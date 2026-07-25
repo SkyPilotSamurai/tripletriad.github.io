@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="bg-galbadia-garden" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1f2e"/>
+      <stop offset="55%" stop-color="#2f394f"/>
+      <stop offset="100%" stop-color="#0c0f16"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg-galbadia-garden)"/>
+  
+      <rect x="90" y="120" width="120" height="90" fill="#3d4a63"/>
+      <polygon points="90,120 150,80 210,120" fill="#4c5c7a"/>
+      <rect x="130" y="150" width="16" height="40" fill="#1a1f2e"/>
+      <rect x="154" y="150" width="16" height="40" fill="#1a1f2e"/>
+      <circle cx="150" cy="100" r="9" fill="#cfe0ff"/>
+      <rect x="70" y="160" width="20" height="50" fill="#333f55"/>
+      <rect x="210" y="160" width="20" height="50" fill="#333f55"/>
+      <ellipse cx="150" cy="228" rx="105" ry="13" fill="#04050a" opacity="0.6"/>
+    
+  <rect x="0" y="248" width="300" height="52" fill="rgba(0,0,0,0.55)"/>
+  <text x="150" y="272" font-family="Georgia, serif" font-size="21" fill="#fff" text-anchor="middle" font-weight="bold">Galbadia Garden</text>
+  <text x="150" y="291" font-family="Georgia, serif" font-size="11" fill="#d9c47a" text-anchor="middle" letter-spacing="2">BOOSTER PACK</text>
+  <rect x="4" y="4" width="292" height="292" fill="none" stroke="#d9c47a" stroke-width="3"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="bg-centra-region" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2a10"/>
+      <stop offset="55%" stop-color="#7a5a22"/>
+      <stop offset="100%" stop-color="#1c1406"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg-centra-region)"/>
+  
+      <circle cx="150" cy="95" r="28" fill="#ffdf8a"/>
+      <path d="M50 210 C90 160 130 190 150 175 C170 160 210 175 250 200 L250 220 L50 220 Z" fill="#c99a4c"/>
+      <path d="M50 220 C100 195 150 215 210 200 C230 195 245 210 250 220 Z" fill="#a97c34"/>
+      <ellipse cx="150" cy="232" rx="100" ry="10" fill="#0e0a03" opacity="0.5"/>
+    
+  <rect x="0" y="248" width="300" height="52" fill="rgba(0,0,0,0.55)"/>
+  <text x="150" y="272" font-family="Georgia, serif" font-size="21" fill="#fff" text-anchor="middle" font-weight="bold">Centra</text>
+  <text x="150" y="291" font-family="Georgia, serif" font-size="11" fill="#d9c47a" text-anchor="middle" letter-spacing="2">BOOSTER PACK</text>
+  <rect x="4" y="4" width="292" height="292" fill="none" stroke="#d9c47a" stroke-width="3"/>
+</svg>

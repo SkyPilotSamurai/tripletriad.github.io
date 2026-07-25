@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="bg-ultimecia-castle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#160321"/>
+      <stop offset="55%" stop-color="#2b0940"/>
+      <stop offset="100%" stop-color="#08010f"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg-ultimecia-castle)"/>
+  
+      <rect x="95" y="120" width="110" height="95" fill="#2a0f3f"/>
+      <rect x="95" y="90" width="18" height="30" fill="#2a0f3f"/>
+      <rect x="187" y="90" width="18" height="30" fill="#2a0f3f"/>
+      <rect x="141" y="70" width="18" height="50" fill="#3a1656"/>
+      <polygon points="141,70 150,55 159,70" fill="#5a2680"/>
+      <circle cx="150" cy="150" r="16" fill="#c8a6ff" opacity="0.8"/>
+      <rect x="140" y="180" width="20" height="35" fill="#08010f"/>
+      <ellipse cx="150" cy="228" rx="100" ry="12" fill="#040007" opacity="0.6"/>
+    
+  <rect x="0" y="248" width="300" height="52" fill="rgba(0,0,0,0.55)"/>
+  <text x="150" y="272" font-family="Georgia, serif" font-size="21" fill="#fff" text-anchor="middle" font-weight="bold">Ultimecia's Castle</text>
+  <text x="150" y="291" font-family="Georgia, serif" font-size="11" fill="#d9c47a" text-anchor="middle" letter-spacing="2">BOOSTER PACK</text>
+  <rect x="4" y="4" width="292" height="292" fill="none" stroke="#d9c47a" stroke-width="3"/>
+</svg>

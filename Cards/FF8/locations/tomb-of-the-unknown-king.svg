@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="bg-tomb-of-the-unknown-king" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#241705"/>
+      <stop offset="55%" stop-color="#3d290a"/>
+      <stop offset="100%" stop-color="#120c02"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg-tomb-of-the-unknown-king)"/>
+  
+      <path d="M95 210 L95 140 C95 100 205 100 205 140 L205 210 Z" fill="#5a3c18"/>
+      <path d="M110 210 L110 150 C110 118 190 118 190 150 L190 210 Z" fill="#241705"/>
+      <rect x="135" y="170" width="30" height="40" fill="#120c02"/>
+      <rect x="60" y="205" width="180" height="14" fill="#6b4a20"/>
+      <ellipse cx="150" cy="232" rx="100" ry="12" fill="#0a0601" opacity="0.6"/>
+    
+  <rect x="0" y="248" width="300" height="52" fill="rgba(0,0,0,0.55)"/>
+  <text x="150" y="272" font-family="Georgia, serif" font-size="21" fill="#fff" text-anchor="middle" font-weight="bold">Tomb of the Unknown King</text>
+  <text x="150" y="291" font-family="Georgia, serif" font-size="11" fill="#d9c47a" text-anchor="middle" letter-spacing="2">BOOSTER PACK</text>
+  <rect x="4" y="4" width="292" height="292" fill="none" stroke="#d9c47a" stroke-width="3"/>
+</svg>

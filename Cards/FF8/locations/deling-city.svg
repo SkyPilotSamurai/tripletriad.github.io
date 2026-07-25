@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="bg-deling-city" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#160a2e"/>
+      <stop offset="55%" stop-color="#2c1250"/>
+      <stop offset="100%" stop-color="#0a0518"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#bg-deling-city)"/>
+  
+      <rect x="128" y="60" width="44" height="150" fill="#241238"/>
+      <polygon points="128,60 150,30 172,60" fill="#3a1f57"/>
+      <circle cx="150" cy="88" r="14" fill="#f4d976"/>
+      <rect x="60" y="140" width="30" height="70" fill="#1c0e2c"/>
+      <rect x="210" y="120" width="30" height="90" fill="#1c0e2c"/>
+      <rect x="138" y="120" width="8" height="8" fill="#f4d976" opacity="0.8"/>
+      <rect x="154" y="120" width="8" height="8" fill="#f4d976" opacity="0.8"/>
+      <rect x="138" y="150" width="8" height="8" fill="#f4d976" opacity="0.8"/>
+      <rect x="154" y="150" width="8" height="8" fill="#f4d976" opacity="0.8"/>
+      <ellipse cx="150" cy="228" rx="100" ry="14" fill="#050208" opacity="0.6"/>
+    
+  <rect x="0" y="248" width="300" height="52" fill="rgba(0,0,0,0.55)"/>
+  <text x="150" y="272" font-family="Georgia, serif" font-size="21" fill="#fff" text-anchor="middle" font-weight="bold">Deling City</text>
+  <text x="150" y="291" font-family="Georgia, serif" font-size="11" fill="#d9c47a" text-anchor="middle" letter-spacing="2">BOOSTER PACK</text>
+  <rect x="4" y="4" width="292" height="292" fill="none" stroke="#d9c47a" stroke-width="3"/>
+</svg>
