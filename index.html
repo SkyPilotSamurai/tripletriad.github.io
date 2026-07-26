@@ -5,6 +5,9 @@
 <title>Triple Triad</title>
 <style>
   * { box-sizing: border-box; }
+  html {
+    background: #000;
+  }
   body {
     margin: 0;
     background: #0f1420;
@@ -16,6 +19,7 @@
     padding: 0 20px 8px;
     min-height: 100vh;
     position: relative;
+    z-index: 0;
     overflow: clip;
     --bg-image: url('Backgrounds/Balamb Garden.png');
     -webkit-user-select: none;
@@ -115,18 +119,18 @@
   }
   #matchupVs { color: #8a92a6; font-size: 13px; font-weight: normal; }
   #titleBar, #onlineTitleBar, #cpuSetupTitleBar, #pickerTitleBar, #shopTitleBar, #indexTitleBar {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr) auto repeat(2, 1fr);
+    display: flex;
     align-items: center;
-    gap: 32px;
+    justify-content: center;
+    gap: 20px;
     width: max-content;
     box-sizing: border-box;
     margin: 0 auto;
-    padding: 10px 14px;
+    padding: 4px 10px;
     background: rgba(10, 13, 22, 0.72);
-    border-radius: 10px;
+    border-radius: 8px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.5);
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     position: relative;
     z-index: 100;
   }
@@ -134,62 +138,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 32px;
+    gap: 20px;
     width: max-content;
     box-sizing: border-box;
-    margin: 0 auto 10px;
-    padding: 10px 14px;
+    margin: 0 auto 6px;
+    padding: 4px 10px;
     background: rgba(10, 13, 22, 0.72);
-    border-radius: 10px;
+    border-radius: 8px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.5);
   }
-  #titleBar h1, #onlineTitleBar h1, #cpuSetupTitleBar h1, #pickerTitleBar h1, #shopTitleBar h1, #indexTitleBar h1 {
-    grid-column: 3;
-    margin: 0;
-    text-align: center;
-    white-space: nowrap;
-  }
   .title-side {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
     align-items: center;
-  }
-  .title-left { grid-column: 1 / 3; }
-  .title-right { grid-column: 4 / 6; }
-  #titleBar, #onlineTitleBar, #cpuSetupTitleBar {
-    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
   }
   #titleBar.hidden, #onlineTitleBar.hidden, #cpuSetupTitleBar.hidden { display: none; }
-  #titleBar .title-left, #onlineTitleBar .title-left, #cpuSetupTitleBar .title-left {
-    grid-column: 1;
-    display: flex;
-    justify-content: flex-end;
-    gap: 24px;
-  }
-  #titleBar .title-right, #onlineTitleBar .title-right, #cpuSetupTitleBar .title-right {
-    grid-column: 3;
-    display: flex;
-    justify-content: flex-start;
-    gap: 24px;
-  }
-  #titleBar h1, #onlineTitleBar h1, #cpuSetupTitleBar h1 { grid-column: 2; }
-  .icon-label-group { justify-self: center; }
-  .icon-label-group:only-child,
-  .icon-label-group:has(+ .icon-label-group.hidden) {
-    grid-column: 1 / 3;
-  }
-  #titleBar .title-left .icon-label-group:has(+ .icon-label-group.hidden),
-  #titleBar .title-right .icon-label-group:has(+ .icon-label-group.hidden) {
-    grid-column: auto;
-  }
   .icon-btn {
     background: #2d3748;
     color: #eee;
     border: 1px solid #4a5568;
-    border-radius: 6px;
-    width: 38px;
-    height: 38px;
-    font-size: 19px;
+    border-radius: 5px;
+    width: 29px;
+    height: 29px;
+    font-size: 15px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -204,11 +175,11 @@
   .icon-label-group {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 7px;
   }
   .icon-label {
     color: #aaa;
-    font-size: 14px;
+    font-size: 12px;
     letter-spacing: 0.5px;
   }
   #settingsModal {
@@ -226,17 +197,17 @@
     background: #1a2130;
     border: 1px solid #4a5568;
     border-radius: 12px;
-    padding: 26px 34px;
+    padding: 12px 34px 20px;
     width: 460px;
     max-width: 90vw;
-    max-height: 86vh;
-    margin-top: 4vh;
+    max-height: 92vh;
+    margin-top: 6px;
     overflow-y: auto;
     color: #e6e6e6;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
   }
   #settingsPanel h2 {
-    margin: 0 0 18px;
+    margin: 0 0 10px;
     color: #fff;
     font-size: 24px;
     text-align: center;
@@ -269,17 +240,17 @@
     background: #1a2130;
     border: 1px solid #4a5568;
     border-radius: 12px;
-    padding: 26px 34px;
+    padding: 12px 34px 20px;
     width: 460px;
     max-width: 90vw;
-    max-height: 86vh;
-    margin-top: 4vh;
+    max-height: 92vh;
+    margin-top: 6px;
     overflow-y: auto;
     color: #e6e6e6;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
   }
   #rulesPanel h2 {
-    margin: 0 0 18px;
+    margin: 0 0 10px;
     color: #fff;
     font-size: 24px;
     text-align: center;
@@ -312,11 +283,11 @@
     background: #1a2130;
     border: 1px solid #4a5568;
     border-radius: 12px;
-    padding: 30px 40px;
+    padding: 14px 40px 22px;
     width: 640px;
     max-width: 92vw;
-    max-height: 86vh;
-    margin-top: 4vh;
+    max-height: 92vh;
+    margin-top: 6px;
     overflow-y: auto;
     color: #e6e6e6;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
@@ -325,7 +296,7 @@
     align-items: center;
   }
   #leaderboardModalPanel h2, #watchModalPanel h2 {
-    margin: 0 0 18px;
+    margin: 0 0 10px;
     color: #fff;
     font-size: 28px;
     text-align: center;
@@ -394,7 +365,7 @@
   .settings-row.checkbox-row label {
     justify-content: flex-start;
   }
-  #settingsPanel select {
+  #settingsPanel select, #rulesPanel select, #cpuSetupBoard select {
     background: #2d3748;
     color: #eee;
     border: 1px solid #4a5568;
@@ -800,6 +771,22 @@
   #tradeRevealLabel.show { opacity: 1; }
   #tradeRevealLabel.lost { color: #ff8080; }
   #tradeRevealLabel.obtained { color: #8ef58e; }
+  #tradeRevealDupNote {
+    font-size: 15px;
+    font-weight: bold;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #tradeRevealDupNote.show { opacity: 1; }
+  #tradeRevealDupNote .dup-tag {
+    color: #ffd479;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 13px;
+  }
+  #tradeRevealDupNote .dup-gil { color: #ffd479; }
+  #tradeRevealDupNote.hidden { display: none; }
   #overlayStatus { font-size: 16px; color: #fff; min-height: 20px; margin-top: -14px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px rgba(0,0,0,0.6); }
   #overlayGraphic {
     max-width: 420px;
@@ -900,7 +887,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding-top: 24px;
+    padding-top: 0;
     min-height: 90vh;
     text-align: center;
   }
@@ -1362,7 +1349,7 @@
     max-width: 1140px;
     box-sizing: border-box;
     padding: 20px 20px 8px;
-    margin-top: -4px;
+    margin-top: 0;
     background: #1a2130;
     border: 1px solid #4a5568;
     border-radius: 14px;
@@ -1487,19 +1474,76 @@
   }
   .picker-stock.picker-stock-empty { color: #8a93a6; }
   .picker-stock.shop-tile-price { color: #e6dcc0; }
-  .booster-tile-art {
+  .picker-stock.booster-pool-count {
+    color: #fff;
+    background: rgba(0,0,0,0.75);
+    border-radius: 3px;
+    padding: 2px 7px;
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: normal;
+    margin-top: 0;
+    width: 124px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  .booster-pack-card {
+    position: relative;
     width: 124px;
     height: 148px;
-    object-fit: cover;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    display: block;
-    border: 1px solid #4a5568;
+    overflow: hidden;
+    border: 3px solid #9aa1ab;
     box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-    transition: transform 0.15s ease;
   }
-  .booster-tile-art:hover { transform: translateY(-4px); }
-  #shopBuySlotCard .booster-tile-art { width: 138px; height: 164px; }
+  .picker-tile .booster-pack-card { margin-bottom: 0; }
+  #shopBuySlotCard .booster-pack-card { width: 138px; height: 164px; }
+  .booster-tile-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .booster-pack-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 22%, rgba(255,255,255,0.85) 44%, rgba(255,255,255,0.95) 48%, rgba(255,255,255,0.35) 54%, transparent 72%);
+    mix-blend-mode: overlay;
+  }
+  .booster-pack-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 20px 6px 6px;
+    background: linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0));
+    pointer-events: none;
+    text-align: center;
+  }
+  .booster-pack-caption-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    line-height: 1.2;
+    text-shadow:
+      -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000,
+      -1px  0   0 #000,               1px  0   0 #000,
+      -1px  1px 0 #000, 0  1px 0 #000, 1px  1px 0 #000;
+  }
+  .booster-pack-caption-sub {
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #e6dcc0;
+    text-shadow:
+      -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000,
+      -1px  0   0 #000,               1px  0   0 #000,
+      -1px  1px 0 #000, 0  1px 0 #000, 1px  1px 0 #000;
+    margin-top: 1px;
+  }
   #pickerHandWrap {
     display: flex;
     flex-direction: column;
@@ -1769,7 +1813,28 @@
     min-height: 28px;
     text-align: center;
   }
-  #boosterOpenNextBtn { padding: 13px 30px; font-size: 15px; }
+  #boosterOpenDuplicateNote {
+    color: #ffd479;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    max-width: 280px;
+  }
+  #boosterOpenDuplicateNote.hidden { display: none; }
+  #boosterOpenNextBtn {
+    background: #3a8fe6;
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 13px 30px;
+    font-size: 15px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  #boosterOpenNextBtn:hover { transform: translateY(-1px); background: #4a9dff; }
+  #boosterOpenNextBtn:active { transform: translateY(0); }
   #shopBuySlotInfo { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 160px; }
   #shopBuySlotName { font-size: 20px; font-weight: bold; color: #eee; }
   #shopBuySlotPrice { font-size: 15px; font-weight: bold; color: #e6dcc0; }
@@ -1894,7 +1959,7 @@
   #indexGrid .picker-row { margin-bottom: 22px; }
   #indexGrid .picker-row:last-child { margin-bottom: 0; }
   #indexGrid .card-hidden .art { opacity: 0.5; }
-  #shopGrid .picker-row { margin-bottom: 22px; }
+  #shopGrid .picker-row { margin-bottom: 22px; min-height: 200px; }
   #shopGrid .picker-row:last-child { margin-bottom: 0; }
   .index-stock { color: #fff; }
   .index-stock.picker-stock-empty { color: #8a93a6; }
@@ -1919,7 +1984,7 @@
     align-items: center;
     justify-content: flex-start;
     background: #0f1420;
-    padding: 20px;
+    padding: 0 20px 20px;
     overflow-y: auto;
   }
   #cpuSetupScreen::before {
@@ -2035,7 +2100,7 @@
       <button class="menu-btn" id="menuWatchAny">Watch Any Active Game</button>
       <button class="menu-btn" id="menuPractice">Practice</button>
       <button class="menu-btn" id="menuCardShop">Card Shop</button>
-      <button class="menu-btn" id="menuCardIndex">Card Index</button>
+      <button class="menu-btn" id="menuCardIndex">Card Index (Ranked)</button>
       <button class="menu-btn" id="menuLeaderboard">Leaderboards</button>
     </div>
     <div id="menuStatus"></div>
@@ -2084,7 +2149,6 @@
       <button class="icon-btn" tabindex="-1">🖼</button>
     </span>
   </div>
-  <h1>TRIPLE TRIAD</h1>
   <div class="title-side title-right">
     <span class="icon-label-group">
       <span class="icon-label">Settings</span>
@@ -2111,7 +2175,6 @@
       <button id="onlineTitleSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
     </span>
   </div>
-  <h1>TRIPLE TRIAD</h1>
   <div class="title-side title-right">
     <span class="icon-label-group">
       <span class="icon-label">Settings</span>
@@ -2169,6 +2232,7 @@
     <div id="tradeReveal" class="hidden">
       <div id="tradeRevealCard"></div>
       <div id="tradeRevealLabel"></div>
+      <div id="tradeRevealDupNote" class="hidden"></div>
     </div>
   </div>
 </div>
@@ -2300,6 +2364,10 @@
       <span class="icon-label">SFX</span>
       <button id="lobbySfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
     </span>
+    <span class="icon-label-group">
+      <span class="icon-label">Settings</span>
+      <button id="lobbySettingsBtn" class="icon-btn" title="Settings">⚙</button>
+    </span>
   </div>
   <div id="lobbyBoard">
     <div id="lobbyTitle">Match Setup</div>
@@ -2405,7 +2473,6 @@
         <button id="pickerSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
       </span>
     </div>
-    <h1>TRIPLE TRIAD</h1>
     <div class="title-side title-right">
       <span class="icon-label-group">
         <span class="icon-label">Settings</span>
@@ -2482,7 +2549,6 @@
         <button id="shopSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
       </span>
     </div>
-    <h1>TRIPLE TRIAD</h1>
     <div class="title-side title-right">
       <span class="icon-label-group">
         <span class="icon-label">Settings</span>
@@ -2522,6 +2588,7 @@
       <div id="boosterOpenCardWrap"></div>
       <div id="boosterOpenCardName"></div>
       <div id="boosterOpenLabel"></div>
+      <div id="boosterOpenDuplicateNote" class="hidden"></div>
       <button id="boosterOpenNextBtn">Open Pack</button>
     </div>
   </div>
@@ -2538,7 +2605,6 @@
         <button id="indexSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
       </span>
     </div>
-    <h1>TRIPLE TRIAD</h1>
     <div class="title-side title-right">
       <span class="icon-label-group">
         <span class="icon-label">Settings</span>
@@ -2571,7 +2637,6 @@
         <button id="cpuSetupSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
       </span>
     </div>
-    <h1>TRIPLE TRIAD</h1>
     <div class="title-side title-right">
       <span class="icon-label-group">
         <span class="icon-label">Settings</span>
@@ -2597,10 +2662,11 @@
           <h3>Point Total</h3>
           <div class="lobby-rule-row">
             <label>Max Points per Hand
-              <input type="number" id="cpuPointTotal" min="5" max="50" value="50" style="width:64px;">
+              <input type="number" id="cpuPointTotal" min="5" max="50" value="25" style="width:64px;">
             </label>
             <button type="button" id="cpuPointTotalRandomize" class="icon-btn" title="Randomize">🎲</button>
           </div>
+          <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuKeepPointsToggle"> Keep points the same</label></div>
         </div>
         <div id="cpuSetupSection">
           <h3>Turn Timer</h3>
@@ -3026,26 +3092,91 @@ const BOOSTER_IMG_PATH = "Cards/FF8/locations/";
 // monster cards encountered there (e.g. Buel in the Fire Cavern). A pack
 // always yields 3 cards, sampled with replacement from its pool, so a pool
 // can safely hold more than 3 monsters for variety/rarity.
+// Ordered to roughly follow the story's progression through the game,
+// Disc 1 through Disc 4, rather than alphabetically.
 const BOOSTER_PACKS = [
-  { id: 'fire-cavern', name: 'Fire Cavern', image: 'fire-cavern.svg', cardIds: [13, 37, 4] },
-  { id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.svg', cardIds: [12, 5, 36, 10] },
-  { id: 'timber', name: 'Timber', image: 'timber.svg', cardIds: [39, 17, 28, 18, 11] },
-  { id: 'deling-city', name: 'Deling City', image: 'deling-city.svg', cardIds: [61, 19, 22] },
-  { id: 'galbadia-garden', name: 'Galbadia Garden', image: 'galbadia-garden.svg', cardIds: [94, 38, 25, 21] },
-  { id: 'tomb-of-the-unknown-king', name: 'Tomb of the Unknown King', image: 'tomb-of-the-unknown-king.svg', cardIds: [87, 88, 24, 23] },
-  { id: 'esthar', name: 'Esthar', image: 'esthar.svg', cardIds: [46, 53, 41, 45, 40, 34, 29] },
-  { id: 'trabia-canyon', name: 'Trabia Canyon', image: 'trabia-canyon.svg', cardIds: [52, 14, 3] },
-  { id: 'deep-sea-research-center', name: 'Deep Sea Research Center', image: 'deep-sea-research-center.svg', cardIds: [97, 77, 20, 64, 42] },
-  { id: 'ultimecia-castle', name: "Ultimecia's Castle", image: 'ultimecia-castle.svg', cardIds: [73, 76, 72, 69, 66, 63, 70, 75] },
-  { id: 'centra-region', name: 'Centra', image: 'centra-region.svg', cardIds: [26, 8, 68, 30] },
+  { id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.png', cardIds: [12, 5, 36, 10, 59, 15, 8, 48, 3] },
+  { id: 'fire-cavern', name: 'Fire Cavern', image: 'fire-cavern.png', cardIds: [13, 37, 4, 85] },
+  { id: 'dollet', name: 'Dollet', image: 'dollet.png', cardIds: [55, 57, 58, 18, 1] },
+  { id: 'timber', name: 'Timber', image: 'timber.png', cardIds: [39, 17, 28, 18, 11, 60] },
+  { id: 'tomb-of-the-unknown-king', name: 'Tomb of the Unknown King', image: 'tomb-of-the-unknown-king.png', cardIds: [87, 88, 24, 23] },
+  { id: 'galbadia-garden', name: 'Galbadia Garden', image: 'galbadia-garden.png', cardIds: [30, 21, 29, 25, 19, 38] },
+  { id: 'deling-city', name: 'Deling City', image: 'deling-city.png', cardIds: [61, 19, 22] },
+  { id: 'trabia-canyon', name: 'Trabia Canyon', image: 'trabia-canyon.png', cardIds: [52, 14, 27] },
+  { id: 'winter-island', name: 'Winter Island', image: 'winter-island.png', cardIds: [15, 27, 84, 14] },
+  { id: 'centra-ruins', name: 'Centra Ruins', image: 'centra-ruins.png', cardIds: [32, 54, 26, 30] },
+  { id: 'kashkabald-desert', name: 'Kashkabald Desert', image: 'kashkabald-desert.png', cardIds: [33, 47, 31, 68] },
+  { id: 'esthar', name: 'Esthar', image: 'esthar.png', cardIds: [46, 53, 41, 45, 40, 34, 29, 6, 44, 51, 62] },
+  { id: 'deep-sea-research-center', name: 'Deep Sea Research Center', image: 'deep-sea-research-center.png', cardIds: [97, 77, 20, 64, 42] },
+  { id: 'ultimecia-castle', name: "Ultimecia's Castle", image: 'ultimecia-castle.png', cardIds: [73, 76, 72, 69, 66, 63, 70, 75] },
 ];
 const BOOSTER_CARDS_PER_PACK = 3;
-// Pack price is the average shop value of every monster in its pool, so
-// packs built around rarer/higher-level monsters cost more — rounded to
-// the nearest 10 gil to match the normal card price granularity.
+// One-of-a-kind cards (PuPu, level 8-10 cards) are rare pulls from a
+// booster — each pack only has this chance of one of its slots coming from
+// the pack's one-of-a-kind cards instead of its regular ones. Easy to
+// retune later.
+const BOOSTER_ONE_OF_A_KIND_PULL_CHANCE = 0.1;
+// Pack pricing weights one-of-a-kind cards at half their pull chance (not
+// the full pull chance) — they're rare enough that pricing them at the
+// same weight as the draw odds overstates how much they're really worth
+// to the average buyer.
+const BOOSTER_ONE_OF_A_KIND_PRICE_WEIGHT = BOOSTER_ONE_OF_A_KIND_PULL_CHANCE / 2;
+function isOneOfAKindCardId(cardId) {
+  const card = CARD_DB.find(c => c.id === cardId);
+  return !!card && isShopPurchaseLimited(card);
+}
+// Pack price approximates the expected value of an actual pull, computed
+// the same way drawBoosterPackCards() actually draws: the regular monsters
+// and the one-of-a-kind monsters are averaged SEPARATELY (never diluting
+// each other), since mixing them into one big average — the old approach —
+// meant a pool with a high proportion of rares (like Sacred/Minotaur
+// making up half of Tomb of the Unknown King's 4-card pool) dragged the
+// price down below packs with no rares at all, even though those rares
+// are worth thousands of gil each. One-of-a-kind monsters only count for
+// BOOSTER_ONE_OF_A_KIND_PRICE_WEIGHT of a card "slot" (half their real
+// 10% pull odds, so pricing doesn't overstate how often they show up);
+// the rest of BOOSTER_CARDS_PER_PACK's slots go to the regular average.
+// Discounted a further 20% and rounded to the nearest 10 gil to match
+// normal card pricing. Reads cardPrice() live every call, so it always
+// tracks the current card pricing table — nothing here is precomputed.
+function boosterPackAverage(ids) {
+  return ids.reduce((sum, id) => sum + cardPrice(id), 0) / ids.length;
+}
 function boosterPackPrice(pack) {
-  const total = pack.cardIds.reduce((sum, id) => sum + cardPrice(id), 0);
-  return Math.round(total / pack.cardIds.length / 10) * 10;
+  const rareIds = pack.cardIds.filter(isOneOfAKindCardId);
+  const commonIds = pack.cardIds.filter(id => !isOneOfAKindCardId(id));
+  let expectedPullValue;
+  if (rareIds.length && commonIds.length) {
+    const rareSlots = BOOSTER_ONE_OF_A_KIND_PRICE_WEIGHT;
+    expectedPullValue = boosterPackAverage(rareIds) * rareSlots
+      + boosterPackAverage(commonIds) * (BOOSTER_CARDS_PER_PACK - rareSlots);
+  } else {
+    // Pool is entirely one-of-a-kind or entirely regular cards, so every
+    // slot draws uniformly across the whole pool.
+    expectedPullValue = boosterPackAverage(pack.cardIds) * BOOSTER_CARDS_PER_PACK;
+  }
+  return Math.round(expectedPullValue * 0.8 / 10) * 10;
+}
+// Draws all of a pack's cards at once. The rare chance applies once per
+// PACK, not per card: there's a single BOOSTER_ONE_OF_A_KIND_PULL_CHANCE
+// roll for the whole pack, and if it hits, exactly one random slot in the
+// pack becomes a one-of-a-kind pull — the rest (or all of it, on the other
+// 90% of pack opens) is drawn from the pack's regular cards.
+function drawBoosterPackCards(pack, count) {
+  const rareIds = pack.cardIds.filter(isOneOfAKindCardId);
+  const commonIds = pack.cardIds.filter(id => !isOneOfAKindCardId(id));
+  const drawFrom = pool => pool[Math.floor(Math.random() * pool.length)];
+  const packHasRareSlot = rareIds.length && commonIds.length && Math.random() < BOOSTER_ONE_OF_A_KIND_PULL_CHANCE;
+  const rareSlot = packHasRareSlot ? Math.floor(Math.random() * count) : -1;
+  const results = [];
+  for (let i = 0; i < count; i++) {
+    if (i === rareSlot) {
+      results.push(drawFrom(rareIds));
+    } else {
+      results.push(drawFrom(commonIds.length ? commonIds : pack.cardIds));
+    }
+  }
+  return results;
 }
 function shuffle(arr) {
   const a = arr.slice();
@@ -3978,13 +4109,26 @@ function refreshCpuBehaviorButtons() {
     btn.classList.toggle('selected', btn.dataset.behavior === cpuSelectedBehavior);
   });
 }
-const CPU_POINT_TOTAL_STORAGE_KEY = 'tripleTriadCpuPointTotal';
+// Vs CPU opens at this point total by default rather than remembering the
+// last value picked — it's a lower, more casual default than the 5-50
+// random range used for online ranked matches. Players can opt into
+// remembering their last value instead via the "Keep points the same"
+// checkbox below.
+const CPU_POINT_TOTAL_DEFAULT = 25;
+const CPU_KEEP_POINTS_STORAGE_KEY = 'tripleTriadCpuKeepPoints';
+const CPU_POINT_TOTAL_STORAGE_KEY = 'tripleTriadCpuPointTotal_v2';
+function loadSavedCpuKeepPoints() {
+  try { return localStorage.getItem(CPU_KEEP_POINTS_STORAGE_KEY) === '1'; } catch (e) { return false; }
+}
+function saveCpuKeepPoints(value) {
+  try { localStorage.setItem(CPU_KEEP_POINTS_STORAGE_KEY, value ? '1' : '0'); } catch (e) {}
+}
 function loadSavedCpuPointTotal() {
   try {
     const saved = parseInt(localStorage.getItem(CPU_POINT_TOTAL_STORAGE_KEY), 10);
     if (Number.isFinite(saved)) return Math.max(POINT_BUDGET_MIN, Math.min(POINT_BUDGET_MAX, saved));
   } catch (e) {}
-  return POINT_BUDGET_MAX;
+  return CPU_POINT_TOTAL_DEFAULT;
 }
 function saveCpuPointTotal(value) {
   try { localStorage.setItem(CPU_POINT_TOTAL_STORAGE_KEY, String(value)); } catch (e) {}
@@ -4008,7 +4152,10 @@ function openCpuSetup() {
     document.getElementById('cpuSourceFreeplay').checked = true;
   }
   document.getElementById('cpuSetupStatus').textContent = '';
-  document.getElementById('cpuPointTotal').value = loadSavedCpuPointTotal();
+  const keepPointsToggle = document.getElementById('cpuKeepPointsToggle');
+  const keepPoints = loadSavedCpuKeepPoints();
+  if (keepPointsToggle) keepPointsToggle.checked = keepPoints;
+  document.getElementById('cpuPointTotal').value = keepPoints ? loadSavedCpuPointTotal() : CPU_POINT_TOTAL_DEFAULT;
   const timerToggle = document.getElementById('cpuTimerToggle');
   if (timerToggle) timerToggle.checked = loadSavedCpuTimerEnabled();
   refreshCpuDifficultyLabel();
@@ -4028,20 +4175,29 @@ document.querySelectorAll('.cpu-behavior-btn').forEach(btn => {
     refreshCpuBehaviorButtons();
   });
 });
+function isCpuKeepPointsChecked() {
+  const toggle = document.getElementById('cpuKeepPointsToggle');
+  return toggle ? toggle.checked : false;
+}
 document.getElementById('cpuPointTotal').addEventListener('change', () => {
   const input = document.getElementById('cpuPointTotal');
   let value = parseInt(input.value, 10);
   if (!Number.isFinite(value)) value = POINT_BUDGET_MAX;
   value = Math.max(POINT_BUDGET_MIN, Math.min(POINT_BUDGET_MAX, value));
   input.value = value;
-  saveCpuPointTotal(value);
+  if (isCpuKeepPointsChecked()) saveCpuPointTotal(value);
 });
 document.getElementById('cpuPointTotalRandomize').addEventListener('click', () => {
   playSfx('cursorMove');
   const value = rollPointBudget();
   const input = document.getElementById('cpuPointTotal');
   input.value = value;
-  saveCpuPointTotal(value);
+  if (isCpuKeepPointsChecked()) saveCpuPointTotal(value);
+});
+document.getElementById('cpuKeepPointsToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  saveCpuKeepPoints(e.target.checked);
+  if (e.target.checked) saveCpuPointTotal(parseInt(document.getElementById('cpuPointTotal').value, 10));
 });
 async function startCpuMatch() {
   const source = document.querySelector('input[name="cpuCardSource"]:checked').value;
@@ -4054,7 +4210,7 @@ async function startCpuMatch() {
   if (!Number.isFinite(pointBudget)) pointBudget = POINT_BUDGET_MAX;
   pointBudget = Math.max(POINT_BUDGET_MIN, Math.min(POINT_BUDGET_MAX, pointBudget));
   pointInput.value = pointBudget;
-  saveCpuPointTotal(pointBudget);
+  if (isCpuKeepPointsChecked()) saveCpuPointTotal(pointBudget);
   const difficultyLevel = Math.max(1, Math.min(5, parseInt(document.getElementById('cpuDifficultySlider').value, 10)));
   const timerToggle = document.getElementById('cpuTimerToggle');
   const timerEnabled = timerToggle ? timerToggle.checked : false;
@@ -4085,6 +4241,7 @@ async function startCpuMatch() {
   initGame({ p1: p1Hand, p2: p2Hand });
 }
 async function rematchCpuMatch() {
+  restorePreviousMusicIfNeeded();
   const pointBudget = state.cpuPointBudget || POINT_BUDGET_MAX;
   showGameScreen();
   const p1Hand = state.rules.random
@@ -4099,6 +4256,7 @@ async function rematchCpuMatch() {
   initGame({ p1: p1Hand, p2: p2Hand });
 }
 async function rematchCpuMatchSame() {
+  restorePreviousMusicIfNeeded();
   const pointBudget = state.cpuPointBudget || POINT_BUDGET_MAX;
   showGameScreen();
   const prevP1Ids = lastPracticeHands ? lastPracticeHands.p1.map(c => c.id) : null;
@@ -4532,6 +4690,10 @@ function playFirstPlayerSpin(firstPlayer, roomSeats) {
     label.textContent = isMe ? 'You go first!' : `${winnerName} goes first!`;
     label.classList.toggle('first-player-p1', firstPlayer === 'p1');
     label.classList.toggle('first-player-p2', firstPlayer === 'p2');
+    if (state.cpuOpponent) {
+      state.turn = firstPlayer;
+      requestAnimationFrame(() => { if (typeof updateActiveHandArrow === 'function') updateActiveHandArrow(); });
+    }
     return new Promise(resolve => setTimeout(resolve, 700));
   }).then(() => {
     overlay.classList.add('hidden');
@@ -4739,7 +4901,20 @@ async function executeDisconnectForfeit(roomId, roomRef, losingSeat, winningSeat
     disconnectForfeitAt: null,
     lastDisconnectForfeit: { cardId: forfeitedCard.id, from: losingSeat, to: winningSeat, at: firebase.database.ServerValue.TIMESTAMP },
   });
-  if (winningUid) await addCardsToCollection(winningUid, forfeitedCard.id, 1);
+  if (winningUid) {
+    const forfeitCard = CARD_DB.find(c => c.id === forfeitedCard.id);
+    let isDupOneOfAKind = false;
+    if (forfeitCard && isShopPurchaseLimited(forfeitCard)) {
+      const winnerSnap = await rtdb.ref(`${USERS_ROOT}/${winningUid}`).once('value');
+      isDupOneOfAKind = collectionStockOf(winnerSnap.val(), forfeitedCard.id) > 0;
+    }
+    if (isDupOneOfAKind) {
+      const fullPrice = cardPrice(forfeitedCard.id);
+      await addGilToUser(winningUid, fullPrice === Infinity ? 0 : fullPrice);
+    } else {
+      await addCardsToCollection(winningUid, forfeitedCard.id, 1);
+    }
+  }
   if (losingUid) await removeCardsFromCollection(losingUid, forfeitedCard.id, 1);
 }
 const TRADE_REVEAL_STEP_MS = 4000;
@@ -5028,7 +5203,19 @@ document.getElementById('spectateNewGamePromptBtn')?.addEventListener('click', (
     }
   }
 });
+function setWatchUrlParam(value) {
+  try {
+    const url = new URL(window.location.href);
+    if (value) {
+      url.searchParams.set('watch', value);
+    } else {
+      url.searchParams.delete('watch');
+    }
+    history.replaceState(null, '', url.pathname + url.search + url.hash);
+  } catch (e) {}
+}
 function startSpectating(roomId, root = ROOMS_ROOT) {
+  if (!autoWatchActive) setWatchUrlParam(roomId);
   stopRoomListener();
   const mySession = ++roomSession;
   stopTurnTimer();
@@ -5123,6 +5310,7 @@ async function pickRandomActiveRoom(excludeId) {
 async function startAutoWatch() {
   autoWatchActive = true;
   autoWatchGameOverSince = null;
+  setWatchUrlParam('any');
   let picked = null;
   let lookupFailed = false;
   try {
@@ -5184,6 +5372,7 @@ function stopAutoWatch() {
 }
 function leaveOnlineRoomOrSpectate() {
   stopAutoWatch();
+  setWatchUrlParam(null);
   stopRoomListener();
   teardownRoomPresence();
   if (state.roomId) {
@@ -6082,7 +6271,10 @@ async function pickTradeCard(roomRef, tradeState, poolKey) {
   const target = pool.find(p => p.poolKey === poolKey);
   if (!target) return;
   const newPool = pool.filter(p => p.poolKey !== poolKey);
-  const newPicked = [...picked, target];
+  let newPicked = [...picked, target];
+  if (newPicked.length >= tradeState.takeCount && currentUser) {
+    newPicked = await annotateTradePicksWithDuplicates(currentUser.uid, newPicked);
+  }
   await roomRef.update({
     'tradeState/pool': newPool,
     'tradeState/picked': newPicked,
@@ -6100,8 +6292,16 @@ async function advanceTradeReveal(room, roomId, roomRef) {
   const winnerUid = room.seatUids && room.seatUids[ts.winner];
   const loserUid = room.seatUids && room.seatUids[ts.loser];
   const gainWrites = [];
-  if (winnerUid) ts.picked.forEach(p => gainWrites.push(addCardsToCollection(winnerUid, p.cardId, 1)));
+  let refundGil = 0;
+  ts.picked.forEach(p => {
+    if (p.duplicateRefund) {
+      refundGil += p.refundAmount || 0;
+    } else if (winnerUid) {
+      gainWrites.push(addCardsToCollection(winnerUid, p.cardId, 1));
+    }
+  });
   await Promise.all(gainWrites);
+  if (winnerUid && refundGil > 0) await addGilToUser(winnerUid, refundGil);
   const lossWrites = [];
   if (loserUid) ts.picked.forEach(p => lossWrites.push(removeCardsFromCollection(loserUid, p.cardId, 1)));
   await Promise.all(lossWrites);
@@ -6179,6 +6379,10 @@ async function resolveRankedMatchIfNeededInner(room, roomId, roomRef) {
   const loserSeat = p1Score === p2Score ? null : (p1Score > p2Score ? 'p2' : 'p1');
   const loserHand = loserSeat ? roomHands[loserSeat] : [];
   const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand);
+  if (tradeState.picked && tradeState.picked.length) {
+    const winnerUid = room.seatUids && tradeState.winner && room.seatUids[tradeState.winner];
+    tradeState.picked = await annotateTradePicksWithDuplicates(winnerUid, tradeState.picked);
+  }
   await roomRef.update({ tradeState });
 }
 async function applyRankedStatsUpdate(uid, outcome, ratingDelta) {
@@ -6201,6 +6405,10 @@ async function applyRankedStatsUpdate(uid, outcome, ratingDelta) {
 async function awardGil(uid, actualRatingDelta) {
   if (!(actualRatingDelta > 0)) return;
   const amount = actualRatingDelta * GIL_PER_RATING_POINT;
+  await addGilToUser(uid, amount);
+}
+async function addGilToUser(uid, amount) {
+  if (!(amount > 0)) return;
   const ref = rtdb.ref(`${USERS_ROOT}/${uid}/gil`);
   const snap = await ref.once('value');
   const current = snap.val() || 0;
@@ -6209,6 +6417,29 @@ async function awardGil(uid, actualRatingDelta) {
   if (currentUser && currentUser.uid === uid && currentUserProfile) {
     currentUserProfile.gil = updated;
   }
+}
+// Marks which cards in a trade-reveal pick list would be one-of-a-kind
+// duplicates for the winner (cards they already own that can't be
+// stocked twice), so those picks convert to gil instead of being granted.
+async function annotateTradePicksWithDuplicates(winnerUid, pickedList) {
+  if (!winnerUid || !pickedList || !pickedList.length) return pickedList || [];
+  const snap = await rtdb.ref(`${USERS_ROOT}/${winnerUid}`).once('value');
+  const profile = snap.val();
+  const grantedSoFar = {};
+  return pickedList.map(p => {
+    const card = CARD_DB.find(c => c.id === p.cardId);
+    const oneOfAKind = !!card && isShopPurchaseLimited(card);
+    if (!oneOfAKind) return { ...p, oneOfAKind: false, duplicateRefund: false, refundAmount: 0 };
+    const existing = grantedSoFar[p.cardId] !== undefined ? grantedSoFar[p.cardId] : collectionStockOf(profile, p.cardId);
+    if (existing > 0) {
+      // Full price here (not the half-price sellPrice used for booster
+      // refunds) since the winner didn't spend gil to get this card.
+      const fullPrice = cardPrice(p.cardId);
+      return { ...p, oneOfAKind: true, duplicateRefund: true, refundAmount: fullPrice === Infinity ? 0 : fullPrice };
+    }
+    grantedSoFar[p.cardId] = 1;
+    return { ...p, oneOfAKind: true, duplicateRefund: false, refundAmount: 0 };
+  });
 }
 async function updateLeaderboardEntry(root, key, name, statsOverride) {
   let stats = statsOverride;
@@ -6729,6 +6960,7 @@ function renderTradeOverlay(ts) {
   }
   const cardStage = document.getElementById('tradeRevealCard');
   const labelStage = document.getElementById('tradeRevealLabel');
+  const dupNoteStage = document.getElementById('tradeRevealDupNote');
   const idx = ts.revealIndex;
   if (idx === lastRenderedRevealIndex) return;
   lastRenderedRevealIndex = idx;
@@ -6737,6 +6969,8 @@ function renderTradeOverlay(ts) {
     cardStage.innerHTML = '';
     labelStage.className = '';
     labelStage.textContent = '';
+    dupNoteStage.className = 'hidden';
+    dupNoteStage.innerHTML = '';
     return;
   }
   const picked = ts.picked[idx];
@@ -6744,6 +6978,8 @@ function renderTradeOverlay(ts) {
   cardStage.innerHTML = '';
   labelStage.className = '';
   labelStage.textContent = '';
+  dupNoteStage.className = 'hidden';
+  dupNoteStage.innerHTML = '';
   if (card) {
     const el = createCardElement({ ...card }, ts.winner, null, false);
     cardStage.appendChild(el);
@@ -6762,12 +6998,20 @@ function renderTradeOverlay(ts) {
     const isWinnerSide = mySeatForLabel ? mySeatForLabel === ts.winner : true;
     labelStage.textContent = isWinnerSide ? `Obtained: ${card ? card.name : ''}` : `Lost: ${card ? card.name : ''}`;
     labelStage.className = isWinnerSide ? 'show obtained' : 'show lost';
+    if (isWinnerSide && picked.duplicateRefund) {
+      dupNoteStage.innerHTML = `<div class="dup-tag">One of a Kind</div><div>Converted to gil: <span class="dup-gil">+${picked.refundAmount || 0}</span></div>`;
+      dupNoteStage.className = 'show';
+    } else {
+      dupNoteStage.className = 'hidden';
+      dupNoteStage.innerHTML = '';
+    }
     playSfx(isWinnerSide ? 'cardObtained' : 'cardPlace');
   });
   setTimeout(() => {
     if (lastRenderedRevealIndex !== idx) return;
     cardStage.classList.add('fading');
     labelStage.classList.remove('show');
+    dupNoteStage.classList.remove('show');
   }, 4000);
 }
 function renderAll() {
@@ -6789,10 +7033,8 @@ function renderAll() {
 function updateActiveHandArrow() {
   const cursor = document.getElementById('activeHandCursor');
   if (!cursor) return;
-  const spinner = document.getElementById('firstPlayerSpinner');
-  const spinnerShowing = spinner && !spinner.classList.contains('hidden');
   const noGameYet = state.hands.p1.length === 0 && state.hands.p2.length === 0 && state.board.every(c => !c);
-  const show = !state.gameOver && !spinnerShowing && !noGameYet;
+  const show = !state.gameOver && state.turn != null && !noGameYet;
   cursor.classList.toggle('hidden', !show);
   if (!show) return;
   const handEl = document.getElementById(state.turn === 'p1' ? 'handP1' : 'handP2');
@@ -7246,6 +7488,8 @@ const indexSettingsBtn = document.getElementById('indexSettingsBtn');
 if (indexSettingsBtn) indexSettingsBtn.addEventListener('click', openSettingsFromTitleBar);
 const cpuSetupSettingsBtn = document.getElementById('cpuSetupSettingsBtn');
 if (cpuSetupSettingsBtn) cpuSetupSettingsBtn.addEventListener('click', openSettingsFromTitleBar);
+const lobbySettingsBtn = document.getElementById('lobbySettingsBtn');
+if (lobbySettingsBtn) lobbySettingsBtn.addEventListener('click', openSettingsFromTitleBar);
 document.getElementById('settingsClose').addEventListener('click', () => {
   playSfx('cursorCancel');
   settingsModal.classList.remove('show');
@@ -7417,6 +7661,32 @@ cpuElementalBiasSelect.addEventListener('change', () => {
 initMusicPlayer();
 initSfxControls();
 initMainMenu();
+initWatchFromUrl();
+function initWatchFromUrl() {
+  let watchParam = null;
+  try {
+    watchParam = new URLSearchParams(window.location.search).get('watch');
+  } catch (e) {}
+  if (!watchParam) return;
+  showGameScreen();
+  if (watchParam === 'any') {
+    startAutoWatch();
+    return;
+  }
+  const roomId = watchParam;
+  findWatchableRoomRoot(roomId).then(root => {
+    if (root) {
+      startSpectating(roomId, root);
+    } else {
+      setWatchUrlParam(null);
+      showMenuScreen();
+      setMenuStatus('No room found with that ID.');
+    }
+  }).catch(() => {
+    setWatchUrlParam(null);
+    showMenuScreen();
+  });
+}
 function showMenuScreen() {
   document.getElementById('mainMenu').classList.remove('hidden');
   document.getElementById('gameScreen').classList.add('hidden');
@@ -7974,7 +8244,7 @@ function renderShopTabs() {
   });
 }
 const SHOP_ROW_SIZES = [6, 5];
-const BOOSTER_ROW_SIZE = 6;
+const BOOSTER_ROW_SIZE = 7;
 function renderShopGrid() {
   const gridEl = document.getElementById('shopGrid');
   gridEl.innerHTML = '';
@@ -8007,24 +8277,49 @@ function renderShopGrid() {
   });
   cardElsOnPage.forEach(shrinkLabelIfWrapped);
 }
-function buildBoosterTile(pack) {
-  const wrap = document.createElement('div');
-  wrap.className = 'picker-tile';
+// Builds the bordered pack-art card used both in the shop grid and the buy
+// slot preview: artwork, a diagonal foil sheen that sweeps on hover, and a
+// caption bar baked into the bottom of the image showing the location name
+// and "Booster".
+function buildBoosterPackCard(pack) {
+  const card = document.createElement('div');
+  card.className = 'booster-pack-card';
   const img = document.createElement('img');
   img.className = 'booster-tile-art';
   img.src = BOOSTER_IMG_PATH + pack.image;
   img.alt = pack.name;
   img.draggable = false;
-  wrap.appendChild(img);
-  const nameEl = document.createElement('div');
-  nameEl.className = 'picker-stock';
-  nameEl.textContent = pack.name;
-  wrap.appendChild(nameEl);
+  card.appendChild(img);
+  const sheen = document.createElement('div');
+  sheen.className = 'booster-pack-sheen';
+  card.appendChild(sheen);
+  const caption = document.createElement('div');
+  caption.className = 'booster-pack-caption';
+  const captionName = document.createElement('div');
+  captionName.className = 'booster-pack-caption-name';
+  captionName.textContent = pack.name;
+  caption.appendChild(captionName);
+  const captionSub = document.createElement('div');
+  captionSub.className = 'booster-pack-caption-sub';
+  captionSub.textContent = 'Booster';
+  caption.appendChild(captionSub);
+  card.appendChild(caption);
+  return card;
+}
+function buildBoosterTile(pack) {
+  const wrap = document.createElement('div');
+  wrap.className = 'picker-tile';
+  const card = buildBoosterPackCard(pack);
+  wrap.appendChild(card);
+  const poolEl = document.createElement('div');
+  poolEl.className = 'picker-stock booster-pool-count';
+  poolEl.textContent = `${pack.cardIds.length} unique cards`;
+  wrap.appendChild(poolEl);
   const priceEl = document.createElement('div');
   priceEl.className = 'picker-stock shop-tile-price';
   priceEl.textContent = `${boosterPackPrice(pack)} gil`;
   wrap.appendChild(priceEl);
-  img.addEventListener('click', () => selectShopBooster(pack.id));
+  card.addEventListener('click', () => selectShopBooster(pack.id));
   return wrap;
 }
 function selectShopBooster(packId) {
@@ -8033,8 +8328,13 @@ function selectShopBooster(packId) {
   shopSelectedBoosterId = packId;
   refreshShopBuySlot();
 }
+// Cards that can never be stocked more than once, regardless of level.
+// PuPu is the classic example — a joke/rare monster with only a handful of
+// real encounters in the game, so the shop and booster packs both treat it
+// (and anything else added here) as one-of-a-kind.
+const ONE_OF_A_KIND_CARD_IDS = new Set([48]);
 function isShopPurchaseLimited(card) {
-  return card.level >= 8 && card.level <= 10;
+  return (card.level >= 8 && card.level <= 10) || ONE_OF_A_KIND_CARD_IDS.has(card.id);
 }
 function shopPurchaseBlockedByCap(card, profile) {
   return isShopPurchaseLimited(card) && collectionStockOf(profile, card.id) > 0;
@@ -8077,11 +8377,7 @@ function refreshShopBuySlot() {
     const pack = BOOSTER_PACKS.find(p => p.id === shopSelectedBoosterId);
     slot.classList.add('shop-buy-slot-filled');
     cardWrap.innerHTML = '';
-    const img = document.createElement('img');
-    img.className = 'booster-tile-art';
-    img.src = BOOSTER_IMG_PATH + pack.image;
-    img.alt = pack.name;
-    cardWrap.appendChild(img);
+    cardWrap.appendChild(buildBoosterPackCard(pack));
     nameEl.textContent = `${pack.name} Booster (${BOOSTER_CARDS_PER_PACK} cards)`;
     const price = boosterPackPrice(pack);
     const gil = (currentUserProfile && currentUserProfile.gil) || 0;
@@ -8194,20 +8490,39 @@ async function openBoosterPack() {
     // Draw cards from the pack's pool (with replacement — duplicates are
     // normal for a booster) and credit them to the collection right away.
     // The stock/owned counts update in the background here, before the
-    // opening animation below reveals each card to the player.
-    const pulledIds = [];
-    for (let i = 0; i < BOOSTER_CARDS_PER_PACK; i++) {
-      pulledIds.push(pack.cardIds[Math.floor(Math.random() * pack.cardIds.length)]);
-    }
+    // opening animation below reveals each card to the player. One-of-a-kind
+    // cards (PuPu, and any level 8-10 card) can't be stocked twice — if the
+    // player already owns one, the pull is auto-sold back for half price
+    // instead of granting a duplicate, and the reveal step says as much.
+    const pulledIds = drawBoosterPackCards(pack, BOOSTER_CARDS_PER_PACK);
+    const ownedCount = {};
+    const pulledResults = [];
+    let refundGil = 0;
     for (const id of pulledIds) {
-      await addCardsToCollection(currentUser.uid, id, 1);
+      const card = CARD_DB.find(c => c.id === id);
+      if (!(id in ownedCount)) ownedCount[id] = collectionStockOf(profile, id);
+      const oneOfAKind = card && isShopPurchaseLimited(card);
+      if (oneOfAKind && ownedCount[id] > 0) {
+        const refund = sellPrice(id);
+        refundGil += refund;
+        pulledResults.push({ id, duplicateRefund: true, refundAmount: refund });
+      } else {
+        await addCardsToCollection(currentUser.uid, id, 1);
+        ownedCount[id] += 1;
+        pulledResults.push({ id, duplicateRefund: false, refundAmount: 0 });
+      }
+    }
+    if (refundGil > 0) {
+      const gilAfterRefund = newGil + refundGil;
+      await userRef.child('gil').set(gilAfterRefund);
+      if (currentUserProfile) currentUserProfile.gil = gilAfterRefund;
     }
     document.getElementById('shopStatus').textContent = '';
     playSfx('shopPurchase');
     refreshShopGilBalance();
     renderShopGrid();
     refreshShopBuySlot();
-    showBoosterOpening(pack, pulledIds);
+    showBoosterOpening(pack, pulledResults);
   } catch (err) {
     document.getElementById('shopStatus').textContent = 'Purchase failed: ' + (err && err.message ? err.message : err);
   } finally {
@@ -8215,8 +8530,8 @@ async function openBoosterPack() {
   }
 }
 let boosterOpenState = null;
-function showBoosterOpening(pack, pulledIds) {
-  boosterOpenState = { pack, pulledIds, index: -1 };
+function showBoosterOpening(pack, pulledResults) {
+  boosterOpenState = { pack, pulledResults, index: -1 };
   document.getElementById('boosterOpenOverlay').classList.add('show');
   renderBoosterOpenStep();
 }
@@ -8226,24 +8541,32 @@ function renderBoosterOpenStep() {
   const labelEl = document.getElementById('boosterOpenLabel');
   const cardWrap = document.getElementById('boosterOpenCardWrap');
   const nameEl = document.getElementById('boosterOpenCardName');
+  const noteEl = document.getElementById('boosterOpenDuplicateNote');
   const nextBtn = document.getElementById('boosterOpenNextBtn');
-  const { pack, pulledIds, index } = boosterOpenState;
+  const { pack, pulledResults, index } = boosterOpenState;
   cardWrap.innerHTML = '';
   if (index === -1) {
     artEl.src = BOOSTER_IMG_PATH + pack.image;
     artEl.classList.remove('hidden');
     nameEl.textContent = `${pack.name} Booster Pack`;
     labelEl.textContent = 'Tap Open Pack to reveal your cards';
+    noteEl.classList.add('hidden');
     nextBtn.textContent = 'Open Pack';
     return;
   }
   artEl.classList.add('hidden');
-  const cardId = pulledIds[index];
-  const card = CARD_DB.find(c => c.id === cardId);
+  const result = pulledResults[index];
+  const card = CARD_DB.find(c => c.id === result.id);
   cardWrap.appendChild(createCardElement(card, 'p1'));
   nameEl.textContent = card ? card.name : '';
-  labelEl.textContent = `Card ${index + 1} of ${pulledIds.length}`;
-  nextBtn.textContent = index < pulledIds.length - 1 ? 'Next Card' : 'Done';
+  labelEl.textContent = `Card ${index + 1} of ${pulledResults.length}`;
+  if (result.duplicateRefund) {
+    noteEl.textContent = `You can only have one ${card ? card.name : 'card'} — refunded ${result.refundAmount} gil.`;
+    noteEl.classList.remove('hidden');
+  } else {
+    noteEl.classList.add('hidden');
+  }
+  nextBtn.textContent = index < pulledResults.length - 1 ? 'Next Card' : 'Done';
 }
 async function completeShopSale() {
   if (shopPurchaseInFlight || shopSelectedCardId == null || !currentUser) return;
@@ -8299,13 +8622,14 @@ document.getElementById('shopScreen').addEventListener('click', e => {
 });
 document.getElementById('boosterOpenNextBtn').addEventListener('click', () => {
   if (!boosterOpenState) return;
-  playSfx('cardPlace');
   boosterOpenState.index += 1;
-  if (boosterOpenState.index >= boosterOpenState.pulledIds.length) {
+  if (boosterOpenState.index >= boosterOpenState.pulledResults.length) {
+    playSfx('cardPlace');
     document.getElementById('boosterOpenOverlay').classList.remove('show');
     boosterOpenState = null;
     return;
   }
+  playSfx('cardObtained');
   renderBoosterOpenStep();
 });
 const CARD_INDEX_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
