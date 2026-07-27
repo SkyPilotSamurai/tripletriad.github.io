@@ -640,7 +640,7 @@
     z-index: 2;
   }
   .val.val-boost { color: #5bc8ff; }
-  .val.val-penalty { color: #ffa64f; }
+  .val.val-penalty { color: #ff5b5b; }
   .val.orig { opacity: 0; pointer-events: none; }
   .card.showing-original .val.orig { opacity: 1; }
   .card.showing-original .val:not(.orig) { opacity: 0; }
@@ -663,7 +663,7 @@
       -1px  1px 0 #000, 0  1px 0 #000, 1px  1px 0 #000;
   }
   .elem-mod-badge.boost { color: #5bc8ff; }
-  .elem-mod-badge.penalty { color: #ffa64f; }
+  .elem-mod-badge.penalty { color: #ff5b5b; }
   .card.showing-original .elem-mod-badge { opacity: 0; }
   body.layout-adjusted .val { font-size: 26px; width: 26px; }
   body.layout-adjusted .val.top { top: 5px; left: 50%; right: auto; bottom: auto; transform: translateX(-50%); }
@@ -6441,21 +6441,35 @@ function openTutorialList() {
   renderTutorialLists();
   tryStartMusicIfEnabled();
 }
+function setTutorialInfoHidden(hidden) {
+  const info = document.getElementById('tutorialInfo');
+  const unhideBtn = document.getElementById('tutorialUnhideBtn');
+  if (info) info.classList.toggle('hidden', hidden);
+  if (unhideBtn) unhideBtn.classList.toggle('hidden', !hidden);
+}
+// Unconditionally hides both the description panel and its Unhide button.
+// #tutorialUnhideBtn lives in the shared board area used by every game
+// mode, not just tutorial mode, so leaving it visible (which
+// setTutorialInfoHidden(true) does on purpose, to reveal the Unhide button
+// mid-lesson) would let it linger into a real match after leaving the
+// tutorial screen. This is for fully exiting tutorial mode, not the
+// mid-lesson show/hide toggle.
+function hideTutorialOverlayUi() {
+  const info = document.getElementById('tutorialInfo');
+  const unhideBtn = document.getElementById('tutorialUnhideBtn');
+  if (info) info.classList.add('hidden');
+  if (unhideBtn) unhideBtn.classList.add('hidden');
+}
 function closeTutorialList() {
   playSfx('cursorCancel');
   currentTutorialRule = null;
   tutorialPlaying = false;
   basicsSessionId++;
   state.tutorialInteractive = false;
+  hideTutorialOverlayUi();
   document.getElementById('tutorialListScreen').classList.add('hidden');
   leaveOnlineRoomOrSpectate();
   showMenuScreen();
-}
-function setTutorialInfoHidden(hidden) {
-  const info = document.getElementById('tutorialInfo');
-  const unhideBtn = document.getElementById('tutorialUnhideBtn');
-  if (info) info.classList.toggle('hidden', hidden);
-  if (unhideBtn) unhideBtn.classList.toggle('hidden', !hidden);
 }
 function backToTutorialList() {
   currentTutorialRule = null;
@@ -6463,7 +6477,7 @@ function backToTutorialList() {
   basicsSessionId++;
   state.tutorialInteractive = false;
   document.getElementById('gameScreen').classList.add('hidden');
-  setTutorialInfoHidden(true);
+  hideTutorialOverlayUi();
   document.getElementById('tutorialListScreen').classList.remove('hidden');
   renderTutorialLists();
 }
