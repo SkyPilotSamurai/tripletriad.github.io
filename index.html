@@ -7018,7 +7018,10 @@ function leaveOnlineRoomOrSpectate() {
   state.roomSeats = null;
   state.closedSingleCardId = null;
   state.cpuOpponent = false;
-  spectatePurpleBg = false;
+  // spectatePurpleBg (the "No BG" toggle) is intentionally left alone here
+  // -- it's a persisted user preference (see SPECTATE_BG_STORAGE_KEY), not
+  // per-session state, so leaving a spectate/replay session shouldn't reset
+  // it back to off.
   document.body.classList.remove('spectate-purple-bg', 'online-full-opacity');
 }
 function requestRematch(sameRulesAndPoints) {
@@ -8917,7 +8920,10 @@ function updateGameFooterVisibility() {
   const isPracticeNonCpu = state.mode === 'practice' && !state.cpuOpponent;
   footer.classList.toggle('hidden', !isPracticeNonCpu);
 }
-let spectatePurpleBg = false;
+const SPECTATE_BG_STORAGE_KEY = 'tripleTriadSpectateNoBg';
+let spectatePurpleBg = (() => {
+  try { return localStorage.getItem(SPECTATE_BG_STORAGE_KEY) === '1'; } catch (e) { return false; }
+})();
 function updateCardOpacityMode() {
   document.body.classList.toggle('online-full-opacity', state.mode === 'online' || state.mode === 'spectate' || state.mode === 'practice' || state.mode === 'replay' || state.mode === 'tutorial');
   document.body.classList.toggle('spectate-purple-bg', (state.mode === 'spectate' || state.mode === 'replay') && spectatePurpleBg);
@@ -9384,6 +9390,7 @@ document.getElementById('resetBtn').addEventListener('click', resetOrLeaveToMenu
 document.getElementById('spectateBgBtn').addEventListener('click', () => {
   playSfx('cursorMove');
   spectatePurpleBg = !spectatePurpleBg;
+  try { localStorage.setItem(SPECTATE_BG_STORAGE_KEY, spectatePurpleBg ? '1' : '0'); } catch (e) {}
   updateCardOpacityMode();
   updateTitleBarControls();
 });
