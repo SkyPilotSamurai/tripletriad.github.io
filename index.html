@@ -41,6 +41,9 @@
     position: relative;
     min-height: 464px;
   }
+  #boardStack {
+    position: relative;
+  }
   #topbar {
     display: flex;
     justify-content: space-between;
@@ -118,7 +121,7 @@
       -1px  1px 0 #000, 0  1px 0 #000, 1px  1px 0 #000;
   }
   #matchupVs { color: #8a92a6; font-size: 13px; font-weight: normal; }
-  #titleBar, #onlineTitleBar, #cpuSetupTitleBar, #pickerTitleBar, #shopTitleBar, #indexTitleBar {
+  #titleBar, #onlineTitleBar, #cpuSetupTitleBar, #pickerTitleBar, #shopTitleBar, #indexTitleBar, #tutorialListTitleBar {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -920,6 +923,12 @@
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
+  /* up.png is a much more square graphic than the same/plus/combo banners,
+     so scaling it to the same max-width as the others left it visually
+     much bigger (barely shrunk at all, since it's already narrower than
+     max-width). Rendered at half size here to match their visual weight. */
+  #ruleBanner.rule-up { transform: translate(-50%, -50%) scale(0.42); }
+  #ruleBanner.rule-up.show { transform: translate(-50%, -50%) scale(0.6); }
   #firstPlayerSpinner {
     position: absolute;
     top: 50%;
@@ -2073,6 +2082,142 @@
   }
   #shopSellBtn:hover:not(:disabled) { transform: translateY(-1px); background: #3a4658; }
   #shopSellBtn:disabled { opacity: 0.45; cursor: default; transform: none; }
+  #tutorialListScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #0f1420;
+    padding: 0 20px 24px;
+    overflow-y: auto;
+  }
+  #tutorialListScreen::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: var(--bg-image);
+    background-size: cover;
+    background-position: center;
+    opacity: 0.25;
+    z-index: -1;
+    pointer-events: none;
+  }
+  #tutorialListScreen.hidden { display: none; }
+  #tutorialListBoard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 900px;
+    box-sizing: border-box;
+    padding: 20px 20px 8px;
+    background: #1a2130;
+    border: 1px solid #4a5568;
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  }
+  #tutorialListClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 2;
+  }
+  #tutorialListClose:hover { color: #eee; }
+  #tutorialListHeader { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 14px; }
+  #tutorialListTitle { font-size: 26px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px; }
+  #tutorialListSubtitle { font-size: 14px; color: #9aa4b8; text-align: center; }
+  #tutorialListGroups {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+  }
+  .tutorial-list-group { display: flex; flex-direction: column; min-width: 0; }
+  .tutorial-list-group-label {
+    color: #e6dcc0;
+    font-weight: bold;
+    font-size: 19px;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    padding-bottom: 7px;
+    border-bottom: 2px solid #4a5568;
+  }
+  .tutorial-list-group-label.capture { color: #e6c86e; border-color: #6b5f3d; }
+  .tutorial-list-group-label.setup { color: #6eb4e6; border-color: #395a75; }
+  .tutorial-rule-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    align-content: start;
+    width: 100%;
+  }
+  .tutorial-rule-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #232b3d;
+    color: #eee;
+    border: 1px solid #3d4759;
+    border-radius: 9px;
+    padding: 9px 10px;
+    text-align: center;
+    font-size: 17px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .tutorial-rule-btn:hover { background: #2d3748; border-color: #5a6a85; transform: translateY(-1px); }
+  #tutorialListFooter { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 22px; width: 100%; max-width: 900px; }
+  #tutorialInfo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: max-content;
+    max-width: calc(100% - 40px);
+    padding: 14px 20px;
+    background: rgba(10, 13, 22, 0.9);
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+  #tutorialInfo.hidden { display: none; }
+  #tutorialInfoHideBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+  #tutorialInfoName { font-size: 18px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px; }
+  #tutorialInfoDesc { font-size: 13px; color: #c3cadb; text-align: center; line-height: 1.4; max-width: 380px; }
+  #tutorialInfoButtons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  #tutorialInfoButtons button {
+    padding: 9px 18px;
+    font-size: 14px;
+    border-radius: 7px;
+    box-shadow: none;
+  }
+  #tutorialUnhideBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 30;
+  }
+  #tutorialUnhideBtn.hidden { display: none; }
   #shopSlotBtnRow { display: flex; gap: 12px; }
   #indexScreen {
     position: fixed;
@@ -2294,6 +2439,7 @@
       <button class="menu-btn" id="menuWatch">Watch a Game</button>
       <button class="menu-btn" id="menuWatchAny">Watch Any Active Game</button>
       <button class="menu-btn" id="menuPractice">Practice</button>
+      <button class="menu-btn" id="menuTutorial">Tutorial</button>
       <button class="menu-btn" id="menuCardShop">Card Shop</button>
       <button class="menu-btn" id="menuCardIndex">Card Index (Ranked)</button>
       <button class="menu-btn" id="menuLeaderboard">Leaderboards</button>
@@ -2372,7 +2518,19 @@
       </div>
       <div id="scoreP2">5</div>
     </div>
-    <div id="board"></div>
+    <div id="boardStack">
+      <div id="board"></div>
+      <div id="tutorialInfo" class="hidden">
+        <button id="tutorialInfoHideBtn" class="icon-btn" title="Hide description">−</button>
+        <div id="tutorialInfoName"></div>
+        <div id="tutorialInfoDesc"></div>
+        <div id="tutorialInfoButtons">
+          <button class="menu-btn menu-btn-secondary" id="tutorialPlayBtn">▶ Play Example</button>
+          <button class="menu-btn menu-btn-secondary" id="tutorialBackBtn">Back to List</button>
+        </div>
+      </div>
+      <button class="icon-btn hidden" id="tutorialUnhideBtn" title="Show description">−</button>
+    </div>
     <div id="spectateNewGamePrompt" class="hidden">
       <span>A new game has started in this room.</span>
       <button class="menu-btn" id="spectateNewGamePromptBtn">Watch New Game</button>
@@ -2872,6 +3030,46 @@
       <div id="boosterOpenDuplicateNote" class="hidden"></div>
       <button id="boosterOpenNextBtn">Open Pack</button>
     </div>
+  </div>
+</div>
+<div id="tutorialListScreen" class="hidden">
+  <div id="tutorialListTitleBar">
+    <div class="title-side title-left">
+      <span class="icon-label-group">
+        <span class="icon-label">Music</span>
+        <button id="tutorialListMusicBtn" class="icon-btn" title="Play/Pause Music">▶</button>
+      </span>
+      <span class="icon-label-group">
+        <span class="icon-label">SFX</span>
+        <button id="tutorialListSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
+      </span>
+    </div>
+    <div class="title-side title-right">
+      <span class="icon-label-group">
+        <span class="icon-label">Settings</span>
+        <button id="tutorialListSettingsBtn" class="icon-btn" title="Settings">⚙</button>
+      </span>
+    </div>
+  </div>
+  <div id="tutorialListBoard">
+    <button id="tutorialListClose" title="Back to Menu">✕</button>
+    <div id="tutorialListHeader">
+      <div id="tutorialListTitle">Tutorial</div>
+      <div id="tutorialListSubtitle">Pick a rule to see how it works with a live example.</div>
+    </div>
+    <div id="tutorialListGroups">
+      <div class="tutorial-list-group">
+        <div class="tutorial-list-group-label capture">Capture Rules</div>
+        <div id="tutorialCaptureGrid" class="tutorial-rule-grid"></div>
+      </div>
+      <div class="tutorial-list-group">
+        <div class="tutorial-list-group-label setup">Setup Rules</div>
+        <div id="tutorialSetupGrid" class="tutorial-rule-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tutorialListFooter">
+    <button class="menu-btn menu-btn-secondary" id="tutorialListBack">Back to Menu</button>
   </div>
 </div>
 <div id="indexScreen" class="hidden">
@@ -6039,6 +6237,445 @@ document.getElementById('replayNextBtn').addEventListener('click', () => {
   stopReplayPlayback();
   stepReplay(1);
 });
+// --- Tutorial mode ---------------------------------------------------
+// Each capture-rule entry stages a real board via the normal game engine
+// (resolveCaptures, playCardPlacementSequence) and plays a short scripted
+// sequence of placements so the actual rule fires for real, with the same
+// animations, flips, and banners as a live match. Setup/meta rules (Closed,
+// Chaos, Order, etc.) instead just stage a representative hand/board so
+// their passive effect (hidden cards, forced-card highlight) is visible.
+const TUTORIAL_RULES = [
+  {
+    id: 'same', group: 'capture', name: 'Same',
+    desc: 'If the touching sides of your card match two or more neighboring cards, you capture all of them.',
+    rules: { same: true },
+    hands: { p1: [10], p2: [6, 5] },
+    moves: [
+      { owner: 'p2', cardId: 6, cell: 1 },
+      { owner: 'p2', cardId: 5, cell: 3 },
+      { owner: 'p1', cardId: 10, cell: 4 },
+    ],
+  },
+  {
+    id: 'plus', group: 'capture', name: 'Plus',
+    desc: 'If the sums of two or more touching sides match each other, you capture all of them, even when the numbers themselves differ.',
+    rules: { plus: true },
+    hands: { p1: [10], p2: [9, 37] },
+    moves: [
+      { owner: 'p2', cardId: 9, cell: 1 },
+      { owner: 'p2', cardId: 37, cell: 3 },
+      { owner: 'p1', cardId: 10, cell: 4 },
+    ],
+  },
+  {
+    id: 'sameWall', group: 'capture', name: 'Same Wall',
+    desc: 'The board edge counts as a side of A (10) for Same. Match the wall plus one neighbor to capture.',
+    rules: { same: true, sameWall: true },
+    hands: { p1: [93], p2: [7] },
+    moves: [
+      { owner: 'p2', cardId: 7, cell: 1 },
+      { owner: 'p1', cardId: 93, cell: 0 },
+    ],
+  },
+  {
+    id: 'combo', group: 'capture', name: 'Combo',
+    desc: 'Cards flipped by Same, Plus, or Up can immediately flip more cards next to them, chaining captures.',
+    rules: { same: true, combo: true },
+    hands: { p1: [10], p2: [9, 6, 5] },
+    moves: [
+      { owner: 'p2', cardId: 9, cell: 0 },
+      { owner: 'p2', cardId: 6, cell: 1 },
+      { owner: 'p2', cardId: 5, cell: 3 },
+      { owner: 'p1', cardId: 10, cell: 4 },
+    ],
+  },
+  {
+    id: 'up', group: 'capture', name: 'Up',
+    desc: 'If a touching side is exactly one higher than yours on two or more sides, you capture all of them.',
+    rules: { up: true },
+    hands: { p1: [10], p2: [19, 16] },
+    moves: [
+      { owner: 'p2', cardId: 19, cell: 1 },
+      { owner: 'p2', cardId: 16, cell: 3 },
+      { owner: 'p1', cardId: 10, cell: 4 },
+    ],
+  },
+  {
+    id: 'elemental', group: 'capture', name: 'Elemental',
+    desc: 'Board tiles can carry an element. A card matching the tile gets +1 on every side, a mismatched card gets -1.',
+    rules: { elemental: true },
+    boardElements: { 4: 'Fire' },
+    hands: { p1: [30], p2: [6] },
+    moves: [
+      { owner: 'p2', cardId: 6, cell: 1 },
+      { owner: 'p1', cardId: 30, cell: 4 },
+    ],
+  },
+  {
+    id: 'fallenAce', group: 'capture', name: 'Fallen Ace',
+    desc: 'A side of 1 always beats a side of A (10), even though 1 normally loses to every other number.',
+    rules: { fallenAce: true },
+    hands: { p1: [9], p2: [90] },
+    moves: [
+      { owner: 'p2', cardId: 90, cell: 3 },
+      { owner: 'p1', cardId: 9, cell: 4 },
+    ],
+  },
+  {
+    id: 'reverse', group: 'capture', name: 'Reverse',
+    desc: 'Lower numbers beat higher numbers on touching sides, the opposite of the normal rule.',
+    rules: { reverse: true },
+    hands: { p1: [5], p2: [9] },
+    moves: [
+      { owner: 'p2', cardId: 9, cell: 1 },
+      { owner: 'p1', cardId: 5, cell: 4 },
+    ],
+  },
+  {
+    id: 'closed', group: 'setup', name: 'Closed',
+    desc: "You cannot see your opponent's hand until they play a card.",
+    rules: { closed: true },
+    cpu: true,
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+  },
+  {
+    id: 'closedSingle', group: 'setup', name: 'Closed Single',
+    desc: "One of your opponent's cards, chosen at random, stays hidden until it is played.",
+    rules: { closedSingle: true },
+    cpu: true,
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+    closedSingleCardId: { p1: null, p2: 6 },
+  },
+  {
+    id: 'random', group: 'setup', name: 'Random',
+    desc: 'Instead of picking your five cards, they are dealt to you at random from your collection.',
+    rules: { random: true },
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+    demo: 'random',
+  },
+  {
+    id: 'suddenDeath', group: 'setup', name: 'Sudden Death',
+    desc: 'If the match ends tied, the board resets and you replay with the cards you ended with, until someone wins.',
+    rules: { suddenDeath: true },
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+    demo: 'suddenDeath',
+  },
+  {
+    id: 'chaos', group: 'setup', name: 'Chaos',
+    desc: 'Each turn, one of your cards is chosen at random and you must play that one.',
+    rules: { chaos: true },
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+    demo: 'chaos',
+  },
+  {
+    id: 'order', group: 'setup', name: 'Order',
+    desc: 'You must play your hand in the order you selected your cards.',
+    rules: { order: true },
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+  },
+  {
+    id: 'swap', group: 'setup', name: 'Swap',
+    desc: 'Before the match starts, you and your opponent each trade one random card with each other.',
+    rules: { swap: true },
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+    demo: 'swap',
+  },
+  {
+    id: 'roulette', group: 'setup', name: 'Roulette',
+    desc: 'The active rules are rolled at random each match instead of chosen by the players.',
+    rules: { roulette: true },
+    hands: { p1: [1, 2, 3, 4, 5], p2: [6, 7, 8, 9, 10] },
+    demo: 'roulette',
+  },
+];
+let currentTutorialRule = null;
+let tutorialPlaying = false;
+function tutorialHandFromIds(ids) {
+  return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
+}
+// Matches the order the same 16 rules appear in the Settings rules
+// checklist, so the tutorial list reads the same way players already know.
+const TUTORIAL_RULE_ORDER = [
+  'same', 'sameWall', 'plus', 'up', 'combo', 'elemental', 'swap', 'suddenDeath',
+  'closed', 'closedSingle', 'random', 'reverse', 'order', 'chaos', 'fallenAce', 'roulette',
+];
+function renderTutorialLists() {
+  const captureGrid = document.getElementById('tutorialCaptureGrid');
+  const setupGrid = document.getElementById('tutorialSetupGrid');
+  if (!captureGrid || !setupGrid) return;
+  captureGrid.innerHTML = '';
+  setupGrid.innerHTML = '';
+  const byId = id => TUTORIAL_RULES.find(r => r.id === id);
+  TUTORIAL_RULE_ORDER.map(byId).filter(Boolean).forEach(rule => {
+    const btn = document.createElement('button');
+    btn.className = 'tutorial-rule-btn';
+    btn.textContent = rule.name;
+    btn.addEventListener('click', () => {
+      playSfx('cursorMove');
+      openTutorialRule(rule.id);
+    });
+    (rule.group === 'capture' ? captureGrid : setupGrid).appendChild(btn);
+  });
+}
+function openTutorialList() {
+  leaveOnlineRoomOrSpectate();
+  document.getElementById('mainMenu').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('tutorialListScreen').classList.remove('hidden');
+  renderTutorialLists();
+  tryStartMusicIfEnabled();
+}
+function closeTutorialList() {
+  playSfx('cursorCancel');
+  currentTutorialRule = null;
+  tutorialPlaying = false;
+  document.getElementById('tutorialListScreen').classList.add('hidden');
+  leaveOnlineRoomOrSpectate();
+  showMenuScreen();
+}
+function setTutorialInfoHidden(hidden) {
+  const info = document.getElementById('tutorialInfo');
+  const unhideBtn = document.getElementById('tutorialUnhideBtn');
+  if (info) info.classList.toggle('hidden', hidden);
+  if (unhideBtn) unhideBtn.classList.toggle('hidden', !hidden);
+}
+function backToTutorialList() {
+  currentTutorialRule = null;
+  tutorialPlaying = false;
+  document.getElementById('gameScreen').classList.add('hidden');
+  setTutorialInfoHidden(true);
+  document.getElementById('tutorialListScreen').classList.remove('hidden');
+  renderTutorialLists();
+}
+function stageTutorialScenario(rule) {
+  stopTurnTimer();
+  state.mode = 'tutorial';
+  state.roomId = null;
+  state.seat = null;
+  state.cpuOpponent = !!rule.cpu;
+  state.rules = Object.assign({
+    same: false, plus: false, up: false, combo: false, elemental: false, random: false,
+    sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false,
+    reverse: false, chaos: false, order: false, swap: false, roulette: false,
+  }, rule.rules || {});
+  state.board = Array(9).fill(null);
+  const hands = { p1: tutorialHandFromIds(rule.hands.p1), p2: tutorialHandFromIds(rule.hands.p2) };
+  tagHandOwnership(hands);
+  state.hands = hands;
+  state.forcedCardId = { p1: null, p2: null };
+  state.forcedCardTurnKey = { p1: null, p2: null };
+  state.closedSingleCardId = rule.closedSingleCardId ? { ...rule.closedSingleCardId } : { p1: null, p2: null };
+  state.boardElements = Array(9).fill(null);
+  if (rule.boardElements) {
+    Object.keys(rule.boardElements).forEach(i => { state.boardElements[Number(i)] = rule.boardElements[i]; });
+  }
+  state.selected = null;
+  state.gameOver = false;
+  state.suppressOverlay = true;
+  state.turn = 'p1';
+  state.rankedTriggerTally = { p1: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 }, p2: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 } };
+  renderAll();
+}
+function openTutorialRule(id) {
+  const rule = TUTORIAL_RULES.find(r => r.id === id);
+  if (!rule) return;
+  currentTutorialRule = rule;
+  tutorialPlaying = false;
+  document.getElementById('tutorialListScreen').classList.add('hidden');
+  showGameScreen();
+  stageTutorialScenario(rule);
+  setTutorialInfoHidden(false);
+  document.getElementById('tutorialInfoName').textContent = rule.name;
+  document.getElementById('tutorialInfoDesc').textContent = rule.desc;
+  const playBtn = document.getElementById('tutorialPlayBtn');
+  if (playBtn) {
+    playBtn.classList.toggle('hidden', !((rule.moves && rule.moves.length) || rule.demo));
+    playBtn.disabled = false;
+  }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function tutorialPlaceCard(owner, cardId, cellIndex) {
+  const idx = state.hands[owner].findIndex(c => c.id === cardId);
+  if (idx === -1 || state.board[cellIndex]) return Promise.resolve();
+  const card = state.hands[owner][idx];
+  const handContainer = document.getElementById(owner === 'p1' ? 'handP1' : 'handP2');
+  const cardEl = handContainer ? handContainer.children[idx] : null;
+  const innerEl = cardEl ? cardEl.querySelector('.card-inner') : null;
+  const startRect = innerEl ? innerEl.getBoundingClientRect() : (cardEl ? cardEl.getBoundingClientRect() : null);
+  const flightEl = buildFlightClone(card, owner, startRect);
+  state.board[cellIndex] = { card, owner, _placedBy: owner, _justPlaced: true };
+  state.hands[owner].splice(idx, 1);
+  playSfx('cardPlace');
+  const captureResult = resolveCaptures(cellIndex, owner);
+  state.turn = owner === 'p1' ? 'p2' : 'p1';
+  renderAll();
+  return playCardPlacementSequence({ cellIndex, captureResult, flightEl });
+}
+// Meta/setup rules (Random, Sudden Death, Chaos, Swap, Roulette) don't have a
+// single capturing move to script -- each instead gets its own small
+// hand-crafted animation demonstrating what actually changes on screen.
+function tutorialRerollChaosCard(owner) {
+  const hand = state.hands[owner];
+  if (!hand || !hand.length) return;
+  const card = hand[Math.floor(Math.random() * hand.length)];
+  state.forcedCardId[owner] = card.id;
+  // Matches the key ensureChaosForcedCard() checks against, so the next
+  // renderAll() call sees this pick as already "current" and leaves it
+  // alone instead of immediately re-rolling over it.
+  state.forcedCardTurnKey[owner] = String(hand.length);
+}
+const TUTORIAL_DEMOS = {
+  // Just re-deals both hands from scratch -- there's no single "move" to
+  // play, the rule is about how the hand is dealt in the first place.
+  random: async function (rule) {
+    stageTutorialScenario(rule);
+    await sleep(250);
+    const hands = dealHands();
+    tagHandOwnership(hands);
+    state.hands = hands;
+    playSfx('cardObtained');
+    renderAll();
+    await sleep(600);
+  },
+  // Stages a full, tied board (5 cells to p1, 4 to p2 plus a leftover hand
+  // card) the way a real Sudden Death trigger would look, then lifts every
+  // card back off the board into whichever side currently controls it --
+  // even a card that started the match in the other player's hand -- and
+  // rebuilds both hands from that, exactly like maybeTriggerPracticeSuddenDeath().
+  suddenDeath: async function (rule) {
+    stageTutorialScenario(rule);
+    const boardIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const leftoverHandId = 10;
+    const board = boardIds.map((id, i) => {
+      const owner = i < 5 ? 'p1' : 'p2';
+      const card = { ...CARD_DB.find(c => c.id === id) };
+      return { card, owner, _placedBy: owner };
+    });
+    state.board = board;
+    state.hands = { p1: [], p2: tutorialHandFromIds([leftoverHandId]) };
+    tagHandOwnership(state.hands);
+    state.turn = null;
+    renderAll();
+    await sleep(900);
+    const cellEls = document.querySelectorAll('#board .cell');
+    const lifts = [];
+    board.forEach((cell, i) => {
+      const cellEl = cellEls[i];
+      const cardEl = cellEl && cellEl.querySelector('.card');
+      if (!cardEl) return;
+      lifts.push(cardEl.animate([
+        { transform: 'translateY(0px) scale(1)', opacity: 1 },
+        { transform: 'translateY(-55px) scale(0.85)', opacity: 0 },
+      ], { duration: 260, delay: i * 45, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {}));
+    });
+    playSfx('cardObtained');
+    await Promise.all(lifts);
+    await sleep(150);
+    const currentlyOwnedIds = owner => board
+      .filter(cell => cell.owner === owner)
+      .map(cell => cell.card.id)
+      .concat(owner === 'p2' ? [leftoverHandId] : []);
+    const p1Hand = buildHandFromPicks(currentlyOwnedIds('p1'));
+    const p2Hand = buildHandFromPicks(currentlyOwnedIds('p2'));
+    state.board = Array(9).fill(null);
+    state.hands = { p1: p1Hand || [], p2: p2Hand || [] };
+    tagHandOwnership(state.hands);
+    state.turn = 'p1';
+    renderAll();
+    await sleep(600);
+  },
+  // The dimming-all-but-one-card effect is already passive (renderHand marks
+  // whichever card is currently "forced"); the demo's job is just to show
+  // that pick actually changing turn to turn.
+  chaos: async function (rule) {
+    stageTutorialScenario(rule);
+    await sleep(500);
+    for (let i = 0; i < 3; i++) {
+      tutorialRerollChaosCard('p1');
+      tutorialRerollChaosCard('p2');
+      playSfx('cursorMove');
+      renderAll();
+      await sleep(700);
+    }
+  },
+  // One random card trades hands, once -- matches applySwapRule() exactly.
+  swap: async function (rule) {
+    stageTutorialScenario(rule);
+    await sleep(400);
+    applySwapRule(state.hands);
+    playSfx('cardObtained');
+    renderAll();
+    await sleep(600);
+  },
+  // Rolls a fresh random ruleset and lets the existing rules indicator at
+  // the top of the board show whatever came up. If Elemental happens to
+  // come up, the board tiles need their elements (re)generated too --
+  // otherwise the rule shows as "active" in the indicator but nothing
+  // elemental actually appears on the board, the same way initGame()
+  // generates them for a real match.
+  roulette: async function (rule) {
+    stageTutorialScenario(rule);
+    await sleep(400);
+    state.rules = rollRouletteRules(state.rules);
+    state.boardElements = state.rules.elemental
+      ? generateBoardElements([0, 1, 2, 3, 4, 5, 6, 7, 8])
+      : Array(9).fill(null);
+    playSfx('cardEvent');
+    renderAll();
+    await sleep(600);
+  },
+};
+async function playTutorialDemo() {
+  const rule = currentTutorialRule;
+  if (!rule || tutorialPlaying) return;
+  const hasMoves = !!(rule.moves && rule.moves.length);
+  const hasDemo = !!(rule.demo && TUTORIAL_DEMOS[rule.demo]);
+  if (!hasMoves && !hasDemo) return;
+  tutorialPlaying = true;
+  const playBtn = document.getElementById('tutorialPlayBtn');
+  if (playBtn) playBtn.disabled = true;
+  // Hide the description panel (and the standalone Unhide button, if the
+  // user had manually hidden it) while the moves play out over the board.
+  document.getElementById('tutorialInfo').classList.add('hidden');
+  document.getElementById('tutorialUnhideBtn').classList.add('hidden');
+  if (hasMoves) {
+    stageTutorialScenario(rule);
+    await sleep(300);
+    for (const move of rule.moves) {
+      await tutorialPlaceCard(move.owner, move.cardId, move.cell);
+      await sleep(750);
+    }
+  } else {
+    await TUTORIAL_DEMOS[rule.demo](rule);
+  }
+  tutorialPlaying = false;
+  if (playBtn) playBtn.disabled = false;
+  // Only bring the description panel back if we're still looking at this
+  // same rule (the user may have already backed out to the list mid-demo).
+  if (currentTutorialRule === rule) setTutorialInfoHidden(false);
+}
+document.getElementById('menuTutorial').addEventListener('click', () => {
+  playSfx('cursorMove');
+  openTutorialList();
+});
+document.getElementById('tutorialListClose').addEventListener('click', closeTutorialList);
+document.getElementById('tutorialListBack').addEventListener('click', closeTutorialList);
+document.getElementById('tutorialPlayBtn').addEventListener('click', () => {
+  playSfx('cursorMove');
+  playTutorialDemo();
+});
+document.getElementById('tutorialBackBtn').addEventListener('click', () => {
+  playSfx('cursorCancel');
+  backToTutorialList();
+});
+document.getElementById('tutorialInfoHideBtn').addEventListener('click', () => {
+  playSfx('cursorCancel');
+  setTutorialInfoHidden(true);
+});
+document.getElementById('tutorialUnhideBtn').addEventListener('click', () => {
+  playSfx('cursorMove');
+  setTutorialInfoHidden(false);
+});
 async function findWatchableRoomRoot(roomId) {
   const roots = [ROOMS_ROOT, RANKED_ROOMS_ROOT];
   const results = await Promise.all(roots.map(async root => {
@@ -7448,7 +8085,7 @@ function attachHoldToRevealListeners(el) {
 function canAct(owner) {
   if (state.gameOver) return false;
   if (owner !== state.turn) return false;
-  if (state.mode === 'spectate' || state.mode === 'replay') return false;
+  if (state.mode === 'spectate' || state.mode === 'replay' || state.mode === 'tutorial') return false;
   if (state.mode === 'online' && state.seat !== owner) return false;
   if (state.cpuOpponent && owner === 'p2') return false;
   const spinner = document.getElementById('firstPlayerSpinner');
@@ -7505,13 +8142,21 @@ function renderHand(owner) {
   const existingCards = container.children;
   const selected = state.selected && state.selected.owner === owner ? state.selected.idx : -1;
   const acting = canAct(owner);
+  // In tutorial mode nothing is ever clickable, so `acting` is always false
+  // and every card would normally get `.disabled`. That's harmless on its
+  // own (opacity is already forced back to 1 for tutorial via the
+  // online-full-opacity body class), but the Chaos/Order dimming CSS
+  // (`.turn-restricted:not(.disabled)`) explicitly skips disabled cards --
+  // so in tutorial mode it never got a chance to show at all. Tutorial mode
+  // is excluded from the disabled class here so that dimming can render.
+  const showDisabled = !acting && state.mode !== 'tutorial';
   const allowedIdx = (state.rules.chaos || state.rules.order) ? allowedHandIndex(owner) : null;
   state.hands[owner].forEach((card, idx) => {
     const sig = handCardSignature(owner, card);
     const el = existingCards[idx];
     if (el && el.dataset.sig === sig) {
       el.classList.toggle('selected', idx === selected);
-      el.classList.toggle('disabled', !acting);
+      el.classList.toggle('disabled', showDisabled);
       el.classList.toggle('turn-forced', allowedIdx != null && idx === allowedIdx);
       el.classList.toggle('turn-restricted', allowedIdx != null && idx !== allowedIdx);
       if (acting && el.dataset.hasClick !== 'true') {
@@ -7535,9 +8180,9 @@ function renderHand(owner) {
     }
     freshEl.classList.toggle('turn-forced', allowedIdx != null && idx === allowedIdx);
     freshEl.classList.toggle('turn-restricted', allowedIdx != null && idx !== allowedIdx);
-    if (!acting) {
+    if (showDisabled) {
       freshEl.classList.add('disabled');
-    } else {
+    } else if (acting) {
       freshEl.dataset.hasClick = 'true';
       freshEl.addEventListener('click', () => selectCard(owner, idx));
       freshEl.addEventListener('mouseenter', () => {
@@ -7634,7 +8279,10 @@ function updateMatchupBox() {
   const box = document.getElementById('matchupBox');
   const isOnlineMatch = state.mode === 'online' || state.mode === 'spectate' || state.mode === 'replay';
   const bothSeatsKnown = !!(state.roomSeats && state.roomSeats.p1 && state.roomSeats.p2);
-  if ((!isOnlineMatch && !state.cpuOpponent) || (isOnlineMatch && state.mode !== 'spectate' && !bothSeatsKnown)) {
+  // Tutorial mode uses cpuOpponent purely to reuse the "opponent's hand is
+  // hidden" rendering logic for the Closed/Closed Single demos -- it's not
+  // an actual CPU match, so the Player 1 vs CPU matchup box shouldn't show.
+  if (state.mode === 'tutorial' || (!isOnlineMatch && !state.cpuOpponent) || (isOnlineMatch && state.mode !== 'spectate' && !bothSeatsKnown)) {
     box.classList.add('hidden');
     return;
   }
@@ -8045,6 +8693,11 @@ function updateTitleBarControls() {
     resetBtnEl.textContent = '✕';
     resetBtnEl.title = 'Exit to Menu';
     resetLabel.textContent = 'Exit';
+  } else if (state.mode === 'tutorial') {
+    resetGroup.classList.remove('hidden');
+    resetBtnEl.textContent = '✕';
+    resetBtnEl.title = 'Back to Tutorial List';
+    resetLabel.textContent = 'Back';
   } else {
     resetGroup.classList.add('hidden');
   }
@@ -8068,7 +8721,7 @@ function updateGameFooterVisibility() {
 }
 let spectatePurpleBg = false;
 function updateCardOpacityMode() {
-  document.body.classList.toggle('online-full-opacity', state.mode === 'online' || state.mode === 'spectate' || state.mode === 'practice' || state.mode === 'replay');
+  document.body.classList.toggle('online-full-opacity', state.mode === 'online' || state.mode === 'spectate' || state.mode === 'practice' || state.mode === 'replay' || state.mode === 'tutorial');
   document.body.classList.toggle('spectate-purple-bg', (state.mode === 'spectate' || state.mode === 'replay') && spectatePurpleBg);
 }
 function syncHandBoardCenter() {
@@ -8153,6 +8806,7 @@ function initMusicPlayer() {
   const shopMusicBtn = document.getElementById('shopMusicBtn');
   const indexMusicBtn = document.getElementById('indexMusicBtn');
   const cpuSetupMusicBtn = document.getElementById('cpuSetupMusicBtn');
+  const tutorialListMusicBtn = document.getElementById('tutorialListMusicBtn');
   function togglePlayback() {
     if (audio.paused) {
       audio.play().catch(() => {});
@@ -8169,6 +8823,7 @@ function initMusicPlayer() {
   if (shopMusicBtn) shopMusicBtn.addEventListener('click', togglePlayback);
   if (indexMusicBtn) indexMusicBtn.addEventListener('click', togglePlayback);
   if (cpuSetupMusicBtn) cpuSetupMusicBtn.addEventListener('click', togglePlayback);
+  if (tutorialListMusicBtn) tutorialListMusicBtn.addEventListener('click', togglePlayback);
   audio.addEventListener('play', () => {
     playBtn.textContent = '⏸ Pause';
     if (titleMusicBtn) titleMusicBtn.textContent = '⏸';
@@ -8179,6 +8834,7 @@ function initMusicPlayer() {
     if (shopMusicBtn) shopMusicBtn.textContent = '⏸';
     if (indexMusicBtn) indexMusicBtn.textContent = '⏸';
     if (cpuSetupMusicBtn) cpuSetupMusicBtn.textContent = '⏸';
+    if (tutorialListMusicBtn) tutorialListMusicBtn.textContent = '⏸';
     try { localStorage.setItem(MUSIC_WAS_PLAYING_KEY, '1'); } catch (e) {}
   });
   audio.addEventListener('pause', () => {
@@ -8191,6 +8847,7 @@ function initMusicPlayer() {
     if (shopMusicBtn) shopMusicBtn.textContent = '▶';
     if (indexMusicBtn) indexMusicBtn.textContent = '▶';
     if (cpuSetupMusicBtn) cpuSetupMusicBtn.textContent = '▶';
+    if (tutorialListMusicBtn) tutorialListMusicBtn.textContent = '▶';
     try { localStorage.setItem(MUSIC_WAS_PLAYING_KEY, '0'); } catch (e) {}
   });
   loadTrack(0, false);
@@ -8269,6 +8926,7 @@ function showRuleBanner(name) {
   return new Promise(resolve => {
     const el = document.getElementById('ruleBanner');
     el.src = RULE_BANNERS[name];
+    el.classList.toggle('rule-up', name === 'up');
     el.classList.add('show');
     playSfx('cardEvent');
     setTimeout(() => {
@@ -8338,6 +8996,7 @@ function initSfxControls() {
   const shopSfxBtn = document.getElementById('shopSfxBtn');
   const indexSfxBtn = document.getElementById('indexSfxBtn');
   const cpuSetupSfxBtn = document.getElementById('cpuSetupSfxBtn');
+  const tutorialListSfxBtn = document.getElementById('tutorialListSfxBtn');
   function updateSfxIcon() {
     const icon = sfxState.enabled ? '🔊' : '🔈';
     if (titleSfxBtn) titleSfxBtn.textContent = icon;
@@ -8348,6 +9007,7 @@ function initSfxControls() {
     if (shopSfxBtn) shopSfxBtn.textContent = icon;
     if (indexSfxBtn) indexSfxBtn.textContent = icon;
     if (cpuSetupSfxBtn) cpuSetupSfxBtn.textContent = icon;
+    if (tutorialListSfxBtn) tutorialListSfxBtn.textContent = icon;
   }
   toggle.addEventListener('change', () => {
     sfxState.enabled = toggle.checked;
@@ -8366,6 +9026,7 @@ function initSfxControls() {
   if (shopSfxBtn) shopSfxBtn.addEventListener('click', toggleSfxFromTitleBar);
   if (indexSfxBtn) indexSfxBtn.addEventListener('click', toggleSfxFromTitleBar);
   if (cpuSetupSfxBtn) cpuSetupSfxBtn.addEventListener('click', toggleSfxFromTitleBar);
+  if (tutorialListSfxBtn) tutorialListSfxBtn.addEventListener('click', toggleSfxFromTitleBar);
   updateSfxIcon();
   if (hoverToggle) {
     hoverToggle.addEventListener('change', () => {
@@ -8512,6 +9173,9 @@ function resetOrLeaveToMenu() {
   } else if (state.mode === 'replay') {
     playSfx('cursorCancel');
     closeReplayViewer();
+  } else if (state.mode === 'tutorial') {
+    playSfx('cursorCancel');
+    backToTutorialList();
   } else {
     playSfx('cursorCancel');
     leaveOnlineRoomOrSpectate();
@@ -8553,6 +9217,8 @@ const cpuSetupSettingsBtn = document.getElementById('cpuSetupSettingsBtn');
 if (cpuSetupSettingsBtn) cpuSetupSettingsBtn.addEventListener('click', openSettingsFromTitleBar);
 const lobbySettingsBtn = document.getElementById('lobbySettingsBtn');
 if (lobbySettingsBtn) lobbySettingsBtn.addEventListener('click', openSettingsFromTitleBar);
+const tutorialListSettingsBtn = document.getElementById('tutorialListSettingsBtn');
+if (tutorialListSettingsBtn) tutorialListSettingsBtn.addEventListener('click', openSettingsFromTitleBar);
 document.getElementById('settingsClose').addEventListener('click', () => {
   playSfx('cursorCancel');
   settingsModal.classList.remove('show');
