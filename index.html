@@ -2152,6 +2152,7 @@
     padding-bottom: 7px;
     border-bottom: 2px solid #4a5568;
   }
+  .tutorial-list-group-label.basics { color: #8ee68e; border-color: #3d6b45; }
   .tutorial-list-group-label.capture { color: #e6c86e; border-color: #6b5f3d; }
   .tutorial-list-group-label.setup { color: #6eb4e6; border-color: #395a75; }
   .tutorial-rule-grid {
@@ -2161,6 +2162,7 @@
     align-content: start;
     width: 100%;
   }
+  .tutorial-rule-grid-single { grid-template-columns: 1fr; }
   .tutorial-rule-btn {
     display: flex;
     align-items: center;
@@ -3058,6 +3060,10 @@
       <div id="tutorialListSubtitle">Pick a rule to see how it works with a live example.</div>
     </div>
     <div id="tutorialListGroups">
+      <div class="tutorial-list-group">
+        <div class="tutorial-list-group-label basics">Basics</div>
+        <div id="tutorialBasicsGrid" class="tutorial-rule-grid tutorial-rule-grid-single"></div>
+      </div>
       <div class="tutorial-list-group">
         <div class="tutorial-list-group-label capture">Capture Rules</div>
         <div id="tutorialCaptureGrid" class="tutorial-rule-grid"></div>
@@ -4446,6 +4452,7 @@ const state = {
   cpuTimerEnabled: false,
   replayMoves: null,
   replayIndex: -1,
+  tutorialInteractive: false,
 };
 // Chaos: picks one random card from the active player's current hand at the
 // start of their turn and forces them to play only that card. Re-rolled
@@ -6246,6 +6253,11 @@ document.getElementById('replayNextBtn').addEventListener('click', () => {
 // their passive effect (hidden cards, forced-card highlight) is visible.
 const TUTORIAL_RULES = [
   {
+    id: 'basics', group: 'basics', name: 'The Basics',
+    desc: 'Learn how flipping works: higher numbers beat lower numbers, and 10 is shown as A.',
+    interactive: true,
+  },
+  {
     id: 'same', group: 'capture', name: 'Same',
     desc: 'If the touching sides of your card match two or more neighboring cards, you capture all of them.',
     rules: { same: true },
@@ -6396,13 +6408,16 @@ function tutorialHandFromIds(ids) {
 // Matches the order the same 16 rules appear in the Settings rules
 // checklist, so the tutorial list reads the same way players already know.
 const TUTORIAL_RULE_ORDER = [
+  'basics',
   'same', 'sameWall', 'plus', 'up', 'combo', 'elemental', 'swap', 'suddenDeath',
   'closed', 'closedSingle', 'random', 'reverse', 'order', 'chaos', 'fallenAce', 'roulette',
 ];
 function renderTutorialLists() {
+  const basicsGrid = document.getElementById('tutorialBasicsGrid');
   const captureGrid = document.getElementById('tutorialCaptureGrid');
   const setupGrid = document.getElementById('tutorialSetupGrid');
-  if (!captureGrid || !setupGrid) return;
+  if (!basicsGrid || !captureGrid || !setupGrid) return;
+  basicsGrid.innerHTML = '';
   captureGrid.innerHTML = '';
   setupGrid.innerHTML = '';
   const byId = id => TUTORIAL_RULES.find(r => r.id === id);
@@ -6414,7 +6429,8 @@ function renderTutorialLists() {
       playSfx('cursorMove');
       openTutorialRule(rule.id);
     });
-    (rule.group === 'capture' ? captureGrid : setupGrid).appendChild(btn);
+    const grid = rule.group === 'basics' ? basicsGrid : (rule.group === 'capture' ? captureGrid : setupGrid);
+    grid.appendChild(btn);
   });
 }
 function openTutorialList() {
@@ -6429,6 +6445,8 @@ function closeTutorialList() {
   playSfx('cursorCancel');
   currentTutorialRule = null;
   tutorialPlaying = false;
+  basicsSessionId++;
+  state.tutorialInteractive = false;
   document.getElementById('tutorialListScreen').classList.add('hidden');
   leaveOnlineRoomOrSpectate();
   showMenuScreen();
@@ -6442,6 +6460,8 @@ function setTutorialInfoHidden(hidden) {
 function backToTutorialList() {
   currentTutorialRule = null;
   tutorialPlaying = false;
+  basicsSessionId++;
+  state.tutorialInteractive = false;
   document.getElementById('gameScreen').classList.add('hidden');
   setTutorialInfoHidden(true);
   document.getElementById('tutorialListScreen').classList.remove('hidden');
@@ -6453,6 +6473,7 @@ function stageTutorialScenario(rule) {
   state.roomId = null;
   state.seat = null;
   state.cpuOpponent = !!rule.cpu;
+  state.tutorialInteractive = false;
   state.rules = Object.assign({
     same: false, plus: false, up: false, combo: false, elemental: false, random: false,
     sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false,
@@ -6483,6 +6504,10 @@ function openTutorialRule(id) {
   tutorialPlaying = false;
   document.getElementById('tutorialListScreen').classList.add('hidden');
   showGameScreen();
+  if (rule.interactive) {
+    openBasicsTutorial(rule);
+    return;
+  }
   stageTutorialScenario(rule);
   setTutorialInfoHidden(false);
   document.getElementById('tutorialInfoName').textContent = rule.name;
@@ -6510,6 +6535,157 @@ function tutorialPlaceCard(owner, cardId, cellIndex) {
   state.turn = owner === 'p1' ? 'p2' : 'p1';
   renderAll();
   return playCardPlacementSequence({ cellIndex, captureResult, flightEl });
+}
+// --- Basics tutorial (interactive) ------------------------------------
+// Every other tutorial entry is a scripted, hands-off demo. This one has
+// the player actually make the move themselves: it briefly opts p1 back
+// into real interaction (see canAct()'s state.tutorialInteractive check),
+// then reuses the exact same selectCard()/placeCard() flow as a real
+// match, and just polls state for when the player's single hand card has
+// been played to know when to advance.
+const TUTORIAL_BASICS_STEPS = [
+  {
+    title: 'Flipping Cards',
+    instruction: "Higher numbers beat lower numbers on the side that touches. Play your card next to the opponent's card to flip it.",
+    p2CardId: 5,  // Blobra (level 1) -- a 3 on the right
+    p1CardId: 1,  // Geezard (level 1) -- a 5 on the left
+    p2Cell: 4,    // center
+  },
+  {
+    title: 'Aces Are 10',
+    instruction: "The number 10 is shown as 'A'. Play your A next to the opponent's card in the top-left corner to beat its 9.",
+    p2CardId: 83, // Quezacotl -- a 9 on the right
+    p1CardId: 94, // Cerberus -- a 10 (A) on the left
+    p2Cell: 0,    // top-left corner
+  },
+];
+let basicsSessionId = 0;
+let basicsStepIndex = 0;
+// Stages a step's board/hand but leaves it non-interactive
+// (state.tutorialInteractive stays false) until the Play button starts it --
+// this is what keeps the instruction panel from being shoved aside the
+// instant the screen loads, and keeps the card unplayable until the player
+// is actually ready to try.
+function stageBasicsStep(index) {
+  const step = TUTORIAL_BASICS_STEPS[index];
+  if (!step) return;
+  stopTurnTimer();
+  state.mode = 'tutorial';
+  state.roomId = null;
+  state.seat = null;
+  state.cpuOpponent = false;
+  state.rules = {
+    same: false, plus: false, up: false, combo: false, elemental: false, random: false,
+    sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false,
+    reverse: false, chaos: false, order: false, swap: false, roulette: false,
+  };
+  state.board = Array(9).fill(null);
+  state.board[step.p2Cell] = { card: { ...CARD_DB.find(c => c.id === step.p2CardId) }, owner: 'p2', _placedBy: 'p2' };
+  state.hands = { p1: tutorialHandFromIds([step.p1CardId]), p2: [] };
+  tagHandOwnership(state.hands);
+  state.forcedCardId = { p1: null, p2: null };
+  state.forcedCardTurnKey = { p1: null, p2: null };
+  state.closedSingleCardId = { p1: null, p2: null };
+  state.boardElements = Array(9).fill(null);
+  state.selected = null;
+  state.gameOver = false;
+  state.suppressOverlay = true;
+  state.turn = 'p1';
+  state.tutorialInteractive = false;
+  state.rankedTriggerTally = { p1: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 }, p2: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 } };
+  renderAll();
+}
+// Resolves true once the player's one hand card has been played, or false
+// if the tutorial was navigated away from while waiting.
+function waitForBasicsMove(mySessionId) {
+  return new Promise(resolve => {
+    const check = () => {
+      if (mySessionId !== basicsSessionId) { resolve(false); return; }
+      if (!state.hands.p1 || state.hands.p1.length === 0) { resolve(true); return; }
+      setTimeout(check, 150);
+    };
+    check();
+  });
+}
+// Stages the given step and shows its instructions with a Play button --
+// the card is dealt but not yet playable, so the panel can sit there as
+// long as the player wants to read it without anything happening on board.
+function presentBasicsStep(index) {
+  basicsStepIndex = index;
+  const step = TUTORIAL_BASICS_STEPS[index];
+  if (!step) return;
+  stageBasicsStep(index);
+  document.getElementById('tutorialInfoName').textContent = `${step.title} (${index + 1}/${TUTORIAL_BASICS_STEPS.length})`;
+  document.getElementById('tutorialInfoDesc').textContent = step.instruction;
+  setTutorialInfoHidden(false);
+  const playBtn = document.getElementById('tutorialPlayBtn');
+  if (playBtn) {
+    playBtn.textContent = '▶ Play Example';
+    playBtn.classList.remove('hidden');
+    playBtn.disabled = false;
+  }
+}
+// Called when the Play button is hit: hides the instructions out of the
+// way, unlocks the card, and waits for the player's move before showing
+// the next message (success, a retry prompt, or the next step).
+async function startBasicsStep() {
+  const mySessionId = basicsSessionId;
+  const index = basicsStepIndex;
+  const step = TUTORIAL_BASICS_STEPS[index];
+  if (!step) return;
+  // Disabled (not just hidden) so that if the player peeks at the
+  // instructions mid-move via the Unhide eye icon, Play can't be clicked
+  // again and start a second, overlapping wait for the same move.
+  const playBtnEl = document.getElementById('tutorialPlayBtn');
+  if (playBtnEl) playBtnEl.disabled = true;
+  setTutorialInfoHidden(true);
+  state.tutorialInteractive = true;
+  renderAll();
+  const played = await waitForBasicsMove(mySessionId);
+  if (!played || mySessionId !== basicsSessionId) return;
+  await sleep(900);
+  if (mySessionId !== basicsSessionId) return;
+  // The player can approach from any open side, not just the one the
+  // instruction illustrates -- what matters is whether the highlighted
+  // card actually ended up flipped to their color.
+  const succeeded = state.board[step.p2Cell] && state.board[step.p2Cell].owner === 'p1';
+  if (succeeded && index + 1 < TUTORIAL_BASICS_STEPS.length) {
+    presentBasicsStep(index + 1);
+  } else if (succeeded) {
+    state.tutorialInteractive = false;
+    document.getElementById('tutorialInfoName').textContent = "You've got it!";
+    document.getElementById('tutorialInfoDesc').textContent = "That's the core of Triple Triad: higher beats lower on the touching side, and 10 is shown as 'A'.";
+    setTutorialInfoHidden(false);
+    const playBtn = document.getElementById('tutorialPlayBtn');
+    if (playBtn) {
+      playBtn.textContent = '↻ Play Example Again';
+      playBtn.classList.remove('hidden');
+      playBtn.disabled = false;
+    }
+    basicsStepIndex = -1; // signals tutorialPlayBtn to restart from step 0
+  } else {
+    document.getElementById('tutorialInfoName').textContent = 'Not quite';
+    document.getElementById('tutorialInfoDesc').textContent = "That didn't flip the card. Let's try again.";
+    stageBasicsStep(index);
+    setTutorialInfoHidden(false);
+    const playBtn = document.getElementById('tutorialPlayBtn');
+    if (playBtn) {
+      playBtn.textContent = '▶ Play Example';
+      playBtn.classList.remove('hidden');
+      playBtn.disabled = false;
+    }
+  }
+}
+function handleBasicsPlayClick() {
+  if (basicsStepIndex === -1) {
+    presentBasicsStep(0);
+  } else {
+    startBasicsStep();
+  }
+}
+function openBasicsTutorial(rule) {
+  basicsSessionId++;
+  presentBasicsStep(0);
 }
 // Meta/setup rules (Random, Sudden Death, Chaos, Swap, Roulette) don't have a
 // single capturing move to script -- each instead gets its own small
@@ -6662,7 +6838,11 @@ document.getElementById('tutorialListClose').addEventListener('click', closeTuto
 document.getElementById('tutorialListBack').addEventListener('click', closeTutorialList);
 document.getElementById('tutorialPlayBtn').addEventListener('click', () => {
   playSfx('cursorMove');
-  playTutorialDemo();
+  if (currentTutorialRule && currentTutorialRule.interactive) {
+    handleBasicsPlayClick();
+  } else {
+    playTutorialDemo();
+  }
 });
 document.getElementById('tutorialBackBtn').addEventListener('click', () => {
   playSfx('cursorCancel');
@@ -8085,7 +8265,11 @@ function attachHoldToRevealListeners(el) {
 function canAct(owner) {
   if (state.gameOver) return false;
   if (owner !== state.turn) return false;
-  if (state.mode === 'spectate' || state.mode === 'replay' || state.mode === 'tutorial') return false;
+  if (state.mode === 'spectate' || state.mode === 'replay') return false;
+  // Every other tutorial rule is a scripted, hands-off demo -- but the
+  // Basics lesson has the player actually place the card themselves, so it
+  // opts p1 back into interaction via state.tutorialInteractive.
+  if (state.mode === 'tutorial' && !(state.tutorialInteractive && owner === 'p1')) return false;
   if (state.mode === 'online' && state.seat !== owner) return false;
   if (state.cpuOpponent && owner === 'p2') return false;
   const spinner = document.getElementById('firstPlayerSpinner');
