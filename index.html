@@ -5804,9 +5804,28 @@ let replayInitialBoardElements = null;
 // mashing Forward or a fast autoplay interval can't stack animations on top
 // of each other or corrupt the board state mid-flight.
 let replayAnimating = false;
+// How long the finished match's win/draw overlay (and, for ranked rooms, the
+// cards-obtained summary) stays up before replay loops back to the start and
+// keeps playing, so a replay left running turns into a continuous demo
+// instead of just stopping dead on the last frame.
+const REPLAY_END_PAUSE_MS = 4500;
+let replayLoopTimer = null;
+function clearReplayLoopTimer() {
+  if (replayLoopTimer) { clearTimeout(replayLoopTimer); replayLoopTimer = null; }
+}
+function scheduleReplayLoopRestart() {
+  clearReplayLoopTimer();
+  replayLoopTimer = setTimeout(() => {
+    replayLoopTimer = null;
+    if (state.mode !== 'replay' || !state.replayMoves || !state.replayMoves.length) return;
+    renderReplayFrame(0);
+    startReplayPlayback();
+  }, REPLAY_END_PAUSE_MS);
+}
 function stopReplayPlayback() {
   replayPlaying = false;
   if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+  clearReplayLoopTimer();
   const btn = document.getElementById('replayPlayPauseBtn');
   if (btn) btn.textContent = '▶ Play';
 }
@@ -5816,6 +5835,12 @@ function startReplayPlayback() {
   replayPlaying = true;
   const btn = document.getElementById('replayPlayPauseBtn');
   if (btn) btn.textContent = '⏸ Pause';
+  // Play the first move immediately instead of sitting on the current frame
+  // for a full REPLAY_STEP_MS before anything happens -- the interval below
+  // only needs to cover the gap *between* moves from here on.
+  if (!replayAnimating) {
+    if (!stepReplay(1)) { stopReplayPlayback(); return; }
+  }
   replayTimer = setInterval(() => {
     if (replayAnimating) return; // let the in-flight animation finish; try again next tick
     if (!stepReplay(1)) stopReplayPlayback();
@@ -5844,6 +5869,7 @@ function stepReplay(direction) {
   const maxIndex = state.replayMoves.length;
   const nextIndex = state.replayIndex + direction;
   if (nextIndex < 0 || nextIndex > maxIndex) return false;
+  clearReplayLoopTimer();
   if (direction > 0) {
     animateReplayStepForward(nextIndex);
   } else {
@@ -5931,6 +5957,7 @@ function animateReplayStepForward(index) {
   Promise.resolve(playCardPlacementSequence({ cellIndex: move.cellIndex, captureResult: move.captureResult || {}, flightEl })).then(() => {
     replayAnimating = false;
     updateReplayControlsUi(state.replayIndex);
+    if (isLastMove) scheduleReplayLoopRestart();
   });
 }
 async function openReplayViewer(root, roomId) {
@@ -5938,6 +5965,7 @@ async function openReplayViewer(root, roomId) {
   stopAutoWatch();
   leaveOnlineRoomOrSpectate();
   stopReplayPlayback();
+  clearReplayLoopTimer();
   showGameScreen();
   let room = null;
   try {
@@ -5975,6 +6003,7 @@ async function openReplayViewer(root, roomId) {
 }
 function closeReplayViewer() {
   stopReplayPlayback();
+  clearReplayLoopTimer();
   state.replayMoves = null;
   state.replayIndex = -1;
   document.getElementById('replayControls').classList.add('hidden');
