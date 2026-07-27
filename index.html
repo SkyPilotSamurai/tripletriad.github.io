@@ -3226,6 +3226,13 @@ async function tryClaimOpenSeat(roomId, playerName, root = ROOMS_ROOT) {
   // again for someone joining by room ID.
   const presenceSnap = await rtdb.ref(`${root}/${roomId}/presence`).once('value');
   const presence = presenceSnap.val() || {};
+  // Signed-in players are only allowed to be matched against a room they
+  // already occupy the other seat of (the admin account is exempt, so it can
+  // self-test both sides of a match) -- otherwise skip this room and keep
+  // looking rather than pairing someone up against their own other session.
+  const seatUidsSnap = await rtdb.ref(`${root}/${roomId}/seatUids`).once('value');
+  const seatUids = seatUidsSnap.val() || {};
+  const isAdminAccount = !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
   let claimedSeat = null;
   let alreadyFull = false;
   const result = await seatsRef.transaction(seats => {
@@ -3240,6 +3247,11 @@ async function tryClaimOpenSeat(roomId, playerName, root = ROOMS_ROOT) {
       return seats;
     }
     if (p2Open) {
+      const opponentUid = seatUids.p1;
+      if (!isAdminAccount && currentUser && opponentUid && opponentUid === currentUser.uid) {
+        claimedSeat = null;
+        return seats;
+      }
       seats.p2 = { playerId: localPlayerId, name: playerName || 'Player' };
       claimedSeat = 'p2';
       return seats;
