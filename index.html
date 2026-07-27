@@ -2467,7 +2467,22 @@
           </select>
         </label>
       </div>
-      <div class="settings-row checkbox-row"><label><input type="checkbox" id="showAdjustedStatsToggle" checked> Show Adjusted Stats (Elemental)</label></div>
+      <div class="settings-row">
+        <label>Flip Type
+          <select id="flipTypeSelect">
+            <option value="both" selected>Horizontal &amp; Vertical</option>
+            <option value="horizontal">Horizontal Only</option>
+          </select>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label>Elemental Stats
+          <select id="elementalStatsSelect">
+            <option value="adjust" selected>Adjust Numbers</option>
+            <option value="plusOne">Just +1 Number</option>
+          </select>
+        </label>
+      </div>
     </div>
     <div class="settings-section">
       <h3>Audio</h3>
@@ -2491,7 +2506,7 @@
         <div class="audio-col">
           <h4>Sound Effects</h4>
           <div class="settings-row checkbox-row"><label><input type="checkbox" id="sfxToggle" checked> SFX</label></div>
-          <div class="settings-row checkbox-row"><label><input type="checkbox" id="sfxHoverToggle"> SFX (Hover)</label></div>
+          <div class="settings-row checkbox-row"><label><input type="checkbox" id="sfxHoverToggle"> SFX (Hand Hover)</label></div>
           <div class="settings-row">
             <label>Cursor Volume
               <select id="cursorVolumeSelect"></select>
@@ -4214,7 +4229,7 @@ const state = {
   elementAlignment: 100,
   elementalMode: 'buffnerf',
   elementalBias: 80,
-  showAdjustedStats: true,
+  elementalStatsMode: 'adjust',
   mode: 'practice',
   seat: null,
   roomId: null,
@@ -6431,6 +6446,12 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
     if (captureResult.up && captureResult.upHasExtra) await showRuleBanner('up');
     const flipWaves = captureResult.flipWaves || [];
     const comboWaveIndices = captureResult.comboWaveIndices || [];
+    const flipOrientations = captureResult.flipOrientations || {};
+    // A capture won via the attacker's top/bottom number flips the defender
+    // around a horizontal hinge (rotateX, vertical flip); one won via
+    // left/right flips it around a vertical hinge (rotateY, horizontal
+    // flip) -- matching whichever side actually did the capturing.
+    const flipAxisFor = i => (!flipTypeHorizontalOnly && flipOrientations[i] === 'v') ? 'rotateX' : 'rotateY';
     let anyFlipped = false;
     for (let w = 0; w < flipWaves.length; w++) {
       if (comboWaveIndices.includes(w)) await showRuleBanner('combo');
@@ -6445,9 +6466,10 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
         const cellEl = document.querySelectorAll('#board .cell')[i];
         const oldCardEl = cellEl && cellEl.querySelector('.card');
         if (!oldCardEl) return Promise.resolve();
+        const axis = flipAxisFor(i);
         return oldCardEl.animate([
-          { transform: 'rotateY(0deg) scale(1)' },
-          { transform: 'rotateY(90deg) scale(1.05)' }
+          { transform: `${axis}(0deg) scale(1)` },
+          { transform: `${axis}(90deg) scale(1.05)` }
         ], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
       });
       await Promise.all(outAnims);
@@ -6458,6 +6480,7 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
         delete cell._displayOwner;
         const cellEl = document.querySelectorAll('#board .cell')[i];
         if (!cellEl) return;
+        const axis = flipAxisFor(i);
         const newCardEl = createCardElement(cell.card, cell.owner, i);
         const oldCardEl = cellEl.querySelector('.card');
         const oldArtEl = oldCardEl && oldCardEl.querySelector('.art');
@@ -6465,7 +6488,7 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
         if (oldArtEl && newArtEl) {
           newArtEl.replaceWith(oldArtEl);
         }
-        newCardEl.style.transform = 'rotateY(90deg) scale(1.05)';
+        newCardEl.style.transform = `${axis}(90deg) scale(1.05)`;
         cellEl.innerHTML = '';
         cellEl.appendChild(newCardEl);
         cellEl.dataset.sig = boardCellSignature(cell, i);
@@ -6478,11 +6501,11 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
         // resetting the inline transform after it settles is a second layer
         // of safety against that same disappearing-card bug.
         const revealAnim = newCardEl.animate([
-          { transform: 'rotateY(90deg) scale(1.05)' },
-          { transform: 'rotateY(0deg) scale(1)' }
+          { transform: `${axis}(90deg) scale(1.05)` },
+          { transform: `${axis}(0deg) scale(1)` }
         ], { duration: 220, easing: 'ease-out', fill: 'forwards' });
         revealAnim.finished.catch(() => {}).then(() => {
-          newCardEl.style.transform = 'rotateY(0deg) scale(1)';
+          newCardEl.style.transform = `${axis}(0deg) scale(1)`;
         });
       });
       if (waveIndices.length > 0) updateScores();
@@ -6941,6 +6964,13 @@ function resolveCaptures(index, owner) {
     capturesBeats(index, placedCell.card, n.mySide, n.index, n.cell.card, n.theirSide)
   );
   const toFlip = new Set(basicCaptures.map(n => n.index));
+  // Which axis each captured cell's flip animation should rotate around: a
+  // capture won via the attacker's top/bottom number flips the defender
+  // vertically (rotateX), one won via left/right flips it horizontally
+  // (rotateY) -- matching whichever side "did the flipping".
+  const flipOrientations = {};
+  const orientationForSide = side => (side === 'top' || side === 'bottom') ? 'v' : 'h';
+  basicCaptures.forEach(n => { flipOrientations[n.index] = orientationForSide(n.mySide); });
   let comboTriggered = false;
   let sameHit = false;
   let plusHit = false;
@@ -6956,7 +6986,7 @@ function resolveCaptures(index, owner) {
       : 0;
     if (sameMatches.length + sameWallMatchCount >= 2) {
       sameMatches.forEach(n => {
-        if (n.cell.owner === opponent) { toFlip.add(n.index); sameFlipIndices.add(n.index); }
+        if (n.cell.owner === opponent) { toFlip.add(n.index); sameFlipIndices.add(n.index); flipOrientations[n.index] = orientationForSide(n.mySide); }
       });
       if (sameFlipIndices.size > 0) {
         comboTriggered = true;
@@ -6974,7 +7004,7 @@ function resolveCaptures(index, owner) {
       if (group.length >= 2) {
         const groupFlipIndices = [];
         group.forEach(n => {
-          if (n.cell.owner === opponent) { toFlip.add(n.index); plusFlipIndices.add(n.index); groupFlipIndices.push(n.index); }
+          if (n.cell.owner === opponent) { toFlip.add(n.index); plusFlipIndices.add(n.index); groupFlipIndices.push(n.index); flipOrientations[n.index] = orientationForSide(n.mySide); }
         });
         if (groupFlipIndices.length > 0) {
           comboTriggered = true;
@@ -6990,7 +7020,7 @@ function resolveCaptures(index, owner) {
     );
     if (upMatches.length >= 2) {
       upMatches.forEach(n => {
-        if (n.cell.owner === opponent) { toFlip.add(n.index); upFlipIndices.add(n.index); }
+        if (n.cell.owner === opponent) { toFlip.add(n.index); upFlipIndices.add(n.index); flipOrientations[n.index] = orientationForSide(n.mySide); }
       });
       if (upFlipIndices.size > 0) {
         comboTriggered = true;
@@ -7016,6 +7046,7 @@ function resolveCaptures(index, owner) {
             flipCells([n.index], owner);
             visited.add(n.index);
             nextWave.push(n.index);
+            flipOrientations[n.index] = orientationForSide(n.mySide);
             chainAddedMore = true;
           }
         });
@@ -7030,7 +7061,7 @@ function resolveCaptures(index, owner) {
   const plusHasExtra = [...plusFlipIndices].some(i => !sameFlipIndices.has(i));
   const upHasExtra = [...upFlipIndices].some(i => !sameFlipIndices.has(i) && !plusFlipIndices.has(i));
   const elementalHit = placedElementalMod > 0 && toFlip.size > 0;
-  return { same: sameHit, plus: plusHit, plusHasExtra, up: upHit, upHasExtra, elemental: elementalHit, combo: chainAddedMore, flipWaves, comboWaveIndices };
+  return { same: sameHit, plus: plusHit, plusHasExtra, up: upHit, upHasExtra, elemental: elementalHit, combo: chainAddedMore, flipWaves, comboWaveIndices, flipOrientations };
 }
 function flipCells(indices, newOwner) {
   indices.forEach(i => {
@@ -7359,7 +7390,12 @@ function createCardElement(card, owner, cellIndex, hidden) {
   const mod = (cellIndex === undefined || cellIndex === null) ? 0 : elementalModifier(cellIndex, card);
   const modClass = mod > 0 ? ' val-boost' : (mod < 0 ? ' val-penalty' : '');
   const effective = side => Math.max(1, Math.min(10, card[side] + mod));
-  const showAdjustedByDefault = state.showAdjustedStats;
+  // "Adjust Numbers" == old checked state: modified stat as the big primary
+  // number, original as the small secondary. "Just +1 Number" == old
+  // unchecked state: original stat primary, modified as the small secondary.
+  // Same exact display logic as before -- this is just the dropdown/label
+  // rename, not a behavior change.
+  const showAdjustedByDefault = state.elementalStatsMode !== 'plusOne';
   const adjustedSet = { top: effective('top'), right: effective('right'), bottom: effective('bottom'), left: effective('left') };
   const plainSet = { top: card.top, right: card.right, bottom: card.bottom, left: card.left };
   const primary = showAdjustedByDefault ? adjustedSet : plainSet;
@@ -7538,7 +7574,7 @@ function boardCellSignature(cell, i) {
   const justLanding = !!cell._justPlaced;
   const owner = cell._displayOwner || cell.owner;
   const elem = state.rules.elemental && state.boardElements[i] ? state.boardElements[i] : '';
-  return `${cell.card.id}|${owner}|${justLanding ? 'landing' : 'settled'}|${elem}|${state.showAdjustedStats}|${state.elementalMode}`;
+  return `${cell.card.id}|${owner}|${justLanding ? 'landing' : 'settled'}|${elem}|${state.elementalStatsMode}|${state.elementalMode}`;
 }
 function renderBoard() {
   const container = document.getElementById('board');
@@ -8056,7 +8092,10 @@ function syncHandBoardCenter() {
 // the individual volume controls are set to.
 const GLOBAL_VOLUME_SCALE = 0.5;
 const MUSIC_TRACKS = [
-  { name: "Shuffle or Boogie", file: "Music/Shuffle or Boogie.mp3", gain: 1 },
+  // loopStart/loopEnd (seconds): the track plays 0:00 -> loopEnd normally on
+  // first play, then once playback passes loopEnd it jumps back to loopStart
+  // instead of restarting from the top or hitting the file's real end.
+  { name: "Shuffle or Boogie", file: "Music/Shuffle or Boogie.mp3", gain: 1, loopStart: 56, loopEnd: 872 },
   { name: "Tetra Master", file: "Music/Tetra Master.mp3", gain: 1.4 },
   { name: "Joustus - Cannon in B-Flat Major", file: "Music/Joustus - Cannon in B-Flat Major.mp3", gain: 0.35 },
 ];
@@ -8076,7 +8115,7 @@ function initMusicPlayer() {
     const opt = document.createElement('option');
     opt.value = v;
     opt.textContent = v + '%';
-    if (v === 10) opt.selected = true;
+    if (v === 20) opt.selected = true;
     volumeSelect.appendChild(opt);
   }
   function applyVolume() {
@@ -8086,6 +8125,16 @@ function initMusicPlayer() {
   }
   applyVolume();
   volumeSelect.addEventListener('change', applyVolume);
+  // Custom A/B loop point for tracks that have one (see MUSIC_TRACKS) --
+  // plays through from the start normally, then once playback crosses
+  // loopEnd it jumps back to loopStart instead of restarting at 0 or
+  // hitting the file's actual end.
+  audio.addEventListener('timeupdate', () => {
+    const track = MUSIC_TRACKS[Number(select.value)];
+    if (track && track.loopEnd != null && audio.currentTime >= track.loopEnd) {
+      audio.currentTime = track.loopStart || 0;
+    }
+  });
   function loadTrack(idx, tryPlay) {
     audio.src = MUSIC_TRACKS[idx].file;
     applyVolume();
@@ -8238,7 +8287,7 @@ const SFX = {
   cardObtained: "Sound/Card Obtained.wav",
   shopPurchase: "Sound/Shop Purchase.wav",
 };
-const sfxState = { enabled: true, cursorVolume: 0.1, cardVolume: 0.1, hoverEnabled: false };
+const sfxState = { enabled: true, cursorVolume: 0.2, cardVolume: 0.2, hoverEnabled: false };
 const SFX_CATEGORY = {
   cursorMove: 'cursor',
   cursorCancel: 'cursor',
@@ -8269,7 +8318,7 @@ function initSfxControls() {
       const opt = document.createElement('option');
       opt.value = v;
       opt.textContent = v + '%';
-      if (v === 10) opt.selected = true;
+      if (v === 20) opt.selected = true;
       select.appendChild(opt);
     }
   });
@@ -8447,8 +8496,8 @@ document.getElementById('elementalModeSelect').addEventListener('change', e => {
   state.elementalMode = e.target.value;
   renderBoard();
 });
-document.getElementById('showAdjustedStatsToggle').addEventListener('change', e => {
-  state.showAdjustedStats = e.target.checked;
+document.getElementById('elementalStatsSelect').addEventListener('change', e => {
+  state.elementalStatsMode = e.target.value;
   renderBoard();
 });
 function resetOrLeaveToMenu() {
@@ -10060,13 +10109,22 @@ handStyleSelect.addEventListener('change', () => {
   handContainers.forEach(el => el.classList.toggle('stack', handStyleSelect.value === 'stack'));
   syncHandBoardCenter();
 });
+// "Horizontal Only" forces every capture flip to rotate around the vertical
+// hinge (rotateY) regardless of which side captured it; "Horizontal &
+// Vertical" (default) lets top/bottom captures flip around the horizontal
+// hinge (rotateX) instead, per flipOrientations from resolveCaptures().
+const flipTypeSelect = document.getElementById('flipTypeSelect');
+let flipTypeHorizontalOnly = false;
+flipTypeSelect.addEventListener('change', () => {
+  flipTypeHorizontalOnly = flipTypeSelect.value === 'horizontal';
+});
 window.addEventListener('resize', syncHandBoardCenter);
 const SETTINGS_STORAGE_KEY = 'tripleTriadSettings';
 const PERSISTED_CONTROL_IDS = [
   'ruleSame', 'rulePlus', 'ruleUp', 'ruleCombo',
-  'elementalModeSelect', 'alignmentSelect', 'elementalBiasSelect', 'showAdjustedStatsToggle', 'ruleElemental',
+  'elementalModeSelect', 'alignmentSelect', 'elementalBiasSelect', 'elementalStatsSelect', 'ruleElemental',
   'ruleRandom',
-  'layoutSelect', 'shapeSelect', 'bgSelect', 'handStyleSelect',
+  'layoutSelect', 'shapeSelect', 'bgSelect', 'handStyleSelect', 'flipTypeSelect',
   'musicSelect', 'volumeSelect',
   'sfxToggle', 'sfxHoverToggle', 'cursorVolumeSelect', 'cardVolumeSelect',
 ];
