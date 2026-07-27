@@ -153,6 +153,12 @@
     gap: 20px;
   }
   #titleBar.hidden, #onlineTitleBar.hidden, #cpuSetupTitleBar.hidden { display: none; }
+  /* Flatten the title-left/title-right split into one continuous flex row so
+     there's a single, uniform gap between every icon group instead of two
+     separate gap contexts (outer, between the two side-divs; inner, between
+     groups within a side) that could add up unevenly and leave a big gap
+     down the middle of the bar. */
+  #titleBar .title-side { display: contents; }
   .icon-btn {
     background: #2d3748;
     color: #eee;
@@ -168,7 +174,6 @@
     line-height: 1;
     padding: 0;
   }
-  #spectateBgSpacer { visibility: hidden; pointer-events: none; }
   .icon-btn:hover { background: #3a465c; }
   .icon-btn.active { background: #fff; color: #222; border-color: #fff; }
   .icon-btn.active:hover { background: #e6e6e6; }
@@ -2320,10 +2325,6 @@
     <span class="icon-label-group hidden" id="rulesTitleGroup">
       <span class="icon-label">Rules</span>
       <button id="rulesBtn" class="icon-btn" title="Rules">📜</button>
-    </span>
-    <span class="icon-label-group hidden" id="spectateBgSpacer" aria-hidden="true">
-      <span class="icon-label">No BG</span>
-      <button class="icon-btn" tabindex="-1">🖼</button>
     </span>
   </div>
   <div class="title-side title-right">
@@ -5239,10 +5240,16 @@ function hideWaitingForOpponent() {
   const overlay = document.getElementById('firstPlayerSpinner');
   const arrow = document.getElementById('firstPlayerArrow');
   if (!overlay || !arrow) return;
-  const label = document.getElementById('firstPlayerLabel');
-  if (label && WAITING_FOR_OPPONENT_MESSAGES.includes(label.textContent)) {
-    overlay.classList.add('hidden');
-  }
+  // Used to only hide if the label's text matched a hardcoded allowlist of
+  // "waiting" messages, but several real messages (the auto-watch "Waiting
+  // for an active game...", "Could not reach the server...", "That game
+  // ended...", the rules-agreement wait, etc.) were never added to that list,
+  // so calling this after showing one of them silently did nothing and left
+  // the overlay stuck on screen indefinitely -- including over a replay's
+  // board, since openReplayViewer routes through here on its way in. This
+  // function is only ever called when the caller genuinely wants the overlay
+  // gone, so just always hide it.
+  overlay.classList.add('hidden');
   const spinnerBackBtn = document.getElementById('spinnerBackToMenu');
   if (spinnerBackBtn) spinnerBackBtn.classList.add('hidden');
   arrow.style.display = '';
@@ -7952,7 +7959,6 @@ function updateTitleBarControls() {
   const rulesGroup = document.getElementById('rulesTitleGroup');
   const spectateBgGroup = document.getElementById('spectateBgGroup');
   const spectateBgBtn = document.getElementById('spectateBgBtn');
-  const spectateBgSpacer = document.getElementById('spectateBgSpacer');
   if (!resetGroup || !resetBtnEl || !resetLabel) return;
   if (state.mode === 'practice' && !state.cpuOpponent) {
     resetGroup.classList.remove('hidden');
@@ -7980,7 +7986,6 @@ function updateTitleBarControls() {
   if (rulesGroup) rulesGroup.classList.toggle('hidden', state.mode !== 'practice' || state.cpuOpponent);
   const showBgToggle = state.mode === 'spectate' || state.mode === 'replay';
   if (spectateBgGroup) spectateBgGroup.classList.toggle('hidden', !showBgToggle);
-  if (spectateBgSpacer) spectateBgSpacer.classList.toggle('hidden', !showBgToggle);
   if (spectateBgBtn) spectateBgBtn.classList.toggle('active', spectatePurpleBg);
   const isOnlineMatch = state.mode === 'online';
   const titleBar = document.getElementById('titleBar');
