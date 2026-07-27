@@ -21,7 +21,7 @@
     position: relative;
     z-index: 0;
     overflow: clip;
-    --bg-image: url('Backgrounds/Balamb Garden.png');
+    --bg-image: url('Backgrounds/Triple Triad.png');
     -webkit-user-select: none;
     user-select: none;
   }
@@ -70,7 +70,7 @@
   #turnIndicator.turn-p1 { color: #3a8fe6; }
   #turnIndicator.turn-p2 { color: #ff4fa3; }
   #turnTimer { font-size: 13px; color: #888; font-variant-numeric: tabular-nums; }
-  #turnTimer.low { color: #ffa64f; }
+  #turnTimer.low { color: #ff4444; }
   #matchupBox {
     width: 464px;
     box-sizing: border-box;
@@ -189,7 +189,7 @@
     display: none;
     align-items: flex-start;
     justify-content: center;
-    z-index: 310;
+    z-index: 420;
   }
   #settingsModal.show { display: flex; }
   #settingsPanel {
@@ -408,6 +408,15 @@
     column-gap: 20px;
   }
   .checkbox-grid .settings-row { margin: 4px 0; }
+  .checkbox-grid-header {
+    grid-column: 1 / -1;
+    margin: 10px 0 2px;
+    font-size: 13px;
+    color: #8fa3bf;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .checkbox-grid-header:first-child { margin-top: 0; }
   .audio-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -551,6 +560,7 @@
   body.spectate-purple-bg::before { display: none; }
   #handP2 .card.disabled { opacity: 1; }
   .card.selected .card-inner { outline: 0px solid #fff; outline-offset: 3px; }
+  .card.turn-restricted:not(.disabled) { filter: brightness(50%); }
   .elem-icon {
     position: absolute;
     top: 5px;
@@ -754,6 +764,11 @@
     box-sizing: border-box;
   }
   #tradePanel.hidden { display: none; }
+  /* Keep the title bar's Exit control clickable even while the post-match
+     trade/spoils screen (which spectators now see too) covers the rest of
+     the game underneath it. Scoped to spectate mode only, so the title bar
+     doesn't also float above things like the Rules modal in other modes. */
+  body.spectate-mode #titleBar { position: relative; z-index: 410; }
   #tradePanelInner {
     display: flex;
     flex-direction: column;
@@ -858,6 +873,8 @@
   #tradeRevealDupNote .dup-gil { color: #ffd479; }
   #tradeRevealDupNote.hidden { display: none; }
   #overlayStatus { font-size: 16px; color: #fff; min-height: 20px; margin-top: -14px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px rgba(0,0,0,0.6); }
+  #overlayGilResult { font-size: 18px; color: #ffd479; font-weight: bold; margin-top: -12px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px rgba(0,0,0,0.6); }
+  #overlayGilResult.hidden { display: none; }
   #overlayGraphic {
     max-width: 420px;
     display: none;
@@ -903,6 +920,13 @@
     border-radius: 0;
   }
   #firstPlayerSpinner.hidden { display: none; }
+  #spinnerBackToMenu {
+    margin-top: -4px;
+    padding: 9px 8px;
+    font-size: 10px;
+    border-radius: 5px;
+    gap: 5px;
+  }
   .board-info-hidden { visibility: hidden; }
   #board.board-not-summoned { display: none; }
   #firstPlayerArrow {
@@ -1074,6 +1098,8 @@
   #leaderboardListHeader { color: #8a92a6; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; }
   .leaderboard-row { background: #1c2333; border: 1px solid #4a5568; border-radius: 6px; color: #eee; }
   .leaderboard-row.leaderboard-me { border-color: #fff; background: #262f45; }
+  .leaderboard-row-clickable { cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease; }
+  .leaderboard-row-clickable:hover { background: #262f45; border-color: #6b7690; }
   .leaderboard-col-rank, .leaderboard-col-points, .leaderboard-col-record { text-align: right; color: #b8c0d0; }
   .leaderboard-col-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #leaderboardList { width: 100%; display: flex; flex-direction: column; gap: 8px; margin: 4px 0 14px; max-height: 62vh; overflow-y: auto; }
@@ -1328,7 +1354,7 @@
     max-width: 480px;
     box-sizing: border-box;
     padding: 32px 36px;
-    margin-top: 8px;
+    margin-top: 0;
     background: #1a2130;
     border: 1px solid #4a5568;
     border-radius: 14px;
@@ -1371,6 +1397,15 @@
   #lobbyRules .lobby-rule-cols > .lobby-rule-warning {
     grid-column: 1 / 3;
   }
+  .lobby-rule-group-header {
+    grid-column: 1 / 3;
+    margin: 12px 0 2px;
+    font-size: 13px;
+    color: #8fa3bf;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lobby-rule-group-header:first-child { margin-top: 0; }
   .lobby-rule-row {
     display: grid;
     grid-template-columns: 1fr auto auto;
@@ -1430,7 +1465,7 @@
   #pickerBudget:empty { display: none; }
   #pickerBudget.picker-budget-over { color: #ffa64f; }
   #pickerTimer { font-size: 13px; color: #888; font-variant-numeric: tabular-nums; margin-top: 2px; }
-  #pickerTimer.low { color: #ffa64f; }
+  #pickerTimer.low { color: #ff4444; }
   #pickerTabs {
     display: flex;
     flex-wrap: wrap;
@@ -1548,6 +1583,8 @@
     white-space: normal;
     text-align: center;
     transform: none;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
   .picker-tile .card .label {
     width: 124px;
@@ -1921,17 +1958,15 @@
     gap: 18px;
     padding: 30px;
   }
-  #boosterOpenLocationArt {
+  #boosterOpenCardWrap .booster-pack-card {
     width: 168px;
     height: 200px;
     border-radius: 8px;
     border: 3px solid #d9c47a;
     box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-    cursor: pointer;
     transition: transform 0.2s ease;
   }
-  #boosterOpenLocationArt:hover { transform: scale(1.03); }
-  #boosterOpenLocationArt.hidden { display: none; }
+  #boosterOpenCardWrap .booster-pack-card:hover { transform: scale(1.03); }
   #boosterOpenLabel {
     color: #e6dcc0;
     font-size: 16px;
@@ -2239,6 +2274,7 @@
       <button class="menu-btn" id="menuCardIndex">Card Index (Ranked)</button>
       <button class="menu-btn" id="menuLeaderboard">Leaderboards</button>
       <button class="menu-btn hidden" id="menuAdminGive">Give Cards (Admin)</button>
+      <button class="menu-btn hidden" id="menuAdminRestorePoints">Restore Lost Points (Admin)</button>
     </div>
     <div id="menuStatus"></div>
     <div id="joinRoomPanel" class="hidden">
@@ -2330,6 +2366,7 @@
     <div id="firstPlayerSpinner" class="hidden">
       <div id="firstPlayerArrow"></div>
       <div id="firstPlayerLabel"></div>
+      <button class="menu-btn menu-btn-secondary hidden" id="spinnerBackToMenu">Back to Menu</button>
     </div>
   </div>
   <div id="handP2" class="hand stack"></div>
@@ -2344,6 +2381,7 @@
     <button id="overlayRematchSame" class="hidden">Rematch (Same Rules/Points)</button>
     <button id="overlayLeave" class="hidden">Leave Room</button>
   </div>
+  <div id="overlayGilResult" class="hidden"></div>
 </div>
 <div id="tradePanel" class="hidden">
   <div id="tradePanelInner">
@@ -2387,8 +2425,8 @@
       <div class="settings-row">
         <label>Background
           <select id="bgSelect">
-            <option value="Backgrounds/Balamb Garden.png" selected>Balamb Garden</option>
-            <option value="Backgrounds/Triple Triad.png">Triple Triad</option>
+            <option value="Backgrounds/Triple Triad.png" selected>Triple Triad</option>
+            <option value="Backgrounds/Balamb Garden.png">Balamb Garden</option>
             <option value="none">No Background</option>
           </select>
         </label>
@@ -2466,14 +2504,24 @@
     <button id="rulesClose" aria-label="Close">✕</button>
     <h2>Rules</h2>
     <div class="checkbox-grid">
+      <div class="checkbox-grid-header">Regular Rules</div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleSame" checked> Same</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleSameWall"> Same Wall</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="rulePlus" checked> Plus</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleUp"> Up</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleCombo"> Combo</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleElemental"> Elemental</label></div>
-      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleRandom"> Random</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleSwap"> Swap</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleSuddenDeath"> Sudden Death</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleClosed"> Closed</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleClosedSingle"> Closed Single</label></div>
+      <div class="checkbox-grid-header">Chaotic Rules</div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleRandom"> Random</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleReverse"> Reverse</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleOrder"> Order</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleChaos"> Chaos</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleFallenAce"> Fallen Ace</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleRoulette"> Roulette</label></div>
     </div>
     <div class="settings-row">
       <label>Elemental Mode
@@ -2518,6 +2566,7 @@
     <div id="lobbyRules">
       <h3>Rules</h3>
       <div class="lobby-rule-cols">
+      <div class="lobby-rule-group-header">Regular Rules</div>
       <div class="lobby-rule-row">
         <label><input type="checkbox" id="lobbyRuleSame"> Same</label>
         <span class="lobby-vote-icon" id="lobbyVoteMeSame">?</span>
@@ -2549,9 +2598,9 @@
         <span class="lobby-vote-icon" id="lobbyVoteThemElemental">?</span>
       </div>
       <div class="lobby-rule-row">
-        <label><input type="checkbox" id="lobbyRuleRandom"> Random</label>
-        <span class="lobby-vote-icon" id="lobbyVoteMeRandom">?</span>
-        <span class="lobby-vote-icon" id="lobbyVoteThemRandom">?</span>
+        <label><input type="checkbox" id="lobbyRuleSwap"> Swap</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeSwap">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemSwap">?</span>
       </div>
       <div class="lobby-rule-row">
         <label><input type="checkbox" id="lobbyRuleSuddenDeath"> Sudden Death</label>
@@ -2567,6 +2616,37 @@
         <label><input type="checkbox" id="lobbyRuleClosedSingle"> Closed Single</label>
         <span class="lobby-vote-icon" id="lobbyVoteMeClosedSingle">?</span>
         <span class="lobby-vote-icon" id="lobbyVoteThemClosedSingle">?</span>
+      </div>
+      <div class="lobby-rule-group-header">Chaotic Rules</div>
+      <div class="lobby-rule-row">
+        <label><input type="checkbox" id="lobbyRuleRandom"> Random</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeRandom">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemRandom">?</span>
+      </div>
+      <div class="lobby-rule-row">
+        <label><input type="checkbox" id="lobbyRuleReverse"> Reverse</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeReverse">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemReverse">?</span>
+      </div>
+      <div class="lobby-rule-row">
+        <label><input type="checkbox" id="lobbyRuleOrder"> Order</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeOrder">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemOrder">?</span>
+      </div>
+      <div class="lobby-rule-row">
+        <label><input type="checkbox" id="lobbyRuleChaos"> Chaos</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeChaos">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemChaos">?</span>
+      </div>
+      <div class="lobby-rule-row">
+        <label><input type="checkbox" id="lobbyRuleFallenAce"> Fallen Ace</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeFallenAce">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemFallenAce">?</span>
+      </div>
+      <div class="lobby-rule-row">
+        <label><input type="checkbox" id="lobbyRuleRoulette"> Roulette</label>
+        <span class="lobby-vote-icon" id="lobbyVoteMeRoulette">?</span>
+        <span class="lobby-vote-icon" id="lobbyVoteThemRoulette">?</span>
       </div>
       </div>
       <div id="lobbyRandomWarning" class="lobby-rule-warning hidden">Ignores the point total — hands are fully random.</div>
@@ -2743,7 +2823,6 @@
   </div>
   <div id="boosterOpenOverlay">
     <div id="boosterOpenPanel">
-      <img id="boosterOpenLocationArt" src="" alt="">
       <div id="boosterOpenCardWrap"></div>
       <div id="boosterOpenCardName"></div>
       <div id="boosterOpenLabel"></div>
@@ -2825,7 +2904,7 @@
             </label>
             <button type="button" id="cpuPointTotalRandomize" class="icon-btn" title="Randomize">🎲</button>
           </div>
-          <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuKeepPointsToggle"> Keep points the same</label></div>
+          <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuKeepPointsToggle"> Remember point amount</label></div>
         </div>
         <div id="cpuSetupSection">
           <h3>Turn Timer</h3>
@@ -2834,32 +2913,24 @@
         <div id="cpuSetupSection">
           <h3>Rules</h3>
           <div class="checkbox-grid">
+            <div class="checkbox-grid-header">Regular Rules</div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleSame" checked> Same</label></div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleSameWall"> Same Wall</label></div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRulePlus" checked> Plus</label></div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleUp"> Up</label></div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleCombo"> Combo</label></div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleElemental"> Elemental</label></div>
-            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleRandom"> Random</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleSwap"> Swap</label></div>
             <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleSuddenDeath"> Sudden Death</label></div>
-          </div>
-          <div class="settings-row">
-            <label>Elemental Mode
-              <select id="cpuElementalModeSelect">
-                <option value="buffnerf" selected>Buff &amp; Nerf</option>
-                <option value="buff">Buff Only</option>
-              </select>
-            </label>
-          </div>
-          <div class="settings-row">
-            <label>Elemental Hand Alignment
-              <select id="cpuAlignmentSelect"></select>
-            </label>
-          </div>
-          <div class="settings-row">
-            <label>Elemental Position Bias
-              <select id="cpuElementalBiasSelect"></select>
-            </label>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleClosed"> Closed</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleClosedSingle"> Closed Single</label></div>
+            <div class="checkbox-grid-header">Chaotic Rules</div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleRandom"> Random</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleReverse"> Reverse</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleOrder"> Order</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleChaos"> Chaos</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleFallenAce"> Fallen Ace</label></div>
+            <div class="settings-row checkbox-row"><label><input type="checkbox" id="cpuRuleRoulette"> Roulette</label></div>
           </div>
         </div>
       </div>
@@ -3137,7 +3208,7 @@ function emptyRoomState() {
     hands: toRoomHands({ p1: [], p2: [] }),
     turn: 'p1',
     gameOver: false,
-    rules: { same: true, plus: true, up: false, combo: false, elemental: false, random: false, sameWall: false, suddenDeath: false, closed: false, closedSingle: false },
+    rules: { same: true, plus: true, up: false, combo: false, elemental: false, random: false, sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false, reverse: false, chaos: false, order: false, swap: false, roulette: false },
     ruleVotes: { p1: null, p2: null },
     liveRuleVotes: { p1: null, p2: null },
     rulesFinalized: false,
@@ -3183,6 +3254,12 @@ function mergeRuleVotes(votes, fallbackRules) {
     suddenDeath: !!(a.suddenDeath && b.suddenDeath),
     closed: !!(a.closed && b.closed),
     closedSingle: !!(a.closedSingle && b.closedSingle) && !(a.closed && b.closed),
+    fallenAce: !!(a.fallenAce && b.fallenAce),
+    reverse: !!(a.reverse && b.reverse),
+    chaos: !!(a.chaos && b.chaos),
+    order: !!(a.order && b.order) && !(a.chaos && b.chaos),
+    swap: !!(a.swap && b.swap),
+    roulette: !!(a.roulette && b.roulette),
   };
 }
 async function findOrCreateOpenRoom(playerName, root = ROOMS_ROOT) {
@@ -3274,7 +3351,7 @@ async function tryClaimOpenSeat(roomId, playerName, root = ROOMS_ROOT) {
   }
   return result.committed && claimedSeat ? claimedSeat : null;
 }
-const CARD_DB = [{"id":1,"name":"Geezard","level":1,"position":1,"element":null,"top":1,"left":5,"right":4,"bottom":1,"image":"001_geezard.png"},{"id":2,"name":"Funguar","level":1,"position":2,"element":null,"top":5,"left":3,"right":1,"bottom":1,"image":"002_funguar.png"},{"id":3,"name":"Bite Bug","level":1,"position":3,"element":null,"top":1,"left":5,"right":3,"bottom":3,"image":"003_bite_bug.png"},{"id":4,"name":"Red Bat","level":1,"position":4,"element":null,"top":6,"left":2,"right":1,"bottom":1,"image":"004_red_bat.png"},{"id":5,"name":"Blobra","level":1,"position":5,"element":null,"top":2,"left":5,"right":3,"bottom":1,"image":"005_blobra.png"},{"id":6,"name":"Gayla","level":1,"position":6,"element":"Thunder","top":2,"left":4,"right":1,"bottom":4,"image":"006_gayla.png"},{"id":7,"name":"Gesper","level":1,"position":7,"element":null,"top":1,"left":1,"right":5,"bottom":4,"image":"007_gesper.png"},{"id":8,"name":"Fastitocalon-F","level":1,"position":8,"element":"Earth","top":3,"left":1,"right":5,"bottom":2,"image":"008_fastitocalon-f.png"},{"id":9,"name":"Blood Soul","level":1,"position":9,"element":null,"top":2,"left":1,"right":1,"bottom":6,"image":"009_blood_soul.png"},{"id":10,"name":"Caterchipillar","level":1,"position":10,"element":null,"top":4,"left":3,"right":2,"bottom":4,"image":"010_caterchipillar.png"},{"id":11,"name":"Cockatrice","level":1,"position":11,"element":"Thunder","top":2,"left":6,"right":1,"bottom":2,"image":"011_cockatrice.png"},{"id":12,"name":"Grat","level":2,"position":1,"element":null,"top":7,"left":1,"right":1,"bottom":3,"image":"012_grat.png"},{"id":13,"name":"Buel","level":2,"position":2,"element":null,"top":6,"left":3,"right":2,"bottom":2,"image":"013_buel.png"},{"id":14,"name":"Mesmerize","level":2,"position":3,"element":null,"top":5,"left":4,"right":3,"bottom":3,"image":"014_mesmerize.png"},{"id":15,"name":"Glacial Eye","level":2,"position":4,"element":"Ice","top":6,"left":3,"right":1,"bottom":4,"image":"015_glacial_eye.png"},{"id":16,"name":"Belhelmel","level":2,"position":5,"element":null,"top":3,"left":3,"right":4,"bottom":5,"image":"016_belhelmel.png"},{"id":17,"name":"Thrustaevis","level":2,"position":6,"element":"Wind","top":5,"left":5,"right":3,"bottom":2,"image":"017_thrustaevis.png"},{"id":18,"name":"Anacondaur","level":2,"position":7,"element":"Poison","top":5,"left":5,"right":1,"bottom":3,"image":"018_anacondaur.png"},{"id":19,"name":"Creeps","level":2,"position":8,"element":"Thunder","top":5,"left":2,"right":2,"bottom":5,"image":"019_creeps.png"},{"id":20,"name":"Grendel","level":2,"position":9,"element":"Thunder","top":4,"left":2,"right":4,"bottom":5,"image":"020_grendel.png"},{"id":21,"name":"Jelleye","level":2,"position":10,"element":null,"top":3,"left":7,"right":2,"bottom":1,"image":"021_jelleye.png"},{"id":22,"name":"Grand Mantis","level":2,"position":11,"element":null,"top":5,"left":3,"right":2,"bottom":5,"image":"022_grand_mantis.png"},{"id":23,"name":"Forbidden","level":3,"position":1,"element":null,"top":6,"left":2,"right":6,"bottom":3,"image":"023_forbidden.png"},{"id":24,"name":"Armadodo","level":3,"position":2,"element":"Earth","top":6,"left":6,"right":3,"bottom":1,"image":"024_armadodo.png"},{"id":25,"name":"Tri-Face","level":3,"position":3,"element":"Poison","top":3,"left":5,"right":5,"bottom":5,"image":"025_tri-face.png"},{"id":26,"name":"Fastitocalon","level":3,"position":4,"element":"Earth","top":7,"left":3,"right":5,"bottom":1,"image":"026_fastitocalon.png"},{"id":27,"name":"Snow Lion","level":3,"position":5,"element":"Ice","top":7,"left":3,"right":1,"bottom":5,"image":"027_snow_lion.png"},{"id":28,"name":"Ochu","level":3,"position":6,"element":null,"top":5,"left":3,"right":6,"bottom":3,"image":"028_ochu.png"},{"id":29,"name":"SAM08G","level":3,"position":7,"element":"Fire","top":5,"left":4,"right":6,"bottom":2,"image":"029_sam08g.png"},{"id":30,"name":"Death Claw","level":3,"position":8,"element":"Fire","top":4,"left":2,"right":4,"bottom":7,"image":"030_death_claw.png"},{"id":31,"name":"Cactuar","level":3,"position":9,"element":null,"top":6,"left":3,"right":2,"bottom":6,"image":"031_cactuar.png"},{"id":32,"name":"Tonberry","level":3,"position":10,"element":null,"top":3,"left":4,"right":6,"bottom":4,"image":"032_tonberry.png"},{"id":33,"name":"Abyss Worm","level":3,"position":11,"element":"Earth","top":7,"left":5,"right":2,"bottom":3,"image":"033_abyss_worm.png"},{"id":34,"name":"Turtapod","level":4,"position":1,"element":null,"top":2,"left":7,"right":3,"bottom":6,"image":"034_turtapod.png"},{"id":35,"name":"Vysage","level":4,"position":2,"element":null,"top":6,"left":5,"right":5,"bottom":4,"image":"035_vysage.png"},{"id":36,"name":"T-Rexaur","level":4,"position":3,"element":null,"top":4,"left":7,"right":6,"bottom":2,"image":"036_t-rexaur.png"},{"id":37,"name":"Bomb","level":4,"position":4,"element":"Fire","top":2,"left":3,"right":7,"bottom":6,"image":"037_bomb.png"},{"id":38,"name":"Blitz","level":4,"position":5,"element":"Thunder","top":1,"left":7,"right":6,"bottom":4,"image":"038_blitz.png"},{"id":39,"name":"Wendigo","level":4,"position":6,"element":null,"top":7,"left":6,"right":3,"bottom":1,"image":"039_wendigo.png"},{"id":40,"name":"Torama","level":4,"position":7,"element":null,"top":7,"left":4,"right":4,"bottom":4,"image":"040_torama.png"},{"id":41,"name":"Imp","level":4,"position":8,"element":null,"top":3,"left":6,"right":7,"bottom":3,"image":"041_imp.png"},{"id":42,"name":"Blue Dragon","level":4,"position":9,"element":"Poison","top":6,"left":3,"right":2,"bottom":7,"image":"042_blue_dragon.png"},{"id":43,"name":"Adamantoise","level":4,"position":10,"element":"Earth","top":4,"left":6,"right":5,"bottom":5,"image":"043_adamantoise.png"},{"id":44,"name":"Hexadragon","level":4,"position":11,"element":"Fire","top":7,"left":3,"right":5,"bottom":4,"image":"044_hexadragon.png"},{"id":45,"name":"Iron Giant","level":5,"position":1,"element":null,"top":6,"left":5,"right":5,"bottom":6,"image":"045_iron_giant.png"},{"id":46,"name":"Behemoth","level":5,"position":2,"element":null,"top":3,"left":7,"right":6,"bottom":5,"image":"046_behemoth.png"},{"id":47,"name":"Chimera","level":5,"position":3,"element":"Water","top":7,"left":3,"right":6,"bottom":5,"image":"047_chimera.png"},{"id":48,"name":"PuPu","level":5,"position":4,"element":null,"top":3,"left":1,"right":10,"bottom":2,"image":"048_pupu.png"},{"id":49,"name":"Elastoid","level":5,"position":5,"element":null,"top":6,"left":7,"right":2,"bottom":6,"image":"049_elastoid.png"},{"id":50,"name":"GIM47N","level":5,"position":6,"element":null,"top":5,"left":4,"right":5,"bottom":7,"image":"050_gim47n.png"},{"id":51,"name":"Malboro","level":5,"position":7,"element":"Poison","top":7,"left":2,"right":7,"bottom":4,"image":"051_malboro.png"},{"id":52,"name":"Ruby Dragon","level":5,"position":8,"element":"Fire","top":7,"left":4,"right":2,"bottom":7,"image":"052_ruby_dragon.png"},{"id":53,"name":"Elnoyle","level":5,"position":9,"element":null,"top":5,"left":6,"right":3,"bottom":7,"image":"053_elnoyle.png"},{"id":54,"name":"Tonberry King","level":5,"position":10,"element":null,"top":7,"left":4,"right":6,"bottom":7,"image":"054_tonberry_king.png"},{"id":55,"name":"Wedge, Biggs","level":5,"position":11,"element":null,"top":6,"left":7,"right":6,"bottom":2,"image":"055_wedge_biggs.png"},{"id":56,"name":"Fujin, Raijin","level":6,"position":1,"element":null,"top":2,"left":4,"right":8,"bottom":8,"image":"056_fujin_raijin.png"},{"id":57,"name":"Elvoret","level":6,"position":2,"element":"Wind","top":7,"left":4,"right":8,"bottom":3,"image":"057_elvoret.png"},{"id":58,"name":"X-ATM092","level":6,"position":3,"element":null,"top":4,"left":3,"right":8,"bottom":7,"image":"058_x-atm092.png"},{"id":59,"name":"Granaldo","level":6,"position":4,"element":null,"top":7,"left":5,"right":2,"bottom":8,"image":"059_granaldo.png"},{"id":60,"name":"Gerogero","level":6,"position":5,"element":"Poison","top":1,"left":3,"right":8,"bottom":8,"image":"060_gerogero.png"},{"id":61,"name":"Iguion","level":6,"position":6,"element":null,"top":8,"left":2,"right":2,"bottom":8,"image":"061_iguion.png"},{"id":62,"name":"Abadon","level":6,"position":7,"element":null,"top":6,"left":5,"right":8,"bottom":4,"image":"062_abadon.png"},{"id":63,"name":"Trauma","level":6,"position":8,"element":null,"top":4,"left":6,"right":8,"bottom":5,"image":"063_trauma.png"},{"id":64,"name":"Oilboyle","level":6,"position":9,"element":null,"top":1,"left":8,"right":8,"bottom":4,"image":"064_oilboyle.png"},{"id":65,"name":"Shumi Tribe","level":6,"position":10,"element":null,"top":6,"left":4,"right":5,"bottom":8,"image":"065_shumi_tribe.png"},{"id":66,"name":"Krysta","level":6,"position":11,"element":null,"top":7,"left":1,"right":5,"bottom":8,"image":"066_krysta.png"},{"id":67,"name":"Propagator","level":7,"position":1,"element":null,"top":8,"left":8,"right":4,"bottom":4,"image":"067_propagator.png"},{"id":68,"name":"Jumbo Cactuar","level":7,"position":2,"element":null,"top":8,"left":4,"right":8,"bottom":4,"image":"068_jumbo_cactuar.png"},{"id":69,"name":"Tri-Point","level":7,"position":3,"element":"Thunder","top":8,"left":8,"right":5,"bottom":2,"image":"069_tri-point.png"},{"id":70,"name":"Gargantua","level":7,"position":4,"element":null,"top":5,"left":8,"right":6,"bottom":6,"image":"070_gargantua.png"},{"id":71,"name":"Mobile Type 8","level":7,"position":5,"element":null,"top":8,"left":3,"right":6,"bottom":7,"image":"071_mobile_type_8.png"},{"id":72,"name":"Sphinxara","level":7,"position":6,"element":null,"top":8,"left":8,"right":3,"bottom":5,"image":"072_sphinxara.png"},{"id":73,"name":"Tiamat","level":7,"position":7,"element":null,"top":8,"left":4,"right":8,"bottom":5,"image":"073_tiamat.png"},{"id":74,"name":"BGH251F2","level":7,"position":8,"element":null,"top":5,"left":5,"right":7,"bottom":8,"image":"074_bgh251f2.png"},{"id":75,"name":"Red Giant","level":7,"position":9,"element":null,"top":6,"left":7,"right":8,"bottom":4,"image":"075_red_giant.png"},{"id":76,"name":"Catoblepas","level":7,"position":10,"element":null,"top":1,"left":7,"right":8,"bottom":7,"image":"076_catoblepas.png"},{"id":77,"name":"Ultima Weapon","level":7,"position":11,"element":null,"top":7,"left":8,"right":7,"bottom":2,"image":"077_ultima_weapon.png"},{"id":78,"name":"Chubby Chocobo","level":8,"position":1,"element":null,"top":4,"left":9,"right":4,"bottom":8,"image":"078_chubby_chocobo.png"},{"id":79,"name":"Angelo","level":8,"position":2,"element":null,"top":9,"left":3,"right":6,"bottom":7,"image":"079_angelo.png"},{"id":80,"name":"Gilgamesh","level":8,"position":3,"element":null,"top":3,"left":6,"right":7,"bottom":9,"image":"080_gilgamesh.png"},{"id":81,"name":"MiniMog","level":8,"position":4,"element":null,"top":9,"left":2,"right":3,"bottom":9,"image":"081_minimog.png"},{"id":82,"name":"Chicobo","level":8,"position":5,"element":null,"top":9,"left":4,"right":4,"bottom":8,"image":"082_chicobo.png"},{"id":83,"name":"Quezacotl","level":8,"position":6,"element":"Thunder","top":2,"left":4,"right":9,"bottom":9,"image":"083_quezacotl.png"},{"id":84,"name":"Shiva","level":8,"position":7,"element":"Ice","top":6,"left":9,"right":7,"bottom":4,"image":"084_shiva.png"},{"id":85,"name":"Ifrit","level":8,"position":8,"element":"Fire","top":9,"left":8,"right":6,"bottom":2,"image":"085_ifrit.png"},{"id":86,"name":"Siren","level":8,"position":9,"element":null,"top":8,"left":2,"right":9,"bottom":6,"image":"086_siren.png"},{"id":87,"name":"Sacred","level":8,"position":10,"element":"Earth","top":5,"left":9,"right":1,"bottom":9,"image":"087_sacred.png"},{"id":88,"name":"Minotaur","level":8,"position":11,"element":"Earth","top":9,"left":9,"right":5,"bottom":2,"image":"088_minotaur.png"},{"id":89,"name":"Carbuncle","level":9,"position":1,"element":null,"top":8,"left":4,"right":4,"bottom":10,"image":"089_carbuncle.png"},{"id":90,"name":"Diablos","level":9,"position":2,"element":null,"top":5,"left":3,"right":10,"bottom":8,"image":"090_diablos.png"},{"id":91,"name":"Leviathan","level":9,"position":3,"element":"Water","top":7,"left":7,"right":10,"bottom":1,"image":"091_leviathan.png"},{"id":92,"name":"Odin","level":9,"position":4,"element":null,"top":8,"left":5,"right":10,"bottom":3,"image":"092_odin.png"},{"id":93,"name":"Pandemona","level":9,"position":5,"element":"Wind","top":10,"left":7,"right":1,"bottom":7,"image":"093_pandemona.png"},{"id":94,"name":"Cerberus","level":9,"position":6,"element":null,"top":7,"left":10,"right":4,"bottom":6,"image":"094_cerberus.png"},{"id":95,"name":"Alexander","level":9,"position":7,"element":"Holy","top":9,"left":2,"right":10,"bottom":4,"image":"095_alexander.png"},{"id":96,"name":"Phoenix","level":9,"position":8,"element":"Fire","top":7,"left":10,"right":2,"bottom":7,"image":"096_phoenix.png"},{"id":97,"name":"Bahamut","level":9,"position":9,"element":null,"top":10,"left":6,"right":8,"bottom":2,"image":"097_bahamut.png"},{"id":98,"name":"Doomtrain","level":9,"position":10,"element":"Poison","top":3,"left":10,"right":1,"bottom":10,"image":"098_doomtrain.png"},{"id":99,"name":"Eden","level":9,"position":11,"element":null,"top":4,"left":10,"right":4,"bottom":9,"image":"099_eden.png"},{"id":100,"name":"Ward","level":10,"position":1,"element":null,"top":10,"left":8,"right":7,"bottom":2,"image":"100_ward.png"},{"id":101,"name":"Kiros","level":10,"position":2,"element":null,"top":6,"left":10,"right":7,"bottom":6,"image":"101_kiros.png"},{"id":102,"name":"Laguna","level":10,"position":3,"element":null,"top":5,"left":9,"right":10,"bottom":3,"image":"102_laguna.png"},{"id":103,"name":"Selphie","level":10,"position":4,"element":null,"top":10,"left":4,"right":8,"bottom":6,"image":"103_selphie.png"},{"id":104,"name":"Quistis","level":10,"position":5,"element":null,"top":9,"left":2,"right":6,"bottom":10,"image":"104_quistis.png"},{"id":105,"name":"Irvine","level":10,"position":6,"element":null,"top":2,"left":10,"right":6,"bottom":9,"image":"105_irvine.png"},{"id":106,"name":"Zell","level":10,"position":7,"element":null,"top":8,"left":6,"right":5,"bottom":10,"image":"106_zell.png"},{"id":107,"name":"Rinoa","level":10,"position":8,"element":null,"top":4,"left":10,"right":10,"bottom":2,"image":"107_rinoa.png"},{"id":108,"name":"Edea","level":10,"position":9,"element":null,"top":10,"left":3,"right":10,"bottom":3,"image":"108_edea.png"},{"id":109,"name":"Seifer","level":10,"position":10,"element":null,"top":6,"left":4,"right":9,"bottom":10,"image":"109_seifer.png"},{"id":110,"name":"Squall","level":10,"position":11,"element":null,"top":10,"left":9,"right":4,"bottom":6,"image":"110_squall.png"},{"id":111,"name":"ThifSlade","level":10,"position":12,"element":null,"top":10,"left":6,"right":6,"bottom":6,"image":"../../Streamer/ThifSlade.png","custom":true}];
+const CARD_DB = [{"id":1,"name":"Geezard","level":1,"position":1,"element":null,"top":1,"left":5,"right":4,"bottom":1,"image":"001_geezard.png"},{"id":2,"name":"Funguar","level":1,"position":2,"element":null,"top":5,"left":3,"right":1,"bottom":1,"image":"002_funguar.png"},{"id":3,"name":"Bite Bug","level":1,"position":3,"element":null,"top":1,"left":5,"right":3,"bottom":3,"image":"003_bite_bug.png"},{"id":4,"name":"Red Bat","level":1,"position":4,"element":null,"top":6,"left":2,"right":1,"bottom":1,"image":"004_red_bat.png"},{"id":5,"name":"Blobra","level":1,"position":5,"element":null,"top":2,"left":5,"right":3,"bottom":1,"image":"005_blobra.png"},{"id":6,"name":"Gayla","level":1,"position":6,"element":"Thunder","top":2,"left":4,"right":1,"bottom":4,"image":"006_gayla.png"},{"id":7,"name":"Gesper","level":1,"position":7,"element":null,"top":1,"left":1,"right":5,"bottom":4,"image":"007_gesper.png"},{"id":8,"name":"Fastitocalon-F","level":1,"position":8,"element":"Earth","top":3,"left":1,"right":5,"bottom":2,"image":"008_fastitocalon-f.png"},{"id":9,"name":"Blood Soul","level":1,"position":9,"element":null,"top":2,"left":1,"right":1,"bottom":6,"image":"009_blood_soul.png"},{"id":10,"name":"Caterchipillar","level":1,"position":10,"element":null,"top":4,"left":3,"right":2,"bottom":4,"image":"010_caterchipillar.png"},{"id":11,"name":"Cockatrice","level":1,"position":11,"element":"Thunder","top":2,"left":6,"right":1,"bottom":2,"image":"011_cockatrice.png"},{"id":12,"name":"Grat","level":2,"position":1,"element":null,"top":7,"left":1,"right":1,"bottom":3,"image":"012_grat.png"},{"id":13,"name":"Buel","level":2,"position":2,"element":null,"top":6,"left":3,"right":2,"bottom":2,"image":"013_buel.png"},{"id":14,"name":"Mesmerize","level":2,"position":3,"element":null,"top":5,"left":4,"right":3,"bottom":3,"image":"014_mesmerize.png"},{"id":15,"name":"Glacial Eye","level":2,"position":4,"element":"Ice","top":6,"left":3,"right":1,"bottom":4,"image":"015_glacial_eye.png"},{"id":16,"name":"Belhelmel","level":2,"position":5,"element":null,"top":3,"left":3,"right":4,"bottom":5,"image":"016_belhelmel.png"},{"id":17,"name":"Thrustaevis","level":2,"position":6,"element":"Wind","top":5,"left":5,"right":3,"bottom":2,"image":"017_thrustaevis.png"},{"id":18,"name":"Anacondaur","level":2,"position":7,"element":"Poison","top":5,"left":5,"right":1,"bottom":3,"image":"018_anacondaur.png"},{"id":19,"name":"Creeps","level":2,"position":8,"element":"Thunder","top":5,"left":2,"right":2,"bottom":5,"image":"019_creeps.png"},{"id":20,"name":"Grendel","level":2,"position":9,"element":"Thunder","top":4,"left":2,"right":4,"bottom":5,"image":"020_grendel.png"},{"id":21,"name":"Jelleye","level":2,"position":10,"element":null,"top":3,"left":7,"right":2,"bottom":1,"image":"021_jelleye.png"},{"id":22,"name":"Grand Mantis","level":2,"position":11,"element":null,"top":5,"left":3,"right":2,"bottom":5,"image":"022_grand_mantis.png"},{"id":23,"name":"Forbidden","level":3,"position":1,"element":null,"top":6,"left":2,"right":6,"bottom":3,"image":"023_forbidden.png"},{"id":24,"name":"Armadodo","level":3,"position":2,"element":"Earth","top":6,"left":6,"right":3,"bottom":1,"image":"024_armadodo.png"},{"id":25,"name":"Tri-Face","level":3,"position":3,"element":"Poison","top":3,"left":5,"right":5,"bottom":5,"image":"025_tri-face.png"},{"id":26,"name":"Fastitocalon","level":3,"position":4,"element":"Earth","top":7,"left":3,"right":5,"bottom":1,"image":"026_fastitocalon.png"},{"id":27,"name":"Snow Lion","level":3,"position":5,"element":"Ice","top":7,"left":3,"right":1,"bottom":5,"image":"027_snow_lion.png"},{"id":28,"name":"Ochu","level":3,"position":6,"element":null,"top":5,"left":3,"right":6,"bottom":3,"image":"028_ochu.png"},{"id":29,"name":"SAM08G","level":3,"position":7,"element":"Fire","top":5,"left":4,"right":6,"bottom":2,"image":"029_sam08g.png"},{"id":30,"name":"Death Claw","level":3,"position":8,"element":"Fire","top":4,"left":2,"right":4,"bottom":7,"image":"030_death_claw.png"},{"id":31,"name":"Cactuar","level":3,"position":9,"element":null,"top":6,"left":3,"right":2,"bottom":6,"image":"031_cactuar.png"},{"id":32,"name":"Tonberry","level":3,"position":10,"element":null,"top":3,"left":4,"right":6,"bottom":4,"image":"032_tonberry.png"},{"id":33,"name":"Abyss Worm","level":3,"position":11,"element":"Earth","top":7,"left":5,"right":2,"bottom":3,"image":"033_abyss_worm.png"},{"id":34,"name":"Turtapod","level":4,"position":1,"element":null,"top":2,"left":7,"right":3,"bottom":6,"image":"034_turtapod.png"},{"id":35,"name":"Vysage","level":4,"position":2,"element":null,"top":6,"left":5,"right":5,"bottom":4,"image":"035_vysage.png"},{"id":36,"name":"T-Rexaur","level":4,"position":3,"element":null,"top":4,"left":7,"right":6,"bottom":2,"image":"036_t-rexaur.png"},{"id":37,"name":"Bomb","level":4,"position":4,"element":"Fire","top":2,"left":3,"right":7,"bottom":6,"image":"037_bomb.png"},{"id":38,"name":"Blitz","level":4,"position":5,"element":"Thunder","top":1,"left":7,"right":6,"bottom":4,"image":"038_blitz.png"},{"id":39,"name":"Wendigo","level":4,"position":6,"element":null,"top":7,"left":6,"right":3,"bottom":1,"image":"039_wendigo.png"},{"id":40,"name":"Torama","level":4,"position":7,"element":null,"top":7,"left":4,"right":4,"bottom":4,"image":"040_torama.png"},{"id":41,"name":"Imp","level":4,"position":8,"element":null,"top":3,"left":6,"right":7,"bottom":3,"image":"041_imp.png"},{"id":42,"name":"Blue Dragon","level":4,"position":9,"element":"Poison","top":6,"left":3,"right":2,"bottom":7,"image":"042_blue_dragon.png"},{"id":43,"name":"Adamantoise","level":4,"position":10,"element":"Earth","top":4,"left":6,"right":5,"bottom":5,"image":"043_adamantoise.png"},{"id":44,"name":"Hexadragon","level":4,"position":11,"element":"Fire","top":7,"left":3,"right":5,"bottom":4,"image":"044_hexadragon.png"},{"id":45,"name":"Iron Giant","level":5,"position":1,"element":null,"top":6,"left":5,"right":5,"bottom":6,"image":"045_iron_giant.png"},{"id":46,"name":"Behemoth","level":5,"position":2,"element":null,"top":3,"left":7,"right":6,"bottom":5,"image":"046_behemoth.png"},{"id":47,"name":"Chimera","level":5,"position":3,"element":"Water","top":7,"left":3,"right":6,"bottom":5,"image":"047_chimera.png"},{"id":48,"name":"PuPu","level":5,"position":4,"element":null,"top":3,"left":1,"right":10,"bottom":2,"image":"048_pupu.png"},{"id":49,"name":"Elastoid","level":5,"position":5,"element":null,"top":6,"left":7,"right":2,"bottom":6,"image":"049_elastoid.png"},{"id":50,"name":"GIM47N","level":5,"position":6,"element":null,"top":5,"left":4,"right":5,"bottom":7,"image":"050_gim47n.png"},{"id":51,"name":"Malboro","level":5,"position":7,"element":"Poison","top":7,"left":2,"right":7,"bottom":4,"image":"051_malboro.png"},{"id":52,"name":"Ruby Dragon","level":5,"position":8,"element":"Fire","top":7,"left":4,"right":2,"bottom":7,"image":"052_ruby_dragon.png"},{"id":53,"name":"Elnoyle","level":5,"position":9,"element":null,"top":5,"left":6,"right":3,"bottom":7,"image":"053_elnoyle.png"},{"id":54,"name":"Tonberry King","level":5,"position":10,"element":null,"top":7,"left":4,"right":6,"bottom":7,"image":"054_tonberry_king.png"},{"id":55,"name":"Wedge, Biggs","level":5,"position":11,"element":null,"top":6,"left":7,"right":6,"bottom":2,"image":"055_wedge_biggs.png"},{"id":56,"name":"Fujin, Raijin","level":6,"position":1,"element":null,"top":2,"left":4,"right":8,"bottom":8,"image":"056_fujin_raijin.png"},{"id":57,"name":"Elvoret","level":6,"position":2,"element":"Wind","top":7,"left":4,"right":8,"bottom":3,"image":"057_elvoret.png"},{"id":58,"name":"X-ATM092","level":6,"position":3,"element":null,"top":4,"left":3,"right":8,"bottom":7,"image":"058_x-atm092.png"},{"id":59,"name":"Granaldo","level":6,"position":4,"element":null,"top":7,"left":5,"right":2,"bottom":8,"image":"059_granaldo.png"},{"id":60,"name":"Gerogero","level":6,"position":5,"element":"Poison","top":1,"left":3,"right":8,"bottom":8,"image":"060_gerogero.png"},{"id":61,"name":"Iguion","level":6,"position":6,"element":null,"top":8,"left":2,"right":2,"bottom":8,"image":"061_iguion.png"},{"id":62,"name":"Abadon","level":6,"position":7,"element":null,"top":6,"left":5,"right":8,"bottom":4,"image":"062_abadon.png"},{"id":63,"name":"Trauma","level":6,"position":8,"element":null,"top":4,"left":6,"right":8,"bottom":5,"image":"063_trauma.png"},{"id":64,"name":"Oilboyle","level":6,"position":9,"element":null,"top":1,"left":8,"right":8,"bottom":4,"image":"064_oilboyle.png"},{"id":65,"name":"Shumi Tribe","level":6,"position":10,"element":null,"top":6,"left":4,"right":5,"bottom":8,"image":"065_shumi_tribe.png"},{"id":66,"name":"Krysta","level":6,"position":11,"element":null,"top":7,"left":1,"right":5,"bottom":8,"image":"066_krysta.png"},{"id":67,"name":"Propagator","level":7,"position":1,"element":null,"top":8,"left":8,"right":4,"bottom":4,"image":"067_propagator.png"},{"id":68,"name":"Jumbo Cactuar","level":7,"position":2,"element":null,"top":8,"left":4,"right":8,"bottom":4,"image":"068_jumbo_cactuar.png"},{"id":69,"name":"Tri-Point","level":7,"position":3,"element":"Thunder","top":8,"left":8,"right":5,"bottom":2,"image":"069_tri-point.png"},{"id":70,"name":"Gargantua","level":7,"position":4,"element":null,"top":5,"left":8,"right":6,"bottom":6,"image":"070_gargantua.png"},{"id":71,"name":"Mobile Type 8","level":7,"position":5,"element":null,"top":8,"left":3,"right":6,"bottom":7,"image":"071_mobile_type_8.png"},{"id":72,"name":"Sphinxara","level":7,"position":6,"element":null,"top":8,"left":8,"right":3,"bottom":5,"image":"072_sphinxara.png"},{"id":73,"name":"Tiamat","level":7,"position":7,"element":null,"top":8,"left":4,"right":8,"bottom":5,"image":"073_tiamat.png"},{"id":74,"name":"BGH251F2","level":7,"position":8,"element":null,"top":5,"left":5,"right":7,"bottom":8,"image":"074_bgh251f2.png"},{"id":75,"name":"Red Giant","level":7,"position":9,"element":null,"top":6,"left":7,"right":8,"bottom":4,"image":"075_red_giant.png"},{"id":76,"name":"Catoblepas","level":7,"position":10,"element":null,"top":1,"left":7,"right":8,"bottom":7,"image":"076_catoblepas.png"},{"id":77,"name":"Ultima Weapon","level":7,"position":11,"element":null,"top":7,"left":8,"right":7,"bottom":2,"image":"077_ultima_weapon.png"},{"id":78,"name":"Chubby Chocobo","level":8,"position":1,"element":null,"top":4,"left":9,"right":4,"bottom":8,"image":"078_chubby_chocobo.png"},{"id":79,"name":"Angelo","level":8,"position":2,"element":null,"top":9,"left":3,"right":6,"bottom":7,"image":"079_angelo.png"},{"id":80,"name":"Gilgamesh","level":8,"position":3,"element":null,"top":3,"left":6,"right":7,"bottom":9,"image":"080_gilgamesh.png"},{"id":81,"name":"MiniMog","level":8,"position":4,"element":null,"top":9,"left":2,"right":3,"bottom":9,"image":"081_minimog.png"},{"id":82,"name":"Chicobo","level":8,"position":5,"element":null,"top":9,"left":4,"right":4,"bottom":8,"image":"082_chicobo.png"},{"id":83,"name":"Quezacotl","level":8,"position":6,"element":"Thunder","top":2,"left":4,"right":9,"bottom":9,"image":"083_quezacotl.png"},{"id":84,"name":"Shiva","level":8,"position":7,"element":"Ice","top":6,"left":9,"right":7,"bottom":4,"image":"084_shiva.png"},{"id":85,"name":"Ifrit","level":8,"position":8,"element":"Fire","top":9,"left":8,"right":6,"bottom":2,"image":"085_ifrit.png"},{"id":86,"name":"Siren","level":8,"position":9,"element":null,"top":8,"left":2,"right":9,"bottom":6,"image":"086_siren.png"},{"id":87,"name":"Sacred","level":8,"position":10,"element":"Earth","top":5,"left":9,"right":1,"bottom":9,"image":"087_sacred.png"},{"id":88,"name":"Minotaur","level":8,"position":11,"element":"Earth","top":9,"left":9,"right":5,"bottom":2,"image":"088_minotaur.png"},{"id":89,"name":"Carbuncle","level":9,"position":1,"element":null,"top":8,"left":4,"right":4,"bottom":10,"image":"089_carbuncle.png"},{"id":90,"name":"Diablos","level":9,"position":2,"element":null,"top":5,"left":3,"right":10,"bottom":8,"image":"090_diablos.png"},{"id":91,"name":"Leviathan","level":9,"position":3,"element":"Water","top":7,"left":7,"right":10,"bottom":1,"image":"091_leviathan.png"},{"id":92,"name":"Odin","level":9,"position":4,"element":null,"top":8,"left":5,"right":10,"bottom":3,"image":"092_odin.png"},{"id":93,"name":"Pandemona","level":9,"position":5,"element":"Wind","top":10,"left":7,"right":1,"bottom":7,"image":"093_pandemona.png"},{"id":94,"name":"Cerberus","level":9,"position":6,"element":null,"top":7,"left":10,"right":4,"bottom":6,"image":"094_cerberus.png"},{"id":95,"name":"Alexander","level":9,"position":7,"element":"Holy","top":9,"left":2,"right":10,"bottom":4,"image":"095_alexander.png"},{"id":96,"name":"Phoenix","level":9,"position":8,"element":"Fire","top":7,"left":10,"right":2,"bottom":7,"image":"096_phoenix.png"},{"id":97,"name":"Bahamut","level":9,"position":9,"element":null,"top":10,"left":6,"right":8,"bottom":2,"image":"097_bahamut.png"},{"id":98,"name":"Doomtrain","level":9,"position":10,"element":"Poison","top":3,"left":10,"right":1,"bottom":10,"image":"098_doomtrain.png"},{"id":99,"name":"Eden","level":9,"position":11,"element":null,"top":4,"left":10,"right":4,"bottom":9,"image":"099_eden.png"},{"id":100,"name":"Ward","level":10,"position":1,"element":null,"top":10,"left":8,"right":7,"bottom":2,"image":"100_ward.png"},{"id":101,"name":"Kiros","level":10,"position":2,"element":null,"top":6,"left":10,"right":7,"bottom":6,"image":"101_kiros.png"},{"id":102,"name":"Laguna","level":10,"position":3,"element":null,"top":5,"left":9,"right":10,"bottom":3,"image":"102_laguna.png"},{"id":103,"name":"Selphie","level":10,"position":4,"element":null,"top":10,"left":4,"right":8,"bottom":6,"image":"103_selphie.png"},{"id":104,"name":"Quistis","level":10,"position":5,"element":null,"top":9,"left":2,"right":6,"bottom":10,"image":"104_quistis.png"},{"id":105,"name":"Irvine","level":10,"position":6,"element":null,"top":2,"left":10,"right":6,"bottom":9,"image":"105_irvine.png"},{"id":106,"name":"Zell","level":10,"position":7,"element":null,"top":8,"left":6,"right":5,"bottom":10,"image":"106_zell.png"},{"id":107,"name":"Rinoa","level":10,"position":8,"element":null,"top":4,"left":10,"right":10,"bottom":2,"image":"107_rinoa.png"},{"id":108,"name":"Edea","level":10,"position":9,"element":null,"top":10,"left":3,"right":10,"bottom":3,"image":"108_edea.png"},{"id":109,"name":"Seifer","level":10,"position":10,"element":null,"top":6,"left":4,"right":9,"bottom":10,"image":"109_seifer.png"},{"id":110,"name":"Squall","level":10,"position":11,"element":null,"top":10,"left":9,"right":4,"bottom":6,"image":"110_squall.png"},{"id":111,"name":"ThifSlade","level":10,"position":12,"element":null,"top":10,"left":6,"right":6,"bottom":6,"image":"../../Streamer/ThifSlade.png","custom":true},{"id":112,"name":"SkyPilotSamurai","level":10,"position":13,"element":null,"top":10,"left":5,"right":5,"bottom":10,"image":"../../Streamer/SkyPilotSamurai.png","custom":true}];
 const CARD_IMG_PATH = "Cards/FF8/cards_individual/";
 const BOOSTER_IMG_PATH = "Cards/FF8/locations/";
 // Each booster is tied to an iconic FF8 location and draws from a pool of
@@ -3284,7 +3361,7 @@ const BOOSTER_IMG_PATH = "Cards/FF8/locations/";
 // Ordered to roughly follow the story's progression through the game,
 // Disc 1 through Disc 4, rather than alphabetically.
 const BOOSTER_PACKS = [
-  { id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.png', cardIds: [12, 5, 36, 10, 59, 15, 8, 48, 3] },
+  { id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.png', cardIds: [12, 5, 36, 10, 59, 15, 8, 48, 3, 83] },
   { id: 'fire-cavern', name: 'Fire Cavern', image: 'fire-cavern.png', cardIds: [13, 37, 4, 85] },
   { id: 'dollet', name: 'Dollet', image: 'dollet.png', cardIds: [55, 57, 58, 18, 1] },
   { id: 'timber', name: 'Timber', image: 'timber.png', cardIds: [39, 17, 28, 18, 11, 60] },
@@ -4083,13 +4160,27 @@ function elementalModifier(cellIndex, card) {
 function rank(cellIndex, card, side) {
   return card[side] + elementalModifier(cellIndex, card);
 }
+// Determines whether the attacking card's side beats the defending card's
+// side for capture purposes, honoring the Fallen Ace and Reverse rules.
+// Fallen Ace is a one-directional exception (a raw 1 always captures a raw
+// A/10) that's checked against the cards' printed values, not their
+// elemental-adjusted rank. Reverse flips the standard higher-beats-lower
+// comparison entirely (elemental-adjusted).
+function capturesBeats(attackerIndex, attackerCard, attackerSide, defenderIndex, defenderCard, defenderSide) {
+  if (state.rules.fallenAce && attackerCard[attackerSide] === 1 && defenderCard[defenderSide] === 10) return true;
+  const attackerRank = rank(attackerIndex, attackerCard, attackerSide);
+  const defenderRank = rank(defenderIndex, defenderCard, defenderSide);
+  return state.rules.reverse ? attackerRank < defenderRank : attackerRank > defenderRank;
+}
 const state = {
   board: Array(9).fill(null),
   boardElements: Array(9).fill(null),
   hands: { p1: [], p2: [] },
   turn: 'p1',
   selected: null,
-  rules: { same: true, plus: true, up: false, combo: false, elemental: false, random: false, sameWall: false, suddenDeath: false, closed: false, closedSingle: false },
+  rules: { same: true, plus: true, up: false, combo: false, elemental: false, random: false, sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false, reverse: false, chaos: false, order: false, swap: false, roulette: false },
+  forcedCardId: { p1: null, p2: null },
+  forcedCardTurnKey: { p1: null, p2: null },
   gameOver: false,
   suppressOverlay: false,
   elementAlignment: 100,
@@ -4113,6 +4204,95 @@ const state = {
   cpuPointBudget: null,
   cpuTimerEnabled: false,
 };
+// Chaos: picks one random card from the active player's current hand at the
+// start of their turn and forces them to play only that card. Re-rolled
+// whenever that owner's hand shrinks (i.e. a genuinely new turn for them),
+// tracked via a simple "hand length" key so repeated re-renders mid-turn
+// don't keep re-rolling.
+function ensureChaosForcedCard(owner) {
+  if (!state.rules.chaos) {
+    state.forcedCardId[owner] = null;
+    state.forcedCardTurnKey[owner] = null;
+    return;
+  }
+  const hand = state.hands[owner];
+  if (!hand || !hand.length) {
+    state.forcedCardId[owner] = null;
+    return;
+  }
+  const key = String(hand.length);
+  if (state.forcedCardTurnKey[owner] === key) return;
+  const card = hand[Math.floor(Math.random() * hand.length)];
+  state.forcedCardId[owner] = card.id;
+  state.forcedCardTurnKey[owner] = key;
+}
+// Returns the one hand index the given owner is allowed to play right now
+// under Chaos/Order, or null if there's no such restriction.
+function allowedHandIndex(owner) {
+  const hand = state.hands[owner];
+  if (!hand || !hand.length) return null;
+  if (state.rules.order) return 0;
+  if (state.rules.chaos) {
+    const forcedId = state.forcedCardId[owner];
+    if (forcedId == null) return null;
+    const idx = hand.findIndex(c => c.id === forcedId);
+    return idx >= 0 ? idx : null;
+  }
+  return null;
+}
+// Tags every hand card with which seat it truly belongs to (for collection
+// purposes) before Swap has a chance to shuffle cards into the other seat's
+// hand. This tag rides along with the card object through board placement
+// and Firebase sync, so ranked win/loss/forfeit card transfers can tell a
+// swapped-in card apart from one the holder actually owns — without it, a
+// player could "win back" their own card via Swap and get an undeserved
+// duplicate or gil refund for it.
+function tagHandOwnership(hands) {
+  if (hands && Array.isArray(hands.p1)) {
+    hands.p1.forEach(c => { if (c && c._originalOwner == null) c._originalOwner = 'p1'; });
+  }
+  if (hands && Array.isArray(hands.p2)) {
+    hands.p2.forEach(c => { if (c && c._originalOwner == null) c._originalOwner = 'p2'; });
+  }
+  return hands;
+}
+// Swap: before the first turn, trade one random card between the two hands.
+// Mutates and returns the given { p1, p2 } hands object in place. Callers
+// must run tagHandOwnership on the hands first so the swapped cards keep
+// their true ownership tag.
+function applySwapRule(hands) {
+  if (!hands || !hands.p1 || !hands.p2 || !hands.p1.length || !hands.p2.length) return hands;
+  const p1Idx = Math.floor(Math.random() * hands.p1.length);
+  const p2Idx = Math.floor(Math.random() * hands.p2.length);
+  const p1Card = hands.p1[p1Idx];
+  const p2Card = hands.p2[p2Idx];
+  hands.p1[p1Idx] = p2Card;
+  hands.p2[p2Idx] = p1Card;
+  return hands;
+}
+// Roulette: replaces the manually-chosen in-match rules with a randomly
+// rolled subset for this one match. Leaves dealing-time rules (random,
+// closed, closedSingle, swap) and roulette itself untouched since those are
+// already resolved by the time this runs.
+const ROULETTE_COIN_FLIP_KEYS = ['same', 'plus', 'up', 'combo', 'elemental', 'fallenAce', 'reverse', 'suddenDeath'];
+function rollRouletteRules(baseRules) {
+  const rolled = { ...baseRules };
+  ROULETTE_COIN_FLIP_KEYS.forEach(key => { rolled[key] = Math.random() < 0.5; });
+  rolled.sameWall = rolled.same && Math.random() < 0.35;
+  const chaosOrderRoll = Math.random();
+  rolled.chaos = chaosOrderRoll < 0.3;
+  rolled.order = !rolled.chaos && chaosOrderRoll < 0.5;
+  return rolled;
+}
+const RULE_CHECKBOX_KEYS = ['same', 'sameWall', 'plus', 'up', 'combo', 'elemental', 'random', 'suddenDeath', 'closed', 'closedSingle', 'fallenAce', 'reverse', 'chaos', 'order', 'swap', 'roulette'];
+function syncRuleCheckboxesFromState() {
+  RULE_CHECKBOX_KEYS.forEach(key => {
+    const el = document.getElementById('rule' + key[0].toUpperCase() + key.slice(1));
+    if (el) el.checked = !!state.rules[key];
+  });
+  if (typeof updateDependentRuleCheckboxes === 'function') updateDependentRuleCheckboxes();
+  if (typeof syncCpuRulesFromState === 'function') syncCpuRulesFromState();
+}
 const DIRS = [
   { dir: 'up',    mySide: 'top',    theirSide: 'bottom' },
   { dir: 'right', mySide: 'right',  theirSide: 'left'   },
@@ -4142,6 +4322,10 @@ function initGame(hands) {
   restorePreviousMusicIfNeeded();
   state.board = Array(9).fill(null);
   state.hands = hands || dealHands();
+  tagHandOwnership(state.hands);
+  if (state.rules.swap) applySwapRule(state.hands);
+  state.forcedCardId = { p1: null, p2: null };
+  state.forcedCardTurnKey = { p1: null, p2: null };
   state.boardElements = state.rules.elemental
     ? generateBoardElements([0, 1, 2, 3, 4, 5, 6, 7, 8])
     : Array(9).fill(null);
@@ -4185,8 +4369,50 @@ function clonePracticeHands(hands) {
   return { p1: hands.p1.map(c => ({ ...c })), p2: hands.p2.map(c => ({ ...c })) };
 }
 async function runPracticePickFlow() {
+  if (state.rules.roulette) {
+    state.rules = rollRouletteRules(state.rules);
+    syncRuleCheckboxesFromState();
+  }
   const p1Hand = state.rules.random ? buildRandomHand() : await runCardPicker('p1', "Player 1: Pick 5 Cards");
   const p2Hand = state.rules.random ? buildRandomHand() : await runCardPicker('p2', "Player 2: Pick 5 Cards");
+  lastPracticeHands = clonePracticeHands({ p1: p1Hand, p2: p2Hand });
+  state.closedSingleCardId = {
+    p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
+    p2: p2Hand.closedSingleCardId != null ? p2Hand.closedSingleCardId : null,
+  };
+  initGame({ p1: p1Hand, p2: p2Hand });
+}
+async function rematchPracticeMatch() {
+  restorePreviousMusicIfNeeded();
+  if (state.rules.roulette) {
+    state.rules = rollRouletteRules(state.rules);
+    syncRuleCheckboxesFromState();
+  }
+  showGameScreen();
+  const p1Hand = state.rules.random ? buildRandomHand() : await runCardPicker('p1', "Player 1: Pick 5 Cards");
+  const p2Hand = state.rules.random ? buildRandomHand() : await runCardPicker('p2', "Player 2: Pick 5 Cards");
+  lastPracticeHands = clonePracticeHands({ p1: p1Hand, p2: p2Hand });
+  state.closedSingleCardId = {
+    p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
+    p2: p2Hand.closedSingleCardId != null ? p2Hand.closedSingleCardId : null,
+  };
+  initGame({ p1: p1Hand, p2: p2Hand });
+}
+async function rematchPracticeMatchSame() {
+  restorePreviousMusicIfNeeded();
+  showGameScreen();
+  const prevP1Ids = lastPracticeHands ? lastPracticeHands.p1.map(c => c.id) : null;
+  const prevP2Ids = lastPracticeHands ? lastPracticeHands.p2.map(c => c.id) : null;
+  const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(prevP1Ids);
+  const prefillP2Ids = state.rules.random ? null : prefillHandFromPreviousPicks(prevP2Ids);
+  const prefillP1ClosedSingle = state.closedSingleCardId ? state.closedSingleCardId.p1 : null;
+  const prefillP2ClosedSingle = state.closedSingleCardId ? state.closedSingleCardId.p2 : null;
+  const p1Hand = state.rules.random
+    ? buildRandomHand()
+    : await runCardPicker('p1', "Player 1: Pick 5 Cards", undefined, prefillP1Ids, prefillP1ClosedSingle);
+  const p2Hand = state.rules.random
+    ? buildRandomHand()
+    : await runCardPicker('p2', "Player 2: Pick 5 Cards", undefined, prefillP2Ids, prefillP2ClosedSingle);
   lastPracticeHands = clonePracticeHands({ p1: p1Hand, p2: p2Hand });
   state.closedSingleCardId = {
     p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
@@ -4322,7 +4548,7 @@ function refreshCpuBehaviorButtons() {
 // Vs CPU opens at this point total by default rather than remembering the
 // last value picked — it's a lower, more casual default than the 5-50
 // random range used for online ranked matches. Players can opt into
-// remembering their last value instead via the "Keep points the same"
+// remembering their last value instead via the "Remember point amount"
 // checkbox below.
 const CPU_POINT_TOTAL_DEFAULT = 25;
 const CPU_KEEP_POINTS_STORAGE_KEY = 'tripleTriadCpuKeepPoints';
@@ -4437,6 +4663,10 @@ async function startCpuMatch() {
     const elementalCheckbox = document.getElementById('ruleElemental');
     if (elementalCheckbox) elementalCheckbox.checked = true;
   }
+  if (state.rules.roulette) {
+    state.rules = rollRouletteRules(state.rules);
+    syncRuleCheckboxesFromState();
+  }
   document.getElementById('cpuSetupScreen').classList.add('hidden');
   showGameScreen();
   const p1Hand = state.rules.random
@@ -4452,6 +4682,10 @@ async function startCpuMatch() {
 }
 async function rematchCpuMatch() {
   restorePreviousMusicIfNeeded();
+  if (state.rules.roulette) {
+    state.rules = rollRouletteRules(state.rules);
+    syncRuleCheckboxesFromState();
+  }
   const pointBudget = state.cpuPointBudget || POINT_BUDGET_MAX;
   showGameScreen();
   const p1Hand = state.rules.random
@@ -4535,7 +4769,7 @@ function writeLocalStateToRoom(move) {
       card: move.card,
       captureResult: move.captureResult,
     },
-    triggerTally: { [state.seat]: state.rankedTriggerTally[state.seat] },
+    [`triggerTally/${state.seat}`]: state.rankedTriggerTally[state.seat],
     updatedAt: firebase.database.ServerValue.TIMESTAMP,
   };
   const roomRef = rtdb.ref(`${state.roomRoot}/${state.roomId}`);
@@ -4551,8 +4785,8 @@ function writeLocalStateToRoom(move) {
 let firstPlayerSpinShownForDeal = null;
 let firstPlayerSpinPending = false;
 let pickPending = false;
-const LOBBY_RULE_IDS = ['same', 'plus', 'up', 'combo', 'elemental', 'random', 'sameWall', 'suddenDeath', 'closed', 'closedSingle'];
-const MUTUALLY_EXCLUSIVE_RULES = { closed: 'closedSingle', closedSingle: 'closed' };
+const LOBBY_RULE_IDS = ['same', 'plus', 'up', 'combo', 'elemental', 'random', 'sameWall', 'suddenDeath', 'closed', 'closedSingle', 'fallenAce', 'reverse', 'chaos', 'order', 'swap', 'roulette'];
+const MUTUALLY_EXCLUSIVE_RULES = { closed: 'closedSingle', closedSingle: 'closed', chaos: 'order', order: 'chaos' };
 const WALL_RULE_PARENTS = { sameWall: 'same' };
 const LOBBY_RULE_STORAGE_KEY = 'tripleTriadLobbyRulePrefs';
 function loadLobbyRulePrefs() {
@@ -4795,6 +5029,8 @@ function applyRoomSnapshot(room) {
     firstPlayerSpinPending = true;
     state.board = Array(9).fill(null);
     state.hands = { p1: [], p2: [] };
+    state.forcedCardId = { p1: null, p2: null };
+    state.forcedCardTurnKey = { p1: null, p2: null };
     renderAll();
     playFirstPlayerSpin(room.firstPlayer, room.seats).then(() => {
       firstPlayerSpinPending = false;
@@ -4810,6 +5046,7 @@ function applyRoomSnapshotNow(room) {
   state.roomRematch = room.rematch || null;
   state.roomTurnStartedAt = room.turnStartedAt || null;
   state.roomTradeState = room.tradeState || null;
+  state.roomRankedResult = room.rankedResult || null;
   const prevRoomSeats = state.roomSeats;
   state.roomSeats = room.seats || null;
   const roomSeatsChanged = JSON.stringify(prevRoomSeats) !== JSON.stringify(state.roomSeats);
@@ -4885,6 +5122,10 @@ function playFirstPlayerSpin(firstPlayer, roomSeats) {
   label.classList.remove('first-player-p1', 'first-player-p2');
   overlay.classList.remove('hidden');
   overlay.classList.add('no-box');
+  const footer = document.getElementById('gameFooter');
+  if (footer) footer.classList.add('hidden');
+  const spinnerBackBtn = document.getElementById('spinnerBackToMenu');
+  if (spinnerBackBtn) spinnerBackBtn.classList.add('hidden');
   const boardEl = document.getElementById('board');
   if (boardEl) boardEl.classList.add('board-dimmed');
   playSfx('playerSelect');
@@ -4932,6 +5173,12 @@ function showWaitingForOpponent(message, hideBoardInfo) {
   }
   overlay.classList.remove('no-box');
   setBoardInfoHidden(!!hideBoardInfo);
+  // Matchmaking for Ranked/Free Play can leave the player waiting a while
+  // with no way out otherwise, so a Back to Menu button lives right in this
+  // popup -- but only until the rules lobby shows up (state.rulesShownOnline
+  // is a one-way flag), after which it's gone for good and never reappears.
+  const spinnerBackBtn = document.getElementById('spinnerBackToMenu');
+  if (spinnerBackBtn) spinnerBackBtn.classList.toggle('hidden', !(state.mode === 'online' && !state.rulesShownOnline));
 }
 function hideWaitingForOpponent() {
   const overlay = document.getElementById('firstPlayerSpinner');
@@ -4941,6 +5188,8 @@ function hideWaitingForOpponent() {
   if (label && WAITING_FOR_OPPONENT_MESSAGES.includes(label.textContent)) {
     overlay.classList.add('hidden');
   }
+  const spinnerBackBtn = document.getElementById('spinnerBackToMenu');
+  if (spinnerBackBtn) spinnerBackBtn.classList.add('hidden');
   arrow.style.display = '';
   if (!overlay.classList.contains('no-box')) {
     const boardEl = document.getElementById('board');
@@ -5023,6 +5272,7 @@ function startOnlineRoom(roomId, seat, root = ROOMS_ROOT) {
   state.roomSeats = null;
   state.board = Array(9).fill(null);
   state.hands = { p1: [], p2: [] };
+  state.rulesShownOnline = false;
   renderAll();
   const roomRef = rtdb.ref(`${root}/${roomId}`);
   setupRoomPresence(roomRef, roomId, root, seat, mySession);
@@ -5111,7 +5361,11 @@ async function executeDisconnectForfeit(roomId, roomRef, losingSeat, winningSeat
     disconnectForfeitAt: null,
     lastDisconnectForfeit: { cardId: forfeitedCard.id, from: losingSeat, to: winningSeat, at: firebase.database.ServerValue.TIMESTAMP },
   });
-  if (winningUid) {
+  // A Swap-borrowed card forfeited back to its true original owner isn't a
+  // real win for them — skip the collection/gil transfer so it can't be used
+  // to "win back" your own card via a forced disconnect forfeit.
+  const isSelfReturn = (forfeitedCard._originalOwner || losingSeat) === winningSeat;
+  if (winningUid && !isSelfReturn) {
     const forfeitCard = CARD_DB.find(c => c.id === forfeitedCard.id);
     let isDupOneOfAKind = false;
     if (forfeitCard && isShopPurchaseLimited(forfeitCard)) {
@@ -5125,7 +5379,7 @@ async function executeDisconnectForfeit(roomId, roomRef, losingSeat, winningSeat
       await addCardsToCollection(winningUid, forfeitedCard.id, 1);
     }
   }
-  if (losingUid) await removeCardsFromCollection(losingUid, forfeitedCard.id, 1);
+  if (losingUid && !isSelfReturn) await removeCardsFromCollection(losingUid, forfeitedCard.id, 1);
 }
 const TRADE_REVEAL_STEP_MS = 4000;
 const tradeRevealTimers = {};
@@ -5165,6 +5419,10 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
   const myPickIn = !!(room.picks && Array.isArray(room.picks[seat]) && room.picks[seat].length === 5);
   const bothPicksIn = !!(room.picks && Array.isArray(room.picks.p1) && room.picks.p1.length === 5
     && Array.isArray(room.picks.p2) && room.picks.p2.length === 5);
+  // Once both seats are filled, the rules lobby is shown -- from that point
+  // on the Back to Menu button in the game footer should stay gone for good,
+  // even during later waits (e.g. for the other player to pick their cards).
+  if (bothSeatsFilled) state.rulesShownOnline = true;
   if (state.gameOver && !room.gameOver) {
     restorePreviousMusicIfNeeded();
     state.gameOver = false;
@@ -5178,7 +5436,15 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
     hideWaitingForOpponent();
   }
   const budgetLockKey = `budget:${roomId}`;
-  if (seat === 'p1' && room.ranked && bothSeatsFilled && !room.pointBudgetCapped && !roomsCurrentlyResolving.has(budgetLockKey)) {
+  // seatUids.p1/p2 are written by a separate, un-awaited call right after the
+  // seats transaction commits (see tryClaimOpenSeat), so bothSeatsFilled can
+  // go true a moment before the just-joined player's uid has actually landed
+  // here. Computing the budget off a missing uid makes rollRankedPointBudget
+  // treat that player as level 1 (cap of 7) no matter what cards they really
+  // own -- so wait for both uids to actually be present; this snapshot
+  // handler re-fires on the next update once they are.
+  const bothSeatUidsKnown = !!(room.seatUids && room.seatUids.p1 && room.seatUids.p2);
+  if (seat === 'p1' && room.ranked && bothSeatsFilled && bothSeatUidsKnown && !room.pointBudgetCapped && !roomsCurrentlyResolving.has(budgetLockKey)) {
     roomsCurrentlyResolving.add(budgetLockKey);
     (async () => {
       try {
@@ -5197,8 +5463,10 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
   if (!room._dealt && bothSeatsFilled && !room.rulesFinalized) {
     updateLobbyScreen(room, roomId, seat, roomRef);
     if (seat === 'p1' && bothVotesIn) {
+      let mergedRules = mergeRuleVotes(room.ruleVotes, room.rules);
+      if (mergedRules.roulette) mergedRules = rollRouletteRules(mergedRules);
       const finalizeUpdate = {
-        rules: mergeRuleVotes(room.ruleVotes, room.rules),
+        rules: mergedRules,
         rulesFinalized: true,
       };
       if (room.ranked) finalizeUpdate.tradeRule = mergeTradeRuleVotes(room.tradeRuleVotes);
@@ -5322,6 +5590,8 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
       p1: buildHandFromPicks(room.picks.p1) || fallbackDeal.p1,
       p2: buildHandFromPicks(room.picks.p2) || fallbackDeal.p2,
     };
+    tagHandOwnership(dealt);
+    if (room.rules && room.rules.swap) applySwapRule(dealt);
     const handsBeforeDeal = state.hands;
     state.hands = dealt;
     const boardElements = room.rules && room.rules.elemental
@@ -5374,13 +5644,9 @@ function handleSpectateSnapshot(snap) {
     maybeDeleteEmptyRoom(state.roomRoot, state.roomId, rtdb.ref(`${state.roomRoot}/${state.roomId}`));
   }
   if (spectateLockedDealId && room.dealId && room.dealId !== spectateLockedDealId) {
-    // A different deal now lives in this room. Hold off touching the
-    // display at all until it's actually ready to watch, then prompt.
-    if (room._dealt) {
-      spectatePendingRoom = room;
-      showSpectateNewGamePrompt();
-    }
-    return;
+    // A different deal now lives in this room — just follow it automatically
+    // instead of waiting for the spectator to confirm.
+    spectateLockedDealId = null;
   }
   const bothSeatsFilled = !!(room.seats && room.seats.p1 && room.seats.p2);
   const bothPicksIn = !!(room.picks && Array.isArray(room.picks.p1) && room.picks.p1.length === 5
@@ -5618,6 +5884,11 @@ function requestRematch(sameRulesAndPoints) {
 }
 function selectCard(owner, idx) {
   if (state.gameOver || owner !== state.turn) return;
+  const allowedIdx = allowedHandIndex(owner);
+  if (allowedIdx != null && idx !== allowedIdx) {
+    playSfx('cursorCancel');
+    return;
+  }
   suppressHoverSfx = true;
   requestAnimationFrame(() => { suppressHoverSfx = false; });
   if (state.selected && state.selected.owner === owner && state.selected.idx === idx) {
@@ -5719,7 +5990,8 @@ function autoPlaceRandomCard() {
     .map((cell, i) => (cell === null ? i : -1))
     .filter(i => i !== -1);
   if (openCells.length === 0) return;
-  const idx = Math.floor(Math.random() * hand.length);
+  const allowedIdx = allowedHandIndex(owner);
+  const idx = allowedIdx != null ? allowedIdx : Math.floor(Math.random() * hand.length);
   const cellIndex = openCells[Math.floor(Math.random() * openCells.length)];
   state.selected = { owner, idx };
   placeCard(cellIndex);
@@ -5913,7 +6185,7 @@ function evaluateMove(board, index, card, owner) {
   }).filter(Boolean);
   const toFlip = new Set();
   neighbors.forEach(n => {
-    if (n.cell.owner === opponent && rank(index, card, n.mySide) > rank(n.index, n.cell.card, n.theirSide)) {
+    if (n.cell.owner === opponent && capturesBeats(index, card, n.mySide, n.index, n.cell.card, n.theirSide)) {
       toFlip.add(n.index);
     }
   });
@@ -6306,14 +6578,16 @@ function chooseCpuMove() {
   const hand = state.hands[owner];
   const openCells = state.board.map((cell, i) => (cell === null ? i : -1)).filter(i => i !== -1);
   if (!hand || hand.length === 0 || openCells.length === 0) return null;
+  const allowedIdx = allowedHandIndex(owner);
   const { behavior, level } = parseCpuDifficulty();
   if (level === 1) {
-    const idx = Math.floor(Math.random() * hand.length);
+    const idx = allowedIdx != null ? allowedIdx : Math.floor(Math.random() * hand.length);
     const cellIndex = openCells[Math.floor(Math.random() * openCells.length)];
     return { idx, cellIndex };
   }
   const scorer = CPU_BEHAVIOR_SCORERS[behavior] || cpuScoreNormal;
-  const moves = generateCandidateMoves(hand, openCells);
+  let moves = generateCandidateMoves(hand, openCells);
+  if (allowedIdx != null) moves = moves.filter(m => m.idx === allowedIdx);
   const scored = moves.map(move => ({ ...move, score: scorer(move, owner, level) }));
   const picked = pickFromScored(scored, level);
   return picked ? { idx: picked.idx, cellIndex: picked.cellIndex } : null;
@@ -6336,7 +6610,7 @@ function resolveCaptures(index, owner) {
   const placedElementalMod = elementalModifier(index, placedCell.card);
   const basicCaptures = neighbors.filter(n =>
     n.cell.owner === opponent &&
-    rank(index, placedCell.card, n.mySide) > rank(n.index, n.cell.card, n.theirSide)
+    capturesBeats(index, placedCell.card, n.mySide, n.index, n.cell.card, n.theirSide)
   );
   const toFlip = new Set(basicCaptures.map(n => n.index));
   let comboTriggered = false;
@@ -6410,7 +6684,7 @@ function resolveCaptures(index, owner) {
         chainNeighbors.forEach(n => {
           if (!visited.has(n.index) &&
               n.cell.owner === opponent &&
-              rank(ci, state.board[ci].card, n.mySide) > rank(n.index, n.cell.card, n.theirSide)) {
+              capturesBeats(ci, state.board[ci].card, n.mySide, n.index, n.cell.card, n.theirSide)) {
             flipCells([n.index], owner);
             visited.add(n.index);
             nextWave.push(n.index);
@@ -6460,8 +6734,8 @@ function buildInitialTradeState(rule, board, p1Score, p2Score, loserHand) {
   const loserPlayedCards = board
     .map((cell, idx) => ({ cell, idx }))
     .filter(({ cell }) => cell && cell.card && cell._placedBy === loser);
-  const boardPool = loserPlayedCards.map(({ cell, idx }) => ({ cardId: cell.card.id, poolKey: `${loser}-${idx}` }));
-  const handPool = (Array.isArray(loserHand) ? loserHand : []).map((card, i) => ({ cardId: card.id, poolKey: `${loser}-hand-${i}` }));
+  const boardPool = loserPlayedCards.map(({ cell, idx }) => ({ cardId: cell.card.id, poolKey: `${loser}-${idx}`, originalOwner: cell.card._originalOwner || loser }));
+  const handPool = (Array.isArray(loserHand) ? loserHand : []).map((card, i) => ({ cardId: card.id, poolKey: `${loser}-hand-${i}`, originalOwner: card._originalOwner || loser }));
   const pool = [...boardPool, ...handPool];
   let takeCount;
   if (rule === 'one') takeCount = 1;
@@ -6483,7 +6757,7 @@ async function pickTradeCard(roomRef, tradeState, poolKey) {
   const newPool = pool.filter(p => p.poolKey !== poolKey);
   let newPicked = [...picked, target];
   if (newPicked.length >= tradeState.takeCount && currentUser) {
-    newPicked = await annotateTradePicksWithDuplicates(currentUser.uid, newPicked);
+    newPicked = await annotateTradePicksWithDuplicates(currentUser.uid, newPicked, tradeState.winner);
   }
   await roomRef.update({
     'tradeState/pool': newPool,
@@ -6495,7 +6769,11 @@ async function advanceTradeReveal(room, roomId, roomRef) {
   if (!rawTs || rawTs.done) return;
   const ts = { ...rawTs, pool: rawTs.pool || [], picked: rawTs.picked || [] };
   if (ts.picked.length < ts.takeCount) return;
-  if (ts.revealIndex < ts.picked.length) {
+  // Stop advancing once the last card is on screen — finalize right here
+  // instead of taking one more empty step first, so the trade panel closes
+  // the moment the last card's own cycle ends instead of lingering empty
+  // for a whole extra reveal step.
+  if (ts.revealIndex < ts.picked.length - 1) {
     await roomRef.update({ 'tradeState/revealIndex': ts.revealIndex + 1 });
     return;
   }
@@ -6504,6 +6782,10 @@ async function advanceTradeReveal(room, roomId, roomRef) {
   const gainWrites = [];
   let refundGil = 0;
   ts.picked.forEach(p => {
+    // A Swap-borrowed card returning to its true original owner isn't a
+    // real win — skip the collection/gil transfer entirely so it can't be
+    // used to "win back" your own card as an undeserved duplicate or refund.
+    if (p.selfReturn || p.originalOwner === ts.winner) return;
     if (p.duplicateRefund) {
       refundGil += p.refundAmount || 0;
     } else if (winnerUid) {
@@ -6513,7 +6795,12 @@ async function advanceTradeReveal(room, roomId, roomRef) {
   await Promise.all(gainWrites);
   if (winnerUid && refundGil > 0) await addGilToUser(winnerUid, refundGil);
   const lossWrites = [];
-  if (loserUid) ts.picked.forEach(p => lossWrites.push(removeCardsFromCollection(loserUid, p.cardId, 1)));
+  if (loserUid) {
+    ts.picked.forEach(p => {
+      if (p.selfReturn || p.originalOwner === ts.winner) return;
+      lossWrites.push(removeCardsFromCollection(loserUid, p.cardId, 1));
+    });
+  }
   await Promise.all(lossWrites);
   if (winnerUid) await replenishCollectionIfLow(winnerUid);
   if (loserUid) await replenishCollectionIfLow(loserUid);
@@ -6575,10 +6862,21 @@ async function resolveRankedMatchIfNeededInner(room, roomId, roomRef) {
     ? applyRankedStatsUpdate(p2Uid, outcome === 'p2' ? 'win' : (outcome === 'draw' ? 'draw' : 'loss'), p2RankedScore - p1RankedScore)
     : Promise.resolve(0);
   const [p1ActualRatingDelta, p2ActualRatingDelta] = await Promise.all([p1StatsPromise, p2StatsPromise]);
+  // Gil is earned for every ranked point scored this match — win, lose, or
+  // draw — based on each player's own ranked score, not gated behind
+  // beating the opponent's like the competitive rating delta above is.
+  const p1GilEarned = p1RankedScore * GIL_PER_RATING_POINT;
+  const p2GilEarned = p2RankedScore * GIL_PER_RATING_POINT;
   const gilWrites = [];
-  if (p1Uid) gilWrites.push(awardGil(p1Uid, p1ActualRatingDelta));
-  if (p2Uid) gilWrites.push(awardGil(p2Uid, p2ActualRatingDelta));
+  if (p1Uid) gilWrites.push(addGilToUser(p1Uid, p1GilEarned));
+  if (p2Uid) gilWrites.push(addGilToUser(p2Uid, p2GilEarned));
   await Promise.all(gilWrites);
+  await roomRef.update({
+    rankedResult: {
+      p1: { ratingDelta: p1ActualRatingDelta, gilEarned: p1GilEarned },
+      p2: { ratingDelta: p2ActualRatingDelta, gilEarned: p2GilEarned },
+    },
+  });
   const leaderboardWrites = [];
   if (p1Uid) leaderboardWrites.push(updateLeaderboardEntry(LEADERBOARD_RANKED_ROOT, p1Uid, room.seats && room.seats.p1 && room.seats.p1.name));
   if (p2Uid) leaderboardWrites.push(updateLeaderboardEntry(LEADERBOARD_RANKED_ROOT, p2Uid, room.seats && room.seats.p2 && room.seats.p2.name));
@@ -6591,31 +6889,30 @@ async function resolveRankedMatchIfNeededInner(room, roomId, roomRef) {
   const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand);
   if (tradeState.picked && tradeState.picked.length) {
     const winnerUid = room.seatUids && tradeState.winner && room.seatUids[tradeState.winner];
-    tradeState.picked = await annotateTradePicksWithDuplicates(winnerUid, tradeState.picked);
+    tradeState.picked = await annotateTradePicksWithDuplicates(winnerUid, tradeState.picked, tradeState.winner);
   }
   await roomRef.update({ tradeState });
 }
-async function applyRankedStatsUpdate(uid, outcome, ratingDelta) {
-  const ref = rtdb.ref(`${USERS_ROOT}/${uid}/rankedStats`);
+// Shared by Ranked and Free Play (statsField picks which profile node to
+// update/read: 'rankedStats' or 'freePlayStats') -- same never-decreases
+// points model for both, just kept in separate buckets.
+async function applyRankedStatsUpdate(uid, outcome, ratingDelta, statsField = 'rankedStats') {
+  const ref = rtdb.ref(`${USERS_ROOT}/${uid}/${statsField}`);
   const snap = await ref.once('value');
   const stats = snap.val() || { rating: 0, wins: 0, losses: 0, draws: 0 };
   const previousRating = stats.rating || 0;
+  const appliedDelta = Math.max(0, ratingDelta);
   const updated = {
-    rating: Math.max(0, previousRating + ratingDelta),
+    rating: previousRating + appliedDelta,
     wins: (stats.wins || 0) + (outcome === 'win' ? 1 : 0),
     losses: (stats.losses || 0) + (outcome === 'loss' ? 1 : 0),
     draws: (stats.draws || 0) + (outcome === 'draw' ? 1 : 0),
   };
   await ref.set(updated);
   if (currentUser && currentUser.uid === uid && currentUserProfile) {
-    currentUserProfile.rankedStats = updated;
+    currentUserProfile[statsField] = updated;
   }
   return updated.rating - previousRating;
-}
-async function awardGil(uid, actualRatingDelta) {
-  if (!(actualRatingDelta > 0)) return;
-  const amount = actualRatingDelta * GIL_PER_RATING_POINT;
-  await addGilToUser(uid, amount);
 }
 async function addGilToUser(uid, amount) {
   if (!(amount > 0)) return;
@@ -6631,12 +6928,18 @@ async function addGilToUser(uid, amount) {
 // Marks which cards in a trade-reveal pick list would be one-of-a-kind
 // duplicates for the winner (cards they already own that can't be
 // stocked twice), so those picks convert to gil instead of being granted.
-async function annotateTradePicksWithDuplicates(winnerUid, pickedList) {
+async function annotateTradePicksWithDuplicates(winnerUid, pickedList, winnerSeat) {
   if (!winnerUid || !pickedList || !pickedList.length) return pickedList || [];
   const snap = await rtdb.ref(`${USERS_ROOT}/${winnerUid}`).once('value');
   const profile = snap.val();
   const grantedSoFar = {};
   return pickedList.map(p => {
+    // A card whose true original owner is the winner (via Swap, not this
+    // trade) is just returning home — never a "new" duplicate, and never
+    // worth a gil refund, since it was never really at stake for them.
+    if (winnerSeat && p.originalOwner === winnerSeat) {
+      return { ...p, oneOfAKind: false, duplicateRefund: false, refundAmount: 0, selfReturn: true };
+    }
     const card = CARD_DB.find(c => c.id === p.cardId);
     const oneOfAKind = !!card && isShopPurchaseLimited(card);
     if (!oneOfAKind) return { ...p, oneOfAKind: false, duplicateRefund: false, refundAmount: 0 };
@@ -6651,10 +6954,10 @@ async function annotateTradePicksWithDuplicates(winnerUid, pickedList) {
     return { ...p, oneOfAKind: true, duplicateRefund: false, refundAmount: 0 };
   });
 }
-async function updateLeaderboardEntry(root, key, name, statsOverride) {
+async function updateLeaderboardEntry(root, key, name, statsOverride, statsField = 'rankedStats') {
   let stats = statsOverride;
   if (!stats) {
-    const snap = await rtdb.ref(`${USERS_ROOT}/${key}/rankedStats`).once('value');
+    const snap = await rtdb.ref(`${USERS_ROOT}/${key}/${statsField}`).once('value');
     stats = snap.val() || { rating: 0, wins: 0, losses: 0, draws: 0 };
   }
   await rtdb.ref(`${root}/${key}`).set({
@@ -6679,6 +6982,9 @@ async function resolveFreePlayMatchIfNeededInner(room, roomId, roomRef) {
   await roomRef.update({ freePlayResolved: true });
   const p1Score = totalScoreFromRoom(room, 'p1');
   const p2Score = totalScoreFromRoom(room, 'p2');
+  const tally = room.triggerTally || {};
+  const p1RankedScore = computeRankedScoreForSeat(p1Score, p2Score, tally.p1);
+  const p2RankedScore = computeRankedScoreForSeat(p2Score, p1Score, tally.p2);
   const outcome = p1Score === p2Score ? 'draw' : (p1Score > p2Score ? 'p1' : 'p2');
   console.log('[freeplay resolve]', {
     roomId,
@@ -6688,26 +6994,23 @@ async function resolveFreePlayMatchIfNeededInner(room, roomId, roomRef) {
   });
   const seatKey = seat => (room.seatUids && room.seatUids[seat]) || null;
   const seatName = seat => (room.seats && room.seats[seat] && room.seats[seat].name) || 'Player';
-  const writes = [];
-  ['p1', 'p2'].forEach(seat => {
-    const key = seatKey(seat);
-    if (!key) return;
-    const result = outcome === 'draw' ? 'draw' : (outcome === seat ? 'win' : 'loss');
-    writes.push(applyFreePlayStatsUpdate(key, seatName(seat), result));
-  });
-  await Promise.all(writes);
-}
-async function applyFreePlayStatsUpdate(key, name, result) {
-  const ref = rtdb.ref(`${LEADERBOARD_FREEPLAY_ROOT}/${key}`);
-  const snap = await ref.once('value');
-  const stats = snap.val() || { name, wins: 0, losses: 0, draws: 0 };
-  await ref.set({
-    name: name || stats.name || 'Player',
-    rating: null,
-    wins: (stats.wins || 0) + (result === 'win' ? 1 : 0),
-    losses: (stats.losses || 0) + (result === 'loss' ? 1 : 0),
-    draws: (stats.draws || 0) + (result === 'draw' ? 1 : 0),
-  });
+  const p1Uid = seatKey('p1');
+  const p2Uid = seatKey('p2');
+  // Free Play now earns the same style of never-decreasing points as Ranked
+  // (score margin + trigger bonuses) so its leaderboard has something to
+  // rank besides win count -- but it explicitly never awards gil, unlike
+  // Ranked, since Free Play matches aren't gil-eligible.
+  const p1StatsPromise = p1Uid
+    ? applyRankedStatsUpdate(p1Uid, outcome === 'p1' ? 'win' : (outcome === 'draw' ? 'draw' : 'loss'), p1RankedScore - p2RankedScore, 'freePlayStats')
+    : Promise.resolve(0);
+  const p2StatsPromise = p2Uid
+    ? applyRankedStatsUpdate(p2Uid, outcome === 'p2' ? 'win' : (outcome === 'draw' ? 'draw' : 'loss'), p2RankedScore - p1RankedScore, 'freePlayStats')
+    : Promise.resolve(0);
+  await Promise.all([p1StatsPromise, p2StatsPromise]);
+  const leaderboardWrites = [];
+  if (p1Uid) leaderboardWrites.push(updateLeaderboardEntry(LEADERBOARD_FREEPLAY_ROOT, p1Uid, seatName('p1'), null, 'freePlayStats'));
+  if (p2Uid) leaderboardWrites.push(updateLeaderboardEntry(LEADERBOARD_FREEPLAY_ROOT, p2Uid, seatName('p2'), null, 'freePlayStats'));
+  await Promise.all(leaderboardWrites);
 }
 const LOGO_CARD_IMAGE = 'logo.png';
 function createCardElement(card, owner, cellIndex, hidden) {
@@ -6838,12 +7141,15 @@ function renderHand(owner) {
   const existingCards = container.children;
   const selected = state.selected && state.selected.owner === owner ? state.selected.idx : -1;
   const acting = canAct(owner);
+  const allowedIdx = (state.rules.chaos || state.rules.order) ? allowedHandIndex(owner) : null;
   state.hands[owner].forEach((card, idx) => {
     const sig = handCardSignature(owner, card);
     const el = existingCards[idx];
     if (el && el.dataset.sig === sig) {
       el.classList.toggle('selected', idx === selected);
       el.classList.toggle('disabled', !acting);
+      el.classList.toggle('turn-forced', allowedIdx != null && idx === allowedIdx);
+      el.classList.toggle('turn-restricted', allowedIdx != null && idx !== allowedIdx);
       if (acting && el.dataset.hasClick !== 'true') {
         el.dataset.hasClick = 'true';
         el.addEventListener('click', () => selectCard(owner, idx));
@@ -6863,6 +7169,8 @@ function renderHand(owner) {
     if (idx === selected) {
       freshEl.classList.add('selected');
     }
+    freshEl.classList.toggle('turn-forced', allowedIdx != null && idx === allowedIdx);
+    freshEl.classList.toggle('turn-restricted', allowedIdx != null && idx !== allowedIdx);
     if (!acting) {
       freshEl.classList.add('disabled');
     } else {
@@ -6983,6 +7291,7 @@ function displayNameForSeat(seat, seatsOverride) {
 }
 const RULE_DISPLAY_ORDER = [
   ['same', 'Same'], ['sameWall', 'Same Wall'], ['plus', 'Plus'], ['up', 'Up'], ['combo', 'Combo'], ['elemental', 'Elemental'], ['random', 'Random'], ['suddenDeath', 'Sudden Death'], ['closed', 'Closed'], ['closedSingle', 'Closed Single'],
+  ['swap', 'Swap'], ['reverse', 'Reverse'], ['chaos', 'Chaos'], ['order', 'Order'], ['fallenAce', 'Fallen Ace'], ['roulette', 'Roulette'],
 ];
 function formatActiveRules(rules) {
   if (!rules) return '[No rules]';
@@ -7019,6 +7328,7 @@ function updateTurnIndicator() {
   el.classList.toggle('turn-p1', state.turn === 'p1');
   el.classList.toggle('turn-p2', state.turn === 'p2');
 }
+let lastGilResultKey = null;
 function updateOverlay() {
   const overlay = document.getElementById('overlay');
   if (!state.gameOver || state.suppressOverlay) { overlay.classList.remove('show'); return; }
@@ -7060,7 +7370,8 @@ function updateOverlay() {
   const statusEl = document.getElementById('overlayStatus');
   const tradePanel = document.getElementById('tradePanel');
   const isRankedRoom = state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT;
-  const ts = isRankedRoom ? state.roomTradeState : null;
+  const isRankedRoomOrSpectating = (state.mode === 'online' || state.mode === 'spectate') && state.roomRoot === RANKED_ROOMS_ROOT;
+  const ts = isRankedRoomOrSpectating ? state.roomTradeState : null;
   if (tradePanel) {
     if (ts && !ts.done) {
       tradePanel.classList.remove('hidden');
@@ -7074,6 +7385,29 @@ function updateOverlay() {
       renderTradeOverlay(ts);
     } else {
       tradePanel.classList.add('hidden');
+    }
+  }
+  const gilResultEl = document.getElementById('overlayGilResult');
+  if (gilResultEl) {
+    if (isRankedRoom && ts && ts.done && state.seat && currentUser) {
+      const key = `${state.roomId}|${state.seat}`;
+      if (key !== lastGilResultKey) {
+        lastGilResultKey = key;
+        const rr = state.roomRankedResult && state.roomRankedResult[state.seat];
+        const gilEarned = rr ? (rr.gilEarned || 0) : 0;
+        gilResultEl.classList.remove('hidden');
+        gilResultEl.textContent = `Gil Obtained: ${gilEarned} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
+        rtdb.ref(`${USERS_ROOT}/${currentUser.uid}/gil`).once('value').then(snap => {
+          const total = snap.val() || 0;
+          if (currentUserProfile) currentUserProfile.gil = total;
+          if (lastGilResultKey === key) {
+            gilResultEl.textContent = `Gil Obtained: ${gilEarned} - Total: ${total}`;
+          }
+        }).catch(() => {});
+      }
+    } else if (!(isRankedRoom && ts)) {
+      lastGilResultKey = null;
+      gilResultEl.classList.add('hidden');
     }
   }
   if (state.mode === 'online') {
@@ -7115,9 +7449,11 @@ function updateOverlay() {
     statusEl.textContent = '';
   } else {
     resetBtn.classList.remove('hidden');
-    resetBtn.textContent = 'Play Again';
+    resetBtn.textContent = 'Rematch';
     resetBtn.disabled = false;
-    rematchSameBtn.classList.add('hidden');
+    rematchSameBtn.classList.remove('hidden');
+    rematchSameBtn.textContent = 'Rematch (Same Rules/Points)';
+    rematchSameBtn.disabled = false;
     leaveBtn.classList.remove('hidden');
     leaveBtn.textContent = 'Back to Menu';
     statusEl.textContent = '';
@@ -7125,6 +7461,7 @@ function updateOverlay() {
 }
 let lastRenderedTradeSignature = null;
 let lastRenderedRevealIndex = -1;
+let lastRenderedPoolSignature = null;
 function renderTradeOverlay(ts) {
   ts = { ...ts, pool: ts.pool || [], picked: ts.picked || [] };
   const label = document.getElementById('tradePanelLabel');
@@ -7141,6 +7478,9 @@ function renderTradeOverlay(ts) {
     label.textContent = iAmWinner
       ? (remaining === 1 ? 'Pick a card' : 'Pick cards')
       : `${winnerName} is picking...`;
+    const poolSignature = `${ts.pool.map(p => p.poolKey).join(',')}|${iAmWinner}`;
+    if (poolSignature === lastRenderedPoolSignature) return;
+    lastRenderedPoolSignature = poolSignature;
     const roomRef = rtdb.ref(`${state.roomRoot}/${state.roomId}`);
     poolEl.innerHTML = '';
     ts.pool.forEach(p => {
@@ -7159,6 +7499,7 @@ function renderTradeOverlay(ts) {
     });
     return;
   }
+  lastRenderedPoolSignature = null;
   poolEl.classList.add('hidden');
   poolEl.innerHTML = '';
   revealWrap.classList.remove('hidden');
@@ -7181,6 +7522,7 @@ function renderTradeOverlay(ts) {
     labelStage.textContent = '';
     dupNoteStage.className = 'hidden';
     dupNoteStage.innerHTML = '';
+    revealWrap.classList.add('hidden');
     return;
   }
   const picked = ts.picked[idx];
@@ -7226,6 +7568,10 @@ function renderTradeOverlay(ts) {
 }
 function renderAll() {
   updateCardOpacityMode();
+  if (state.rules.chaos && !state.gameOver) {
+    ensureChaosForcedCard('p1');
+    ensureChaosForcedCard('p2');
+  }
   renderHand('p1');
   renderHand('p2');
   renderBoard();
@@ -7290,6 +7636,7 @@ function updateTitleBarControls() {
   const onlineTitleBar = document.getElementById('onlineTitleBar');
   if (titleBar) titleBar.classList.toggle('hidden', isOnlineMatch);
   if (onlineTitleBar) onlineTitleBar.classList.toggle('hidden', !isOnlineMatch);
+  document.body.classList.toggle('spectate-mode', state.mode === 'spectate');
 }
 function updateGameFooterVisibility() {
   const footer = document.getElementById('gameFooter');
@@ -7318,6 +7665,10 @@ function syncHandBoardCenter() {
     hand.style.marginTop = (delta / zoomFactor) + 'px';
   });
 }
+// Applied on top of every volume setting (music sliders and SFX sliders
+// alike) so the whole page plays at half its usual loudness no matter what
+// the individual volume controls are set to.
+const GLOBAL_VOLUME_SCALE = 0.5;
 const MUSIC_TRACKS = [
   { name: "Shuffle or Boogie", file: "Music/Shuffle or Boogie.mp3", gain: 1 },
   { name: "Tetra Master", file: "Music/Tetra Master.mp3", gain: 1.4 },
@@ -7345,7 +7696,7 @@ function initMusicPlayer() {
   function applyVolume() {
     const track = MUSIC_TRACKS[Number(select.value)];
     const gain = (track && track.gain) || 1;
-    audio.volume = Math.min(1, Math.max(0, (Number(volumeSelect.value) / 100) * gain));
+    audio.volume = Math.min(1, Math.max(0, (Number(volumeSelect.value) / 100) * gain * GLOBAL_VOLUME_SCALE));
   }
   applyVolume();
   volumeSelect.addEventListener('change', applyVolume);
@@ -7443,7 +7794,7 @@ function maybeStartVictoryMusic(result) {
   audio.src = VICTORY_TRACK_FILE;
   audio.currentTime = 0;
   const volumeSelect = document.getElementById('volumeSelect');
-  audio.volume = volumeSelect ? Math.min(1, Math.max(0, Number(volumeSelect.value) / 100)) : 1;
+  audio.volume = volumeSelect ? Math.min(1, Math.max(0, (Number(volumeSelect.value) / 100) * GLOBAL_VOLUME_SCALE)) : GLOBAL_VOLUME_SCALE;
   audio.play().catch(() => {});
 }
 function restorePreviousMusicIfNeeded() {
@@ -7460,7 +7811,7 @@ function restorePreviousMusicIfNeeded() {
   if (volumeSelect) {
     const track = MUSIC_TRACKS[Number(saved.selectValue)];
     const gain = (track && track.gain) || 1;
-    audio.volume = Math.min(1, Math.max(0, (Number(volumeSelect.value) / 100) * gain));
+    audio.volume = Math.min(1, Math.max(0, (Number(volumeSelect.value) / 100) * gain * GLOBAL_VOLUME_SCALE));
   }
   if (saved.wasPlaying) {
     audio.play().catch(() => {});
@@ -7593,7 +7944,7 @@ function playSfx(name) {
   if (!src) return;
   const audio = new Audio(src);
   const category = SFX_CATEGORY[name] || 'card';
-  audio.volume = category === 'cursor' ? sfxState.cursorVolume : sfxState.cardVolume;
+  audio.volume = (category === 'cursor' ? sfxState.cursorVolume : sfxState.cardVolume) * GLOBAL_VOLUME_SCALE;
   audio.play().catch(() => {});
 }
 function rulesLockedForCurrentMode() {
@@ -7653,6 +8004,58 @@ document.getElementById('ruleSuddenDeath').addEventListener('change', e => {
   if (rulesLockedForCurrentMode()) return;
   state.rules.suddenDeath = e.target.checked;
 });
+document.getElementById('ruleClosed').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.closed = e.target.checked;
+  if (e.target.checked) {
+    const closedSingleEl = document.getElementById('ruleClosedSingle');
+    closedSingleEl.checked = false;
+    state.rules.closedSingle = false;
+  }
+});
+document.getElementById('ruleClosedSingle').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.closedSingle = e.target.checked;
+  if (e.target.checked) {
+    const closedEl = document.getElementById('ruleClosed');
+    closedEl.checked = false;
+    state.rules.closed = false;
+  }
+});
+document.getElementById('ruleFallenAce').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.fallenAce = e.target.checked;
+});
+document.getElementById('ruleReverse').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.reverse = e.target.checked;
+});
+document.getElementById('ruleChaos').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.chaos = e.target.checked;
+  if (e.target.checked) {
+    const orderEl = document.getElementById('ruleOrder');
+    orderEl.checked = false;
+    state.rules.order = false;
+  }
+});
+document.getElementById('ruleOrder').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.order = e.target.checked;
+  if (e.target.checked) {
+    const chaosEl = document.getElementById('ruleChaos');
+    chaosEl.checked = false;
+    state.rules.chaos = false;
+  }
+});
+document.getElementById('ruleSwap').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.swap = e.target.checked;
+});
+document.getElementById('ruleRoulette').addEventListener('change', e => {
+  if (rulesLockedForCurrentMode()) return;
+  state.rules.roulette = e.target.checked;
+});
 document.getElementById('elementalModeSelect').addEventListener('change', e => {
   if (rulesLockedForCurrentMode()) return;
   state.elementalMode = e.target.value;
@@ -7685,6 +8088,11 @@ document.getElementById('spectateBgBtn').addEventListener('click', () => {
   updateTitleBarControls();
 });
 document.getElementById('gameBackToMenu').addEventListener('click', () => {
+  playSfx('cursorCancel');
+  leaveOnlineRoomOrSpectate();
+  showMenuScreen();
+});
+document.getElementById('spinnerBackToMenu').addEventListener('click', () => {
   playSfx('cursorCancel');
   leaveOnlineRoomOrSpectate();
   showMenuScreen();
@@ -7735,7 +8143,7 @@ document.getElementById('overlayReset').addEventListener('click', () => {
   if (state.mode === 'practice' && state.cpuOpponent) {
     rematchCpuMatch();
   } else if (state.mode === 'practice') {
-    initGame();
+    rematchPracticeMatch();
   } else if (state.mode === 'online') {
     requestRematch();
   }
@@ -7743,6 +8151,8 @@ document.getElementById('overlayReset').addEventListener('click', () => {
 document.getElementById('overlayRematchSame').addEventListener('click', () => {
   if (state.mode === 'practice' && state.cpuOpponent) {
     rematchCpuMatchSame();
+  } else if (state.mode === 'practice') {
+    rematchPracticeMatchSame();
   } else if (state.mode === 'online') {
     requestRematch(true);
   }
@@ -7773,22 +8183,6 @@ for (let v = 0; v <= 100; v += 10) {
 elementalBiasSelect.addEventListener('change', () => {
   state.elementalBias = Number(elementalBiasSelect.value);
 });
-const cpuAlignmentSelect = document.getElementById('cpuAlignmentSelect');
-for (let v = 0; v <= 100; v += 10) {
-  const opt = document.createElement('option');
-  opt.value = v;
-  opt.textContent = v + '%';
-  if (v === 100) opt.selected = true;
-  cpuAlignmentSelect.appendChild(opt);
-}
-const cpuElementalBiasSelect = document.getElementById('cpuElementalBiasSelect');
-for (let v = 0; v <= 100; v += 10) {
-  const opt = document.createElement('option');
-  opt.value = v;
-  opt.textContent = v + '%';
-  if (v === 80) opt.selected = true;
-  cpuElementalBiasSelect.appendChild(opt);
-}
 const CPU_RULE_CHECKBOX_MAP = {
   cpuRuleSame: 'ruleSame',
   cpuRuleSameWall: 'ruleSameWall',
@@ -7798,6 +8192,14 @@ const CPU_RULE_CHECKBOX_MAP = {
   cpuRuleElemental: 'ruleElemental',
   cpuRuleRandom: 'ruleRandom',
   cpuRuleSuddenDeath: 'ruleSuddenDeath',
+  cpuRuleFallenAce: 'ruleFallenAce',
+  cpuRuleReverse: 'ruleReverse',
+  cpuRuleChaos: 'ruleChaos',
+  cpuRuleOrder: 'ruleOrder',
+  cpuRuleSwap: 'ruleSwap',
+  cpuRuleRoulette: 'ruleRoulette',
+  cpuRuleClosed: 'ruleClosed',
+  cpuRuleClosedSingle: 'ruleClosedSingle',
 };
 function updateCpuDependentRuleCheckboxes() {
   const sameWallEl = document.getElementById('cpuRuleSameWall');
@@ -7809,9 +8211,6 @@ function syncCpuRulesFromState() {
     const mainEl = document.getElementById(mainId);
     if (cpuEl && mainEl) cpuEl.checked = mainEl.checked;
   });
-  document.getElementById('cpuElementalModeSelect').value = document.getElementById('elementalModeSelect').value;
-  cpuAlignmentSelect.value = alignmentSelect.value;
-  cpuElementalBiasSelect.value = elementalBiasSelect.value;
   updateCpuDependentRuleCheckboxes();
 }
 document.getElementById('cpuRuleSame').addEventListener('change', e => {
@@ -7863,17 +8262,57 @@ document.getElementById('cpuRuleSuddenDeath').addEventListener('change', e => {
   state.rules.suddenDeath = e.target.checked;
   document.getElementById('ruleSuddenDeath').checked = e.target.checked;
 });
-document.getElementById('cpuElementalModeSelect').addEventListener('change', e => {
-  state.elementalMode = e.target.value;
-  document.getElementById('elementalModeSelect').value = e.target.value;
+document.getElementById('cpuRuleClosed').addEventListener('change', e => {
+  state.rules.closed = e.target.checked;
+  document.getElementById('ruleClosed').checked = e.target.checked;
+  if (e.target.checked) {
+    state.rules.closedSingle = false;
+    document.getElementById('cpuRuleClosedSingle').checked = false;
+    document.getElementById('ruleClosedSingle').checked = false;
+  }
 });
-cpuAlignmentSelect.addEventListener('change', () => {
-  state.elementAlignment = Number(cpuAlignmentSelect.value);
-  alignmentSelect.value = cpuAlignmentSelect.value;
+document.getElementById('cpuRuleClosedSingle').addEventListener('change', e => {
+  state.rules.closedSingle = e.target.checked;
+  document.getElementById('ruleClosedSingle').checked = e.target.checked;
+  if (e.target.checked) {
+    state.rules.closed = false;
+    document.getElementById('cpuRuleClosed').checked = false;
+    document.getElementById('ruleClosed').checked = false;
+  }
 });
-cpuElementalBiasSelect.addEventListener('change', () => {
-  state.elementalBias = Number(cpuElementalBiasSelect.value);
-  elementalBiasSelect.value = cpuElementalBiasSelect.value;
+document.getElementById('cpuRuleFallenAce').addEventListener('change', e => {
+  state.rules.fallenAce = e.target.checked;
+  document.getElementById('ruleFallenAce').checked = e.target.checked;
+});
+document.getElementById('cpuRuleReverse').addEventListener('change', e => {
+  state.rules.reverse = e.target.checked;
+  document.getElementById('ruleReverse').checked = e.target.checked;
+});
+document.getElementById('cpuRuleChaos').addEventListener('change', e => {
+  state.rules.chaos = e.target.checked;
+  document.getElementById('ruleChaos').checked = e.target.checked;
+  if (e.target.checked) {
+    state.rules.order = false;
+    document.getElementById('cpuRuleOrder').checked = false;
+    document.getElementById('ruleOrder').checked = false;
+  }
+});
+document.getElementById('cpuRuleOrder').addEventListener('change', e => {
+  state.rules.order = e.target.checked;
+  document.getElementById('ruleOrder').checked = e.target.checked;
+  if (e.target.checked) {
+    state.rules.chaos = false;
+    document.getElementById('cpuRuleChaos').checked = false;
+    document.getElementById('ruleChaos').checked = false;
+  }
+});
+document.getElementById('cpuRuleSwap').addEventListener('change', e => {
+  state.rules.swap = e.target.checked;
+  document.getElementById('ruleSwap').checked = e.target.checked;
+});
+document.getElementById('cpuRuleRoulette').addEventListener('change', e => {
+  state.rules.roulette = e.target.checked;
+  document.getElementById('ruleRoulette').checked = e.target.checked;
 });
 initMusicPlayer();
 initSfxControls();
@@ -8050,11 +8489,11 @@ function updateAuthUi() {
       nameInput.value = getSavedDisplayName();
     }
   }
+  const isAdmin = !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
   const adminBtn = document.getElementById('menuAdminGive');
-  if (adminBtn) {
-    const isAdmin = !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
-    adminBtn.classList.toggle('hidden', !isAdmin);
-  }
+  if (adminBtn) adminBtn.classList.toggle('hidden', !isAdmin);
+  const adminRestoreBtn = document.getElementById('menuAdminRestorePoints');
+  if (adminRestoreBtn) adminRestoreBtn.classList.toggle('hidden', !isAdmin);
 }
 function setAccountError(msg) {
   const el = document.getElementById('accountError');
@@ -8420,6 +8859,51 @@ function openAdminGiveModal() {
 function closeAdminGiveModal() {
   document.getElementById('adminGiveModal').classList.remove('show');
 }
+// One-time migration: ranked losses used to subtract rating (floored at 0
+// total). That's been changed so losses never subtract points going forward,
+// but individual past deltas were never logged anywhere, so we can't recover
+// the exact amount each user lost historically. As an approximation, this
+// adds back an estimated flat amount per recorded loss. Idempotent via the
+// rankedStats.lossesRestored flag so re-running it is a no-op.
+const RANKED_LOSS_POINT_ESTIMATE = 4;
+async function restoreLostRankedPoints() {
+  const btn = document.getElementById('menuAdminRestorePoints');
+  if (btn) btn.disabled = true;
+  setMenuStatus('Restoring lost ranked points...');
+  try {
+    const snap = await rtdb.ref(USERS_ROOT).once('value');
+    const users = snap.val() || {};
+    let usersAdjusted = 0;
+    let totalPointsAdded = 0;
+    const writes = [];
+    Object.entries(users).forEach(([uid, profile]) => {
+      const stats = profile && profile.rankedStats;
+      if (!stats || stats.lossesRestored || !(stats.losses > 0)) return;
+      const bonus = stats.losses * RANKED_LOSS_POINT_ESTIMATE;
+      const updated = Object.assign({}, stats, {
+        rating: (stats.rating || 0) + bonus,
+        lossesRestored: true,
+      });
+      usersAdjusted += 1;
+      totalPointsAdded += bonus;
+      writes.push(
+        rtdb.ref(`${USERS_ROOT}/${uid}/rankedStats`).set(updated)
+          .then(() => updateLeaderboardEntry(LEADERBOARD_RANKED_ROOT, uid, profile.displayName, updated))
+      );
+      if (currentUser && currentUser.uid === uid && currentUserProfile) {
+        currentUserProfile.rankedStats = updated;
+      }
+    });
+    await Promise.all(writes);
+    setMenuStatus(usersAdjusted
+      ? `Restored points for ${usersAdjusted} user(s), +${totalPointsAdded} total.`
+      : 'No users needed restoring (already applied, or no one has losses on record).');
+  } catch (err) {
+    setMenuStatus((err && err.message) ? err.message : 'Restore failed.');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
 function initAdminGiveUi() {
   const cardSelect = document.getElementById('adminGiveCardSelect');
   if (cardSelect && !cardSelect.options.length) {
@@ -8432,6 +8916,8 @@ function initAdminGiveUi() {
   }
   const adminBtn = document.getElementById('menuAdminGive');
   if (adminBtn) adminBtn.addEventListener('click', openAdminGiveModal);
+  const adminRestoreBtn = document.getElementById('menuAdminRestorePoints');
+  if (adminRestoreBtn) adminRestoreBtn.addEventListener('click', restoreLostRankedPoints);
   const closeBtn = document.getElementById('adminGiveClose');
   if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeAdminGiveModal(); });
   const modal = document.getElementById('adminGiveModal');
@@ -8560,7 +9046,6 @@ function showLeaderboardTab(tab) {
   activeLeaderboardTab = tab;
   document.getElementById('leaderboardTabRanked').classList.toggle('active', tab === 'ranked');
   document.getElementById('leaderboardTabFreeplay').classList.toggle('active', tab === 'freeplay');
-  document.querySelector('.leaderboard-col-points').classList.toggle('hidden', tab === 'freeplay');
   refreshLeaderboard(tab);
 }
 async function refreshLeaderboard(tab) {
@@ -8570,24 +9055,29 @@ async function refreshLeaderboard(tab) {
   const snap = await rtdb.ref(root).once('value');
   if (activeLeaderboardTab !== tab) return;
   if (!snap.exists()) {
-    container.innerHTML = '<div class="leaderboard-empty">No ranked matches played yet.</div>';
+    container.innerHTML = `<div class="leaderboard-empty">No ${tab === 'freeplay' ? 'free play' : 'ranked'} matches played yet.</div>`;
     return;
   }
   const entries = Object.entries(snap.val()).map(([key, entry]) => ({ key, ...entry }));
-  entries.sort((a, b) => tab === 'freeplay' ? (b.wins || 0) - (a.wins || 0) : (b.rating || 0) - (a.rating || 0));
+  entries.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   const top = entries.slice(0, 50);
   if (!top.length) {
-    container.innerHTML = '<div class="leaderboard-empty">No matches played yet.</div>';
+    container.innerHTML = `<div class="leaderboard-empty">No ${tab === 'freeplay' ? 'free play' : 'ranked'} matches played yet.</div>`;
     return;
   }
   container.innerHTML = '';
   top.forEach((entry, i) => {
     const row = document.createElement('div');
-    row.className = 'leaderboard-row';
-    if (tab === 'ranked' && currentUser && entry.key === currentUser.uid) row.classList.add('leaderboard-me');
-    const pointsCell = tab === 'freeplay' ? '' : (entry.rating != null ? Math.round(entry.rating) : '—');
+    row.className = 'leaderboard-row leaderboard-row-clickable';
+    if (currentUser && entry.key === currentUser.uid) row.classList.add('leaderboard-me');
+    const pointsCell = entry.rating != null ? Math.round(entry.rating) : '—';
     row.innerHTML = `<span class="leaderboard-col-rank">${i + 1}</span><span class="leaderboard-col-name"></span><span class="leaderboard-col-points">${pointsCell}</span><span class="leaderboard-col-record">${entry.wins || 0}-${entry.draws || 0}-${entry.losses || 0}</span>`;
     row.querySelector('.leaderboard-col-name').textContent = entry.name || 'Player';
+    row.addEventListener('click', () => {
+      playSfx('cursorMove');
+      document.getElementById('leaderboardModal').classList.remove('show');
+      openCardIndex(entry.key, entry.name || 'Player');
+    });
     container.appendChild(row);
   });
 }
@@ -8695,7 +9185,7 @@ function buildBoosterPackCard(pack) {
   caption.appendChild(captionName);
   const captionSub = document.createElement('div');
   captionSub.className = 'booster-pack-caption-sub';
-  captionSub.textContent = 'Booster';
+  captionSub.textContent = 'Booster Pack';
   caption.appendChild(captionSub);
   card.appendChild(caption);
   return card;
@@ -8741,7 +9231,7 @@ function buildShopTile(card) {
   if (owned > 0) {
     const badge = document.createElement('div');
     badge.className = 'picker-count-badge shop-count-badge';
-    badge.textContent = String(owned);
+    badge.textContent = isShopPurchaseLimited(card) ? '✓' : String(owned);
     cardEl.appendChild(badge);
   } else {
     cardEl.classList.add('card-dim-unstocked');
@@ -8846,7 +9336,7 @@ async function completeShopPurchase() {
     await userRef.child('gil').set(newGil);
     if (currentUserProfile) currentUserProfile.gil = newGil;
     await addCardsToCollection(currentUser.uid, cardId, 1);
-    document.getElementById('shopStatus').textContent = `Bought ${card ? card.name : 'a card'}!`;
+    document.getElementById('shopStatus').textContent = '';
     playSfx('shopPurchase');
     refreshShopGilBalance();
     renderShopGrid();
@@ -8931,7 +9421,6 @@ function showBoosterOpening(pack, pulledResults) {
 }
 function renderBoosterOpenStep() {
   if (!boosterOpenState) return;
-  const artEl = document.getElementById('boosterOpenLocationArt');
   const labelEl = document.getElementById('boosterOpenLabel');
   const cardWrap = document.getElementById('boosterOpenCardWrap');
   const nameEl = document.getElementById('boosterOpenCardName');
@@ -8940,15 +9429,15 @@ function renderBoosterOpenStep() {
   const { pack, pulledResults, index } = boosterOpenState;
   cardWrap.innerHTML = '';
   if (index === -1) {
-    artEl.src = BOOSTER_IMG_PATH + pack.image;
-    artEl.classList.remove('hidden');
+    // Show the same styled pack art used in the shop (name caption, sheen,
+    // and "Booster" label baked in) instead of a bare image.
+    cardWrap.appendChild(buildBoosterPackCard(pack));
     nameEl.textContent = `${pack.name} Booster Pack`;
     labelEl.textContent = 'Tap Open Pack to reveal your cards';
     noteEl.classList.add('hidden');
     nextBtn.textContent = 'Open Pack';
     return;
   }
-  artEl.classList.add('hidden');
   const result = pulledResults[index];
   const card = CARD_DB.find(c => c.id === result.id);
   cardWrap.appendChild(createCardElement(card, 'p1'));
@@ -9028,26 +9517,57 @@ document.getElementById('boosterOpenNextBtn').addEventListener('click', () => {
 });
 const CARD_INDEX_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 'custom'];
 let indexSelectedLevel = 1;
-function openCardIndex() {
+// When set (via clicking a leaderboard entry), the Card Index shows a
+// read-only view of that player's collection instead of the signed-in
+// user's own. indexViewRequestId guards against a slower fetch for an
+// earlier-clicked player clobbering a later one.
+let indexViewProfile = null;
+let indexViewRequestId = 0;
+function activeIndexProfile() {
+  return indexViewProfile || currentUserProfile;
+}
+async function openCardIndex(viewUid, viewName) {
   document.getElementById('mainMenu').classList.add('hidden');
   document.getElementById('indexScreen').classList.remove('hidden');
   tryStartMusicIfEnabled();
   indexSelectedLevel = 1;
+  const requestId = ++indexViewRequestId;
+  const titleEl = document.getElementById('indexTitle');
+  if (viewUid) {
+    indexViewProfile = {};
+    if (titleEl) titleEl.textContent = `${viewName || 'Player'}'s Card Index`;
+    renderIndexTabs();
+    renderIndexGrid();
+    refreshIndexOwnedTotal();
+    let profile = {};
+    try {
+      const snap = await rtdb.ref(`${USERS_ROOT}/${viewUid}`).once('value');
+      profile = snap.val() || {};
+    } catch (e) {}
+    if (requestId !== indexViewRequestId) return;
+    indexViewProfile = profile;
+  } else {
+    indexViewProfile = null;
+    if (titleEl) titleEl.textContent = 'Card Index';
+  }
   renderIndexTabs();
   renderIndexGrid();
   refreshIndexOwnedTotal();
 }
 function closeCardIndex() {
+  indexViewProfile = null;
+  indexViewRequestId++;
   document.getElementById('indexScreen').classList.add('hidden');
   document.getElementById('mainMenu').classList.remove('hidden');
   document.getElementById('menuButtons').classList.remove('hidden');
 }
 function refreshIndexOwnedTotal() {
-  const uniqueOwned = currentUserProfile && currentUserProfile.collection
-    ? Object.values(currentUserProfile.collection).filter(n => n > 0).length
+  const profile = activeIndexProfile();
+  const uniqueOwned = profile && profile.collection
+    ? Object.values(profile.collection).filter(n => n > 0).length
     : 0;
-  const uniqueSeen = currentUserProfile && currentUserProfile.seenCardIds
-    ? Object.keys(currentUserProfile.seenCardIds).length
+  const uniqueSeen = profile && profile.seenCardIds
+    ? Object.keys(profile.seenCardIds).length
     : 0;
   document.getElementById('indexOwnedTotal').textContent =
     `${uniqueOwned} / ${CARD_DB.length} cards owned - ${uniqueSeen} / ${CARD_DB.length} cards seen`;
@@ -9092,8 +9612,9 @@ function renderIndexGrid() {
 function buildIndexTile(card) {
   const wrap = document.createElement('div');
   wrap.className = 'picker-tile';
-  const owned = collectionStockOf(currentUserProfile, card.id);
-  const isUnseen = !(currentUserProfile && currentUserProfile.seenCardIds && currentUserProfile.seenCardIds[card.id]);
+  const profile = activeIndexProfile();
+  const owned = collectionStockOf(profile, card.id);
+  const isUnseen = !(profile && profile.seenCardIds && profile.seenCardIds[card.id]);
   const cardEl = createCardElement(card, 'p1', undefined, isUnseen);
   wrap.appendChild(cardEl);
   const countEl = document.createElement('div');
