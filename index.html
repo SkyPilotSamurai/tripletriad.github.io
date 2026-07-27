@@ -1972,7 +1972,7 @@
   #shopBuySlotInfo { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 160px; }
   #shopBuySlotName { font-size: 20px; font-weight: bold; color: #eee; }
   #shopBuySlotPrice { font-size: 15px; font-weight: bold; color: #e6dcc0; }
-  #shopBuySlotPrice.shop-price-unaffordable { color: #ffa64f; }
+  #shopBuySlotPrice.shop-price-unaffordable { color: #ff5b5b; }
   #shopBuyBtn {
     background: #3a8fe6;
     color: #fff;
@@ -8345,15 +8345,65 @@ function initAccountUi() {
   });
 }
 let adminGiveFoundUid = null;
+async function populateAdminUserSelect(query) {
+  const foundEl = document.getElementById('adminGiveFoundUser');
+  const userSelect = document.getElementById('adminGiveUserSelect');
+  const submitBtn = document.getElementById('adminGiveSubmit');
+  const findBtn = document.getElementById('adminGiveFind');
+  adminGiveFoundUid = null;
+  submitBtn.disabled = true;
+  foundEl.classList.remove('found');
+  userSelect.innerHTML = '';
+  userSelect.classList.add('hidden');
+  if (findBtn) findBtn.disabled = true;
+  foundEl.textContent = 'Loading users...';
+  try {
+    const snap = await rtdb.ref(USERS_ROOT).once('value');
+    const users = snap.val() || {};
+    const matches = Object.entries(users)
+      .map(([uid, profile]) => ({ uid, profile }))
+      .filter(({ profile }) => {
+        if (!query) return true;
+        const name = (profile.displayName || '').toLowerCase();
+        const email = (profile.email || '').toLowerCase();
+        return name.includes(query) || email.includes(query);
+      })
+      .sort((a, b) => (a.profile.displayName || '').localeCompare(b.profile.displayName || ''));
+    if (!matches.length) {
+      foundEl.textContent = 'No matching user found.';
+      return;
+    }
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = `-- ${matches.length} user${matches.length === 1 ? '' : 's'}, pick one --`;
+    userSelect.appendChild(placeholder);
+    matches.forEach(({ uid, profile }) => {
+      const opt = document.createElement('option');
+      opt.value = uid;
+      const label = profile.displayName || profile.email || uid;
+      opt.textContent = profile.email && profile.displayName ? `${label} (${profile.email})` : label;
+      userSelect.appendChild(opt);
+    });
+    userSelect.classList.remove('hidden');
+    foundEl.textContent = 'Pick a user from the list below.';
+  } catch (err) {
+    foundEl.textContent = (err && err.message) ? err.message : 'Search failed.';
+  } finally {
+    if (findBtn) findBtn.disabled = false;
+  }
+}
 function openAdminGiveModal() {
   document.getElementById('adminGiveUserQuery').value = '';
   document.getElementById('adminGiveFoundUser').textContent = '';
   document.getElementById('adminGiveFoundUser').classList.remove('found');
+  document.getElementById('adminGiveUserSelect').innerHTML = '';
+  document.getElementById('adminGiveUserSelect').classList.add('hidden');
   document.getElementById('adminGiveStatus').textContent = '';
   document.getElementById('adminGiveQty').value = 1;
   adminGiveFoundUid = null;
   document.getElementById('adminGiveSubmit').disabled = true;
   document.getElementById('adminGiveModal').classList.add('show');
+  populateAdminUserSelect('');
 }
 function closeAdminGiveModal() {
   document.getElementById('adminGiveModal').classList.remove('show');
@@ -8380,54 +8430,29 @@ function initAdminGiveUi() {
   }
   const findBtn = document.getElementById('adminGiveFind');
   if (findBtn) {
-    findBtn.addEventListener('click', async () => {
+    findBtn.addEventListener('click', () => {
       const query = document.getElementById('adminGiveUserQuery').value.trim().toLowerCase();
+      populateAdminUserSelect(query);
+    });
+  }
+  const userSelect = document.getElementById('adminGiveUserSelect');
+  if (userSelect) {
+    userSelect.addEventListener('change', () => {
       const foundEl = document.getElementById('adminGiveFoundUser');
       const submitBtn = document.getElementById('adminGiveSubmit');
-      adminGiveFoundUid = null;
-      submitBtn.disabled = true;
-      foundEl.classList.remove('found');
-      if (!query) { foundEl.textContent = 'Enter a username or email.'; return; }
-      findBtn.disabled = true;
-      foundEl.textContent = 'Searching...';
-      try {
-        const snap = await rtdb.ref(USERS_ROOT).once('value');
-        const users = snap.val() || {};
-        let matchUid = null;
-        let matchProfile = null;
-        Object.entries(users).forEach(([uid, profile]) => {
-          if (matchUid) return;
-          const name = (profile.displayName || '').toLowerCase();
-          const email = (profile.email || '').toLowerCase();
-          if (name === query || email === query) {
-            matchUid = uid;
-            matchProfile = profile;
-          }
-        });
-        if (!matchUid) {
-          Object.entries(users).forEach(([uid, profile]) => {
-            if (matchUid) return;
-            const name = (profile.displayName || '').toLowerCase();
-            const email = (profile.email || '').toLowerCase();
-            if (name.includes(query) || email.includes(query)) {
-              matchUid = uid;
-              matchProfile = profile;
-            }
-          });
-        }
-        if (matchUid) {
-          adminGiveFoundUid = matchUid;
-          foundEl.textContent = `Found: ${matchProfile.displayName || matchProfile.email || matchUid}`;
-          foundEl.classList.add('found');
-          submitBtn.disabled = false;
-        } else {
-          foundEl.textContent = 'No matching user found.';
-        }
-      } catch (err) {
-        foundEl.textContent = (err && err.message) ? err.message : 'Search failed.';
-      } finally {
-        findBtn.disabled = false;
+      const uid = userSelect.value;
+      if (!uid) {
+        adminGiveFoundUid = null;
+        submitBtn.disabled = true;
+        foundEl.classList.remove('found');
+        foundEl.textContent = 'Pick a user from the list below.';
+        return;
       }
+      adminGiveFoundUid = uid;
+      const label = userSelect.options[userSelect.selectedIndex].textContent;
+      foundEl.textContent = `Selected: ${label}`;
+      foundEl.classList.add('found');
+      submitBtn.disabled = false;
     });
   }
   const submitBtn = document.getElementById('adminGiveSubmit');
