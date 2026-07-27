@@ -477,6 +477,21 @@
     margin-top: 4px;
   }
   #gameFooter.hidden { display: none; }
+  #replayControls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  #replayControls.hidden { display: none; }
+  #replayStatus { color: #e6dcc0; font-size: 21px; font-weight: bold; letter-spacing: 0.5px; }
+  #replayButtons { display: flex; align-items: center; gap: 10px; }
+  #replayButtons button { font-size: 20px; padding: 9px 18px; border-radius: 7px; }
+  #replayButtons button:disabled { opacity: 0.4; cursor: default; }
   .board-col { zoom: 1.25; }
   .hand { zoom: 1.25; }
   .hand:not(.stack) { zoom: 0.924; }
@@ -768,7 +783,11 @@
      trade/spoils screen (which spectators now see too) covers the rest of
      the game underneath it. Scoped to spectate mode only, so the title bar
      doesn't also float above things like the Rules modal in other modes. */
-  body.spectate-mode #titleBar { position: relative; z-index: 410; }
+  body.spectate-mode #titleBar, body.replay-mode #titleBar { position: relative; z-index: 410; }
+  /* Same idea for the replay progress bar (Back/Play/Forward + move counter):
+     it needs to stay reachable on the win/draw screen and the post-match
+     trade panel too, not just the title bar. */
+  body.replay-mode #replayControls { position: relative; z-index: 410; }
   #tradePanelInner {
     display: flex;
     flex-direction: column;
@@ -1033,7 +1052,7 @@
   .menu-btn-secondary:hover { background: #3a4658; box-shadow: none; }
   #menuStatus { min-height: 20px; color: #ffa64f; font-size: 13px; margin-top: 10px; }
   #watchListItems, #watchReplayItems { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-height: 46vh; overflow-y: auto; width: 100%; }
-  #watchReplayItems.hidden { display: none; }
+  #watchListItems.hidden, #watchReplayItems.hidden { display: none; }
   .watch-room-item {
     display: flex;
     justify-content: space-between;
@@ -2398,6 +2417,14 @@
 </div>
 <div id="gameFooter" class="hidden">
   <button class="menu-btn menu-btn-secondary" id="gameBackToMenu">Back to Menu</button>
+</div>
+<div id="replayControls" class="hidden">
+  <div id="replayButtons">
+    <button class="menu-btn-secondary" id="replayPrevBtn" title="Previous Move">⏮ Back</button>
+    <button class="menu-btn-secondary" id="replayPlayPauseBtn">▶ Play</button>
+    <button class="menu-btn-secondary" id="replayNextBtn" title="Next Move">Forward ⏭</button>
+  </div>
+  <div id="replayStatus"></div>
 </div>
 </div>
 <div id="settingsModal">
@@ -4203,6 +4230,8 @@ const state = {
   cpuBehavior: 'normal',
   cpuPointBudget: null,
   cpuTimerEnabled: false,
+  replayMoves: null,
+  replayIndex: -1,
 };
 // Chaos: picks one random card from the active player's current hand at the
 // start of their turn and forces them to play only that card. Re-rolled
@@ -4752,8 +4781,19 @@ function stopRoomListener() {
   }
   stopRoomPoll();
 }
+// Strips transient animation-only fields (_displayOwner/_justFlipped from
+// flipCells(), _justPlaced/_placedBy from placement) that are still sitting
+// on state.board at the moment a move is written -- they get cleared later
+// by the flip/landing animation, but that hasn't run yet here. A moveHistory
+// snapshot only needs the settled card/owner per cell; carrying the stale
+// pre-animation fields into storage would make a later replay render
+// captured cells with their old (pre-capture) owner.
+function cleanBoardForHistory(board) {
+  return board.map(cell => (cell && cell.card) ? { card: cell.card, owner: cell.owner } : null);
+}
 function writeLocalStateToRoom(move) {
   if (state.mode !== 'online' || !state.roomId || applyingRemoteUpdate) return Promise.resolve();
+  const roomRef = rtdb.ref(`${state.roomRoot}/${state.roomId}`);
   const payload = {
     board: toRoomBoard(state.board),
     boardElements: toRoomBoard(state.boardElements),
@@ -4769,10 +4809,24 @@ function writeLocalStateToRoom(move) {
       card: move.card,
       captureResult: move.captureResult,
     },
+    // Every move gets its own permanent entry too (push key keeps them in
+    // order), storing the board/hands snapshot right after this move landed
+    // -- this is what lets a finished match be replayed turn-by-turn later,
+    // not just spectated live. Capped at 9 moves per match (one per cell),
+    // so this is always small.
+    [`moveHistory/${roomRef.child('moveHistory').push().key}`]: {
+      cellIndex: move.cellIndex,
+      owner: move.owner,
+      card: move.card,
+      captureResult: move.captureResult,
+      board: toRoomBoard(cleanBoardForHistory(state.board)),
+      hands: toRoomHands(state.hands),
+      turn: state.turn,
+      gameOver: state.gameOver,
+    },
     [`triggerTally/${state.seat}`]: state.rankedTriggerTally[state.seat],
     updatedAt: firebase.database.ServerValue.TIMESTAMP,
   };
-  const roomRef = rtdb.ref(`${state.roomRoot}/${state.roomId}`);
   function attempt(retryDelayMs) {
     return roomRef.update(payload).catch(err => {
       console.error('writeLocalStateToRoom: write failed, retrying in ' + retryDelayMs + 'ms', err);
@@ -5047,6 +5101,7 @@ function applyRoomSnapshotNow(room) {
   state.roomTurnStartedAt = room.turnStartedAt || null;
   state.roomTradeState = room.tradeState || null;
   state.roomRankedResult = room.rankedResult || null;
+  state.roomDealId = room.dealId || null;
   const prevRoomSeats = state.roomSeats;
   state.roomSeats = room.seats || null;
   const roomSeatsChanged = JSON.stringify(prevRoomSeats) !== JSON.stringify(state.roomSeats);
@@ -5600,7 +5655,7 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
     state.hands = handsBeforeDeal;
     const firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
     const dealId = state.roomId + '_deal_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-    roomRef.update({ hands: dealt, boardElements: toRoomBoard(boardElements), turn: firstPlayer, firstPlayer, turnStartedAt: firebase.database.ServerValue.TIMESTAMP, dealId, _dealt: true, lastPicks: room.picks, lastClosedSingleCardId: room.closedSingleCardId || null });
+    roomRef.update({ hands: dealt, boardElements: toRoomBoard(boardElements), turn: firstPlayer, firstPlayer, turnStartedAt: firebase.database.ServerValue.TIMESTAMP, dealId, _dealt: true, lastPicks: room.picks, lastClosedSingleCardId: room.closedSingleCardId || null, moveHistory: null });
     return;
   }
   applyRoomSnapshot(room);
@@ -5727,6 +5782,212 @@ function startSpectating(roomId, root = ROOMS_ROOT) {
   roomRef.once('value').then(attachLiveHandling).catch(() => attachLiveHandling(null));
   setTimeout(() => attachLiveHandling(null), 2500);
 }
+// --- Replay viewer -----------------------------------------------------
+// Watching a finished match used to just spectate its frozen final board.
+// This instead steps through the match's recorded moveHistory turn by turn:
+// autoplay at REPLAY_STEP_MS per move, plus manual pause/back/forward.
+// Older finished rooms saved before moveHistory existed have none recorded,
+// so those fall back to the old frozen-board spectate view.
+const REPLAY_STEP_MS = 2000;
+let replayPlaying = false;
+let replayTimer = null;
+let replayInitialBoardElements = null;
+// True while a forward step's hand-to-board flight/flip animation is still
+// playing. Blocks further stepping (manual or autoplay) until it settles, so
+// mashing Forward or a fast autoplay interval can't stack animations on top
+// of each other or corrupt the board state mid-flight.
+let replayAnimating = false;
+function stopReplayPlayback() {
+  replayPlaying = false;
+  if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+  const btn = document.getElementById('replayPlayPauseBtn');
+  if (btn) btn.textContent = '▶ Play';
+}
+function startReplayPlayback() {
+  if (!state.replayMoves || !state.replayMoves.length) return;
+  if (state.replayIndex >= state.replayMoves.length) return;
+  replayPlaying = true;
+  const btn = document.getElementById('replayPlayPauseBtn');
+  if (btn) btn.textContent = '⏸ Pause';
+  replayTimer = setInterval(() => {
+    if (replayAnimating) return; // let the in-flight animation finish; try again next tick
+    if (!stepReplay(1)) stopReplayPlayback();
+  }, REPLAY_STEP_MS);
+}
+function toggleReplayPlayback() {
+  if (replayPlaying) stopReplayPlayback();
+  else startReplayPlayback();
+}
+function updateReplayControlsUi(index) {
+  const total = (state.replayMoves || []).length;
+  const statusEl = document.getElementById('replayStatus');
+  if (statusEl) statusEl.textContent = total ? `Move ${index} of ${total}` : 'No recorded moves for this match';
+  const prevBtn = document.getElementById('replayPrevBtn');
+  const nextBtn = document.getElementById('replayNextBtn');
+  const playBtn = document.getElementById('replayPlayPauseBtn');
+  if (prevBtn) prevBtn.disabled = index <= 0 || replayAnimating;
+  if (nextBtn) nextBtn.disabled = index >= total || replayAnimating;
+  if (playBtn) playBtn.disabled = total === 0 || replayAnimating;
+  if (index >= total) stopReplayPlayback();
+}
+// direction is +1 or -1; returns false (and does nothing) if already at
+// that end of the move list or an animation is still playing.
+function stepReplay(direction) {
+  if (!state.replayMoves || replayAnimating) return false;
+  const maxIndex = state.replayMoves.length;
+  const nextIndex = state.replayIndex + direction;
+  if (nextIndex < 0 || nextIndex > maxIndex) return false;
+  if (direction > 0) {
+    animateReplayStepForward(nextIndex);
+  } else {
+    state.replayIndex = nextIndex;
+    renderReplayFrame(nextIndex);
+  }
+  return true;
+}
+// Frame 0 is the empty board before any move; frame N is the state right
+// after move N. Every frame after the first is just the stored snapshot for
+// that move -- frame 0 alone has to be derived, by taking move 1's snapshot
+// and adding move 1's card back into the hand it was played from. This
+// works regardless of what rules were in play (random hands, swap, etc.)
+// since it's reconstructed purely from what was actually recorded, not from
+// re-deriving the deal.
+// Used for manual backward steps and the initial jump to frame 0 -- an
+// instant snap, no animation (animating backwards wouldn't make sense).
+function renderReplayFrame(index) {
+  const moves = state.replayMoves || [];
+  if (index <= 0) {
+    if (moves.length) {
+      const first = moves[0];
+      const hands = fromRoomHands(first.hands);
+      hands[first.owner] = [{ ...first.card }, ...(hands[first.owner] || [])];
+      state.board = Array(9).fill(null);
+      state.hands = hands;
+      state.turn = first.owner;
+    } else {
+      state.board = Array(9).fill(null);
+      state.hands = { p1: [], p2: [] };
+    }
+  } else {
+    const frame = moves[index - 1];
+    state.board = fromRoomBoard(frame.board);
+    state.hands = fromRoomHands(frame.hands);
+    state.turn = frame.turn || state.turn;
+  }
+  state.boardElements = replayInitialBoardElements || Array(9).fill(null);
+  state.gameOver = false;
+  state.suppressOverlay = false;
+  state.selected = null;
+  renderAll();
+  updateReplayControlsUi(index);
+}
+// Stepping forward one move plays the same hand-to-board flight + capture
+// flip animation a live/spectated match uses, reusing playCardPlacementSequence
+// (the exact function opponents' remote moves already animate with) instead of
+// just snapping to the next stored board snapshot. On the final move this also
+// sets state.gameOver so the existing win/draw overlay (and, for ranked rooms,
+// the post-match trade/spoils panel showing what card was obtained) appears
+// automatically once the animation settles, just like it does in a live match.
+function animateReplayStepForward(index) {
+  const move = (state.replayMoves || [])[index - 1];
+  if (!move) { state.replayIndex = index; renderReplayFrame(index); return; }
+  replayAnimating = true;
+  updateReplayControlsUi(state.replayIndex);
+  const flightEl = buildRemoteFlightClone(move.card, move.owner);
+  // The stored move.board is the FINAL post-capture board. Diffing it against
+  // the board currently on screen (pre-move) lets us tag any cell this move
+  // captures with _displayOwner (its old color) so it keeps showing the old
+  // owner until playCardPlacementSequence's flip-wave animation deletes that
+  // field and reveals the real (new) owner -- exactly like a live local
+  // move's resolveCaptures() already defers the color change for its player.
+  const preBoard = state.board;
+  const postBoard = fromRoomBoard(move.board);
+  state.board = postBoard.map((cell, i) => {
+    if (!cell) return cell;
+    if (i === move.cellIndex) return { ...cell, _placedBy: move.owner, _justPlaced: true };
+    const prevCell = preBoard[i];
+    if (prevCell && prevCell.owner !== cell.owner) {
+      return { ...cell, _displayOwner: prevCell.owner, _justFlipped: true };
+    }
+    return cell;
+  });
+  state.hands = fromRoomHands(move.hands);
+  state.turn = move.turn || state.turn;
+  state.boardElements = replayInitialBoardElements || Array(9).fill(null);
+  state.selected = null;
+  const isLastMove = index >= state.replayMoves.length;
+  state.gameOver = isLastMove;
+  if (isLastMove) state.suppressOverlay = true;
+  state.replayIndex = index;
+  renderAll();
+  updateReplayControlsUi(index);
+  Promise.resolve(playCardPlacementSequence({ cellIndex: move.cellIndex, captureResult: move.captureResult || {}, flightEl })).then(() => {
+    replayAnimating = false;
+    updateReplayControlsUi(state.replayIndex);
+  });
+}
+async function openReplayViewer(root, roomId) {
+  document.getElementById('watchModal').classList.remove('show');
+  stopAutoWatch();
+  leaveOnlineRoomOrSpectate();
+  stopReplayPlayback();
+  showGameScreen();
+  let room = null;
+  try {
+    const snap = await rtdb.ref(`${root}/${roomId}`).once('value');
+    room = snap.val();
+  } catch (e) {}
+  if (!room) { showMenuScreen(); return; }
+  const movesObj = room.moveHistory || {};
+  const moves = Object.keys(movesObj).sort().map(k => movesObj[k]);
+  if (!moves.length) {
+    // No recorded history for this (older) match -- fall back to the
+    // frozen-final-board spectate view rather than an empty replay screen.
+    startSpectating(roomId, root);
+    return;
+  }
+  replayInitialBoardElements = room.boardElements ? fromRoomBoard(room.boardElements) : Array(9).fill(null);
+  state.mode = 'replay';
+  state.roomId = roomId;
+  state.roomRoot = root;
+  state.seat = null;
+  state.cpuOpponent = false;
+  state.selected = null;
+  state.roomSeats = room.seats || null;
+  state.rules = room.rules || state.rules;
+  // So the post-match trade/spoils panel ("what card(s) they obtained") can
+  // show once the replay reaches the final move, same as it does live.
+  state.roomTradeState = room.tradeState || null;
+  state.suppressOverlay = false;
+  lastRenderedReplayTradeSummary = null;
+  state.replayMoves = moves;
+  state.replayIndex = 0;
+  updateTitleBarControls();
+  document.getElementById('replayControls').classList.remove('hidden');
+  renderReplayFrame(0);
+}
+function closeReplayViewer() {
+  stopReplayPlayback();
+  state.replayMoves = null;
+  state.replayIndex = -1;
+  document.getElementById('replayControls').classList.add('hidden');
+  leaveOnlineRoomOrSpectate();
+  showMenuScreen();
+}
+document.getElementById('replayPlayPauseBtn').addEventListener('click', () => {
+  playSfx('cursorMove');
+  toggleReplayPlayback();
+});
+document.getElementById('replayPrevBtn').addEventListener('click', () => {
+  playSfx('cursorMove');
+  stopReplayPlayback();
+  stepReplay(-1);
+});
+document.getElementById('replayNextBtn').addEventListener('click', () => {
+  playSfx('cursorMove');
+  stopReplayPlayback();
+  stepReplay(1);
+});
 async function findWatchableRoomRoot(roomId) {
   const roots = [ROOMS_ROOT, RANKED_ROOMS_ROOT];
   const results = await Promise.all(roots.map(async root => {
@@ -6101,7 +6362,7 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
   } else {
     placementDone = handLeaveDone;
   }
-  placementDone.then(async () => {
+  return placementDone.then(async () => {
     const landedCellEl = document.querySelectorAll('#board .cell')[cellIndex];
     const leftoverIcon = landedCellEl && landedCellEl.querySelector(':scope > .elem-icon');
     if (leftoverIcon) leftoverIcon.remove();
@@ -6137,7 +6398,24 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
     let anyFlipped = false;
     for (let w = 0; w < flipWaves.length; w++) {
       if (comboWaveIndices.includes(w)) await showRuleBanner('combo');
-      flipWaves[w].forEach(i => {
+      const waveIndices = flipWaves[w];
+      // Two-phase flip so the color change actually lands at the rotation's
+      // midpoint (card edge-on) instead of swapping to the new owner's color
+      // the instant the wave starts and just spinning an already-changed
+      // card. Phase 1 rotates the CURRENT (old-owner) card down to 90deg;
+      // only once that's visually finished do we swap in the new-owner card
+      // (already parked at 90deg) and rotate it back to 0deg to reveal it.
+      const outAnims = waveIndices.map(i => {
+        const cellEl = document.querySelectorAll('#board .cell')[i];
+        const oldCardEl = cellEl && cellEl.querySelector('.card');
+        if (!oldCardEl) return Promise.resolve();
+        return oldCardEl.animate([
+          { transform: 'rotateY(0deg) scale(1)' },
+          { transform: 'rotateY(90deg) scale(1.05)' }
+        ], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+      });
+      await Promise.all(outAnims);
+      waveIndices.forEach(i => {
         const cell = state.board[i];
         if (!cell) return;
         cell._justFlipped = false;
@@ -6151,18 +6429,32 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
         if (oldArtEl && newArtEl) {
           newArtEl.replaceWith(oldArtEl);
         }
-        newCardEl.classList.add('flip');
+        newCardEl.style.transform = 'rotateY(90deg) scale(1.05)';
         cellEl.innerHTML = '';
         cellEl.appendChild(newCardEl);
         cellEl.dataset.sig = boardCellSignature(cell, i);
         playSfx('cardFlip');
+        // fill:'forwards' keeps the animation's last keyframe applied once it
+        // ends; without it the Web Animations engine drops the effect and the
+        // element reverts to its own inline style -- which was still the
+        // rotated/collapsed 90deg pose set just above -- making the card
+        // snap back to invisible right as the flip finished. Explicitly
+        // resetting the inline transform after it settles is a second layer
+        // of safety against that same disappearing-card bug.
+        const revealAnim = newCardEl.animate([
+          { transform: 'rotateY(90deg) scale(1.05)' },
+          { transform: 'rotateY(0deg) scale(1)' }
+        ], { duration: 220, easing: 'ease-out', fill: 'forwards' });
+        revealAnim.finished.catch(() => {}).then(() => {
+          newCardEl.style.transform = 'rotateY(0deg) scale(1)';
+        });
       });
-      anyFlipped = anyFlipped || flipWaves[w].length > 0;
+      if (waveIndices.length > 0) updateScores();
+      anyFlipped = anyFlipped || waveIndices.length > 0;
       if (w < flipWaves.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 450));
+        await new Promise(resolve => setTimeout(resolve, 230));
       }
     }
-    if (anyFlipped) updateScores();
     if (state.gameOver) {
       const animDone = new Promise(resolve => setTimeout(resolve, 450));
       Promise.all([animDone, writeDone || Promise.resolve()]).then(() => {
@@ -7084,7 +7376,7 @@ function attachHoldToRevealListeners(el) {
 function canAct(owner) {
   if (state.gameOver) return false;
   if (owner !== state.turn) return false;
-  if (state.mode === 'spectate') return false;
+  if (state.mode === 'spectate' || state.mode === 'replay') return false;
   if (state.mode === 'online' && state.seat !== owner) return false;
   if (state.cpuOpponent && owner === 'p2') return false;
   const spinner = document.getElementById('firstPlayerSpinner');
@@ -7268,7 +7560,7 @@ function updateScores() {
 }
 function updateMatchupBox() {
   const box = document.getElementById('matchupBox');
-  const isOnlineMatch = state.mode === 'online' || state.mode === 'spectate';
+  const isOnlineMatch = state.mode === 'online' || state.mode === 'spectate' || state.mode === 'replay';
   const bothSeatsKnown = !!(state.roomSeats && state.roomSeats.p1 && state.roomSeats.p2);
   if ((!isOnlineMatch && !state.cpuOpponent) || (isOnlineMatch && state.mode !== 'spectate' && !bothSeatsKnown)) {
     box.classList.add('hidden');
@@ -7371,9 +7663,25 @@ function updateOverlay() {
   const tradePanel = document.getElementById('tradePanel');
   const isRankedRoom = state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT;
   const isRankedRoomOrSpectating = (state.mode === 'online' || state.mode === 'spectate') && state.roomRoot === RANKED_ROOMS_ROOT;
-  const ts = isRankedRoomOrSpectating ? state.roomTradeState : null;
+  const isReplayRankedRoom = state.mode === 'replay' && state.roomRoot === RANKED_ROOMS_ROOT;
+  const ts = (isRankedRoomOrSpectating || isReplayRankedRoom) ? state.roomTradeState : null;
   if (tradePanel) {
-    if (ts && !ts.done) {
+    if (isReplayRankedRoom && ts && ts.done && ts.picked && ts.picked.length) {
+      // The live trade reveal is a one-at-a-time ceremony driven by a
+      // server-synced ts.revealIndex timer that's already fully played out
+      // and exhausted by the time a match is finished/replayable. Replay
+      // instead shows everything the winner ended up with at once, as a
+      // static "cards obtained" summary.
+      tradePanel.classList.remove('hidden');
+      const resultTextEl = document.getElementById('tradePanelResultText');
+      if (resultTextEl) resultTextEl.textContent = document.getElementById('overlayText').textContent;
+      const resultGraphicEl = document.getElementById('tradePanelGraphic');
+      if (resultGraphicEl) {
+        resultGraphicEl.src = graphic.src;
+        resultGraphicEl.classList.toggle('hidden', !graphic.classList.contains('show'));
+      }
+      renderReplayTradeSummary(ts);
+    } else if (ts && !ts.done) {
       tradePanel.classList.remove('hidden');
       const resultTextEl = document.getElementById('tradePanelResultText');
       if (resultTextEl) resultTextEl.textContent = document.getElementById('overlayText').textContent;
@@ -7390,7 +7698,11 @@ function updateOverlay() {
   const gilResultEl = document.getElementById('overlayGilResult');
   if (gilResultEl) {
     if (isRankedRoom && ts && ts.done && state.seat && currentUser) {
-      const key = `${state.roomId}|${state.seat}`;
+      // Include the room's dealId so a rematch played in the same room (same
+      // roomId + seat) is treated as a distinct result -- otherwise the gil
+      // text would freeze on the first match's numbers and never update for
+      // the rematch's actual (correct) payout.
+      const key = `${state.roomId}|${state.roomDealId || ''}|${state.seat}`;
       if (key !== lastGilResultKey) {
         lastGilResultKey = key;
         const rr = state.roomRankedResult && state.roomRankedResult[state.seat];
@@ -7437,6 +7749,11 @@ function updateOverlay() {
     rematchSameBtn.classList.add('hidden');
     leaveBtn.classList.add('hidden');
     statusEl.textContent = 'Waiting for the next game...';
+  } else if (state.mode === 'replay') {
+    resetBtn.classList.add('hidden');
+    rematchSameBtn.classList.add('hidden');
+    leaveBtn.classList.add('hidden');
+    statusEl.textContent = '';
   } else if (state.cpuOpponent) {
     resetBtn.classList.remove('hidden');
     resetBtn.textContent = 'Rematch';
@@ -7458,6 +7775,29 @@ function updateOverlay() {
     leaveBtn.textContent = 'Back to Menu';
     statusEl.textContent = '';
   }
+}
+let lastRenderedReplayTradeSummary = null;
+function renderReplayTradeSummary(ts) {
+  const label = document.getElementById('tradePanelLabel');
+  const poolEl = document.getElementById('tradePool');
+  const revealWrap = document.getElementById('tradeReveal');
+  if (revealWrap) revealWrap.classList.add('hidden');
+  if (poolEl) poolEl.classList.remove('hidden');
+  const winnerName = displayNameForSeat(ts.winner) || (ts.winner === 'p1' ? 'Player 1' : 'Player 2');
+  const picked = ts.picked || [];
+  if (label) label.textContent = `${winnerName} obtained:`;
+  const signature = picked.map(p => p.cardId).join(',');
+  if (signature === lastRenderedReplayTradeSummary) return;
+  lastRenderedReplayTradeSummary = signature;
+  if (!poolEl) return;
+  poolEl.innerHTML = '';
+  picked.forEach(p => {
+    const card = CARD_DB.find(c => c.id === p.cardId);
+    if (!card) return;
+    const el = createCardElement({ ...card }, ts.winner, null, false);
+    el.style.cursor = 'default';
+    poolEl.appendChild(el);
+  });
 }
 let lastRenderedTradeSignature = null;
 let lastRenderedRevealIndex = -1;
@@ -7624,12 +7964,23 @@ function updateTitleBarControls() {
     resetBtnEl.textContent = '✕';
     resetBtnEl.title = 'Exit Spectate';
     resetLabel.textContent = 'Exit';
+  } else if (state.mode === 'replay') {
+    resetGroup.classList.remove('hidden');
+    resetBtnEl.textContent = '✕';
+    resetBtnEl.title = 'Exit Replay';
+    resetLabel.textContent = 'Exit';
+  } else if (state.mode === 'practice' && state.cpuOpponent) {
+    resetGroup.classList.remove('hidden');
+    resetBtnEl.textContent = '✕';
+    resetBtnEl.title = 'Exit to Menu';
+    resetLabel.textContent = 'Exit';
   } else {
     resetGroup.classList.add('hidden');
   }
   if (rulesGroup) rulesGroup.classList.toggle('hidden', state.mode !== 'practice' || state.cpuOpponent);
-  if (spectateBgGroup) spectateBgGroup.classList.toggle('hidden', state.mode !== 'spectate');
-  if (spectateBgSpacer) spectateBgSpacer.classList.toggle('hidden', state.mode !== 'spectate');
+  const showBgToggle = state.mode === 'spectate' || state.mode === 'replay';
+  if (spectateBgGroup) spectateBgGroup.classList.toggle('hidden', !showBgToggle);
+  if (spectateBgSpacer) spectateBgSpacer.classList.toggle('hidden', !showBgToggle);
   if (spectateBgBtn) spectateBgBtn.classList.toggle('active', spectatePurpleBg);
   const isOnlineMatch = state.mode === 'online';
   const titleBar = document.getElementById('titleBar');
@@ -7637,6 +7988,7 @@ function updateTitleBarControls() {
   if (titleBar) titleBar.classList.toggle('hidden', isOnlineMatch);
   if (onlineTitleBar) onlineTitleBar.classList.toggle('hidden', !isOnlineMatch);
   document.body.classList.toggle('spectate-mode', state.mode === 'spectate');
+  document.body.classList.toggle('replay-mode', state.mode === 'replay');
 }
 function updateGameFooterVisibility() {
   const footer = document.getElementById('gameFooter');
@@ -7646,8 +7998,8 @@ function updateGameFooterVisibility() {
 }
 let spectatePurpleBg = false;
 function updateCardOpacityMode() {
-  document.body.classList.toggle('online-full-opacity', state.mode === 'online' || state.mode === 'spectate' || state.mode === 'practice');
-  document.body.classList.toggle('spectate-purple-bg', state.mode === 'spectate' && spectatePurpleBg);
+  document.body.classList.toggle('online-full-opacity', state.mode === 'online' || state.mode === 'spectate' || state.mode === 'practice' || state.mode === 'replay');
+  document.body.classList.toggle('spectate-purple-bg', (state.mode === 'spectate' || state.mode === 'replay') && spectatePurpleBg);
 }
 function syncHandBoardCenter() {
   const board = document.getElementById('board');
@@ -8066,7 +8418,7 @@ document.getElementById('showAdjustedStatsToggle').addEventListener('change', e 
   renderBoard();
 });
 function resetOrLeaveToMenu() {
-  if (state.mode === 'practice') {
+  if (state.mode === 'practice' && !state.cpuOpponent) {
     if (state.rules.random) {
       initGame({ p1: buildRandomHand(), p2: buildRandomHand() });
     } else if (lastPracticeHands) {
@@ -8074,6 +8426,9 @@ function resetOrLeaveToMenu() {
     } else {
       runPracticePickFlow();
     }
+  } else if (state.mode === 'replay') {
+    playSfx('cursorCancel');
+    closeReplayViewer();
   } else {
     playSfx('cursorCancel');
     leaveOnlineRoomOrSpectate();
@@ -8984,10 +9339,14 @@ function renderWatchRoomItem(container, { id, root, room }) {
     : '<span class="watch-room-freeplay-tag">Free Play</span>';
   item.innerHTML = `<span>${typeTag}${p1Name} vs ${p2Name}</span><span>${room.gameOver ? 'Finished' : 'Live'}</span>`;
   item.addEventListener('click', () => {
-    document.getElementById('watchModal').classList.remove('show');
-    stopAutoWatch();
-    showGameScreen();
-    startSpectating(id, root);
+    if (room.gameOver) {
+      openReplayViewer(root, id);
+    } else {
+      document.getElementById('watchModal').classList.remove('show');
+      stopAutoWatch();
+      showGameScreen();
+      startSpectating(id, root);
+    }
   });
   container.appendChild(item);
 }
@@ -9026,7 +9385,9 @@ async function refreshWatchList() {
   }
   const all = perRoot.flatMap(r => r.status === 'fulfilled' ? r.value : []);
   const liveRooms = all.filter(r => isRoomGenuinelyLive(r.room)).slice(0, 20);
-  const replayRooms = all.filter(r => r.room.gameOver).slice(0, 20);
+  const replayRooms = all.filter(r => r.room.gameOver)
+    .sort((a, b) => (b.room.updatedAt || 0) - (a.room.updatedAt || 0))
+    .slice(0, 20);
   liveContainer.innerHTML = liveRooms.length ? '' : '<div class="watch-room-empty">No active games right now.</div>';
   liveRooms.forEach(entry => renderWatchRoomItem(liveContainer, entry));
   replayContainer.innerHTML = replayRooms.length ? '' : '<div class="watch-room-empty">No replays available.</div>';
@@ -9523,6 +9884,7 @@ let indexSelectedLevel = 1;
 // earlier-clicked player clobbering a later one.
 let indexViewProfile = null;
 let indexViewRequestId = 0;
+let indexViewLoadFailed = false;
 function activeIndexProfile() {
   return indexViewProfile || currentUserProfile;
 }
@@ -9531,6 +9893,7 @@ async function openCardIndex(viewUid, viewName) {
   document.getElementById('indexScreen').classList.remove('hidden');
   tryStartMusicIfEnabled();
   indexSelectedLevel = 1;
+  indexViewLoadFailed = false;
   const requestId = ++indexViewRequestId;
   const titleEl = document.getElementById('indexTitle');
   if (viewUid) {
@@ -9540,12 +9903,17 @@ async function openCardIndex(viewUid, viewName) {
     renderIndexGrid();
     refreshIndexOwnedTotal();
     let profile = {};
+    let loadFailed = false;
     try {
       const snap = await rtdb.ref(`${USERS_ROOT}/${viewUid}`).once('value');
       profile = snap.val() || {};
-    } catch (e) {}
+    } catch (e) {
+      console.error('openCardIndex: failed to load profile for', viewUid, e);
+      loadFailed = true;
+    }
     if (requestId !== indexViewRequestId) return;
     indexViewProfile = profile;
+    indexViewLoadFailed = loadFailed;
   } else {
     indexViewProfile = null;
     if (titleEl) titleEl.textContent = 'Card Index';
@@ -9562,6 +9930,11 @@ function closeCardIndex() {
   document.getElementById('menuButtons').classList.remove('hidden');
 }
 function refreshIndexOwnedTotal() {
+  const totalEl = document.getElementById('indexOwnedTotal');
+  if (indexViewLoadFailed) {
+    totalEl.textContent = "Couldn't load this player's collection -- try again.";
+    return;
+  }
   const profile = activeIndexProfile();
   const uniqueOwned = profile && profile.collection
     ? Object.values(profile.collection).filter(n => n > 0).length
@@ -9569,7 +9942,7 @@ function refreshIndexOwnedTotal() {
   const uniqueSeen = profile && profile.seenCardIds
     ? Object.keys(profile.seenCardIds).length
     : 0;
-  document.getElementById('indexOwnedTotal').textContent =
+  totalEl.textContent =
     `${uniqueOwned} / ${CARD_DB.length} cards owned - ${uniqueSeen} / ${CARD_DB.length} cards seen`;
 }
 function renderIndexTabs() {
