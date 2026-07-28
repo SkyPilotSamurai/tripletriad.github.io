@@ -11415,8 +11415,8 @@ async function completeShopSale() {
     await userRef.child('gil').set(newGil);
     if (currentUserProfile) currentUserProfile.gil = newGil;
     await removeCardsFromCollection(currentUser.uid, cardId, 1);
-    document.getElementById('shopStatus').textContent = `Sold ${card ? card.name : 'a card'} for ${proceeds} gil.`;
-    playSfx('cursorMove');
+    document.getElementById('shopStatus').textContent = '';
+    playSfx('shopPurchase');
     refreshShopGilBalance();
     renderShopGrid();
     refreshShopBuySlot();
