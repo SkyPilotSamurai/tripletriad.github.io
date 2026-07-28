@@ -3780,6 +3780,7 @@ let matchmakingDisconnectHook = null;
 let matchmakingPresenceIntervalId = null;
 let matchmakingPromptKind = null; // 'nudge' | 'mutual' | 'incoming' | 'mismatch' | null
 let matchmakingPromptOtherId = null;
+let matchmakingPromptShownKey = null;
 let matchmakingDismissedKey = null;
 function matchmakingPairRoomId(idA, idB, mode) {
   const safe = s => String(s).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
@@ -3888,6 +3889,7 @@ function detachMatchmakingListeners() {
 function hideMatchmakingPrompt(dismissedKey) {
   matchmakingPromptKind = null;
   matchmakingPromptOtherId = null;
+  matchmakingPromptShownKey = null;
   if (dismissedKey) matchmakingDismissedKey = dismissedKey;
   const el = document.getElementById('matchmakingPrompt');
   if (el) el.classList.add('hidden');
@@ -3927,11 +3929,15 @@ function evaluateMatchmakingCandidates(users) {
   hideMatchmakingPrompt();
 }
 function showMatchmakingNudge(other) {
-  const key = `nudge:${other.id}:${other.status}`;
+  // Keying on name too (not just id+status) means a guest who types a
+  // username after this prompt already rendered still gets picked up --
+  // otherwise it'd stay stuck showing the "Player" fallback forever.
+  const key = `nudge:${other.id}:${other.status}:${other.name}`;
   if (key === matchmakingDismissedKey) return;
-  if (matchmakingPromptKind === 'nudge' && matchmakingPromptOtherId === other.id) return;
+  if (matchmakingPromptShownKey === key) return;
   matchmakingPromptKind = 'nudge';
   matchmakingPromptOtherId = other.id;
+  matchmakingPromptShownKey = key;
   const modeLabel = other.status === 'ranked' ? 'Ranked' : 'Free Play';
   const buttons = [
     { label: `Join ${modeLabel}`, action: () => {
@@ -3949,11 +3955,14 @@ function showMatchmakingNudge(other) {
   renderMatchmakingPrompt(`${other.name} is looking for a ${modeLabel} match.`, buttons);
 }
 function showMatchmakingMutualPrompt(other) {
-  const key = `mutual:${other.id}`;
+  // Same reasoning as showMatchmakingNudge -- keep the name in the key so a
+  // later-typed username replaces an already-shown "Player" fallback.
+  const key = `mutual:${other.id}:${other.name}`;
   if (key === matchmakingDismissedKey) return;
-  if (matchmakingPromptKind === 'mutual' && matchmakingPromptOtherId === other.id) return;
+  if (matchmakingPromptShownKey === key) return;
   matchmakingPromptKind = 'mutual';
   matchmakingPromptOtherId = other.id;
+  matchmakingPromptShownKey = key;
   const buttons = [];
   if (currentUser) buttons.push({ label: 'Challenge: Ranked', action: () => sendMatchmakingChallenge(other, 'ranked') });
   buttons.push({ label: 'Challenge: Free Play', action: () => sendMatchmakingChallenge(other, 'freeplay') });
