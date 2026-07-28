@@ -962,12 +962,18 @@
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
-  /* up.png is a much more square graphic than the same/plus/combo banners,
-     so scaling it to the same max-width as the others left it visually
-     much bigger (barely shrunk at all, since it's already narrower than
-     max-width). Rendered at half size here to match their visual weight. */
-  #ruleBanner.rule-up { transform: translate(-50%, -50%) scale(0.42); }
-  #ruleBanner.rule-up.show { transform: translate(-50%, -50%) scale(0.6); }
+  /* up.png is a much more square graphic than the same/plus/combo banners --
+     at the same max-width it's already narrower than that cap, so it barely
+     shrinks at all and reads visually much bigger. It also isn't actually
+     constrained by max-width the way the wider banners are, so its pop-in
+     transform used to be scaling a much smaller box than theirs: even with
+     the same 0.7->1.0 growth ratio, that made the animation itself look far
+     less dynamic (a small fraction of the pixel movement), not just the
+     final size look different. Capping its own width here -- instead of
+     shrinking the transform range -- keeps it visually sized to match the
+     other banners' weight while animating with the exact same scale curve
+     (see the shared #ruleBanner/#ruleBanner.show rules above) they use. */
+  #ruleBanner.rule-up { width: 190px; max-width: 190px; }
   #firstPlayerSpinner {
     position: absolute;
     top: 50%;
@@ -7023,6 +7029,15 @@ const TUTORIAL_RULES = [
 ];
 let currentTutorialRule = null;
 let tutorialPlaying = false;
+// Bumped every time the tutorial is navigated away from (Back, Close, or
+// opening a different rule). playTutorialDemo() and the TUTORIAL_DEMOS
+// functions snapshot this at the start of a run and bail out at each
+// checkpoint if it's changed underneath them -- otherwise a still-running
+// demo (its moves/sleeps mid-flight) keeps mutating shared state.board/
+// state.hands/state.rules after the player has already moved on to a
+// different tutorial, which is what caused rule banners (Same/Combo/etc.)
+// to flash during the wrong tutorial.
+let tutorialDemoSessionId = 0;
 function tutorialHandFromIds(ids) {
   return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
 }
@@ -7085,6 +7100,7 @@ function closeTutorialList() {
   playSfx('cursorCancel');
   currentTutorialRule = null;
   tutorialPlaying = false;
+  tutorialDemoSessionId++;
   basicsSessionId++;
   state.tutorialInteractive = false;
   hideTutorialOverlayUi();
@@ -7095,6 +7111,7 @@ function closeTutorialList() {
 function backToTutorialList() {
   currentTutorialRule = null;
   tutorialPlaying = false;
+  tutorialDemoSessionId++;
   basicsSessionId++;
   state.tutorialInteractive = false;
   document.getElementById('gameScreen').classList.add('hidden');
@@ -7102,7 +7119,7 @@ function backToTutorialList() {
   document.getElementById('tutorialListScreen').classList.remove('hidden');
   renderTutorialLists();
 }
-function stageTutorialScenario(rule) {
+function stageTutorialScenario(rule, skipRender) {
   stopTurnTimer();
   state.mode = 'tutorial';
   state.roomId = null;
@@ -7130,13 +7147,14 @@ function stageTutorialScenario(rule) {
   state.suppressOverlay = true;
   state.turn = 'p1';
   state.rankedTriggerTally = { p1: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 }, p2: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 } };
-  renderAll();
+  if (!skipRender) renderAll();
 }
 function openTutorialRule(id) {
   const rule = TUTORIAL_RULES.find(r => r.id === id);
   if (!rule) return;
   currentTutorialRule = rule;
   tutorialPlaying = false;
+  tutorialDemoSessionId++;
   document.getElementById('tutorialListScreen').classList.add('hidden');
   showGameScreen();
   if (rule.interactive) {
@@ -7338,13 +7356,13 @@ function tutorialRerollChaosCard(owner) {
 const TUTORIAL_DEMOS = {
   // Just re-deals both hands from scratch -- there's no single "move" to
   // play, the rule is about how the hand is dealt in the first place.
-  random: async function (rule) {
-    stageTutorialScenario(rule);
+  random: async function (rule, stale) {
     await sleep(250);
+    if (stale && stale()) return;
     const hands = dealHands();
     tagHandOwnership(hands);
     state.hands = hands;
-    playSfx('cardObtained');
+    playSfx('cardPlace');
     renderAll();
     await sleep(600);
   },
@@ -7353,8 +7371,7 @@ const TUTORIAL_DEMOS = {
   // card back off the board into whichever side currently controls it --
   // even a card that started the match in the other player's hand -- and
   // rebuilds both hands from that, exactly like maybeTriggerPracticeSuddenDeath().
-  suddenDeath: async function (rule) {
-    stageTutorialScenario(rule);
+  suddenDeath: async function (rule, stale) {
     const boardIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     const leftoverHandId = 10;
     const board = boardIds.map((id, i) => {
@@ -7368,6 +7385,7 @@ const TUTORIAL_DEMOS = {
     state.turn = null;
     renderAll();
     await sleep(900);
+    if (stale && stale()) return;
     const cellEls = document.querySelectorAll('#board .cell');
     const lifts = [];
     board.forEach((cell, i) => {
@@ -7379,9 +7397,11 @@ const TUTORIAL_DEMOS = {
         { transform: 'translateY(-55px) scale(0.85)', opacity: 0 },
       ], { duration: 260, delay: i * 45, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {}));
     });
-    playSfx('cardObtained');
+    playSfx('cardPlace');
     await Promise.all(lifts);
+    if (stale && stale()) return;
     await sleep(150);
+    if (stale && stale()) return;
     const currentlyOwnedIds = owner => board
       .filter(cell => cell.owner === owner)
       .map(cell => cell.card.id)
@@ -7398,10 +7418,11 @@ const TUTORIAL_DEMOS = {
   // The dimming-all-but-one-card effect is already passive (renderHand marks
   // whichever card is currently "forced"); the demo's job is just to show
   // that pick actually changing turn to turn.
-  chaos: async function (rule) {
-    stageTutorialScenario(rule);
+  chaos: async function (rule, stale) {
+    renderAll();
     await sleep(500);
     for (let i = 0; i < 3; i++) {
+      if (stale && stale()) return;
       tutorialRerollChaosCard('p1');
       tutorialRerollChaosCard('p2');
       playSfx('cursorMove');
@@ -7410,11 +7431,11 @@ const TUTORIAL_DEMOS = {
     }
   },
   // One random card trades hands, once -- matches applySwapRule() exactly.
-  swap: async function (rule) {
-    stageTutorialScenario(rule);
+  swap: async function (rule, stale) {
     await sleep(400);
+    if (stale && stale()) return;
     applySwapRule(state.hands);
-    playSfx('cardObtained');
+    playSfx('cardPlace');
     renderAll();
     await sleep(600);
   },
@@ -7424,9 +7445,10 @@ const TUTORIAL_DEMOS = {
   // otherwise the rule shows as "active" in the indicator but nothing
   // elemental actually appears on the board, the same way initGame()
   // generates them for a real match.
-  roulette: async function (rule) {
-    stageTutorialScenario(rule);
+  roulette: async function (rule, stale) {
+    renderAll();
     await sleep(400);
+    if (stale && stale()) return;
     state.rules = rollRouletteRules(state.rules);
     state.boardElements = state.rules.elemental
       ? generateBoardElements([0, 1, 2, 3, 4, 5, 6, 7, 8])
@@ -7442,6 +7464,13 @@ async function playTutorialDemo() {
   const hasMoves = !!(rule.moves && rule.moves.length);
   const hasDemo = !!(rule.demo && TUTORIAL_DEMOS[rule.demo]);
   if (!hasMoves && !hasDemo) return;
+  // Snapshot the session id: if the player navigates away (Back/Close, or
+  // opening a different rule) while this run is still mid-flight, that
+  // navigation bumps tutorialDemoSessionId and every checkpoint below sees
+  // the mismatch and bails, instead of continuing to place cards / trigger
+  // captures / show rule banners against whatever tutorial is now on screen.
+  const mySessionId = tutorialDemoSessionId;
+  const stale = () => mySessionId !== tutorialDemoSessionId;
   tutorialPlaying = true;
   const playBtn = document.getElementById('tutorialPlayBtn');
   if (playBtn) playBtn.disabled = true;
@@ -7449,16 +7478,28 @@ async function playTutorialDemo() {
   // user had manually hidden it) while the moves play out over the board.
   document.getElementById('tutorialInfo').classList.add('hidden');
   document.getElementById('tutorialUnhideBtn').classList.add('hidden');
+  // Reset to the rule's clean starting hand/board exactly once per play,
+  // here rather than inside each branch/demo below -- but don't render it
+  // yet (skipRender). On a replay, the screen is currently showing the
+  // *previous* play's result (e.g. an already-swapped hand); rendering this
+  // reset immediately would flash it back to the original hand right before
+  // the demo below immediately changes it again, reading as if the swap/
+  // deal happened twice. Each branch below renders explicitly once it's
+  // ready to show something meaningful.
+  stageTutorialScenario(rule, true);
   if (hasMoves) {
-    stageTutorialScenario(rule);
+    renderAll();
     await sleep(300);
     for (const move of rule.moves) {
+      if (stale()) return;
       await tutorialPlaceCard(move.owner, move.cardId, move.cell);
+      if (stale()) return;
       await sleep(750);
     }
   } else {
-    await TUTORIAL_DEMOS[rule.demo](rule);
+    await TUTORIAL_DEMOS[rule.demo](rule, stale);
   }
+  if (stale()) return;
   tutorialPlaying = false;
   if (playBtn) playBtn.disabled = false;
   // Only bring the description panel back if we're still looking at this
@@ -7466,7 +7507,6 @@ async function playTutorialDemo() {
   if (currentTutorialRule === rule) setTutorialInfoHidden(false);
 }
 document.getElementById('menuTutorial').addEventListener('click', () => {
-  playSfx('cursorMove');
   openTutorialList();
 });
 document.getElementById('tutorialListClose').addEventListener('click', closeTutorialList);
@@ -7893,13 +7933,16 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
       }
       landedCellEl.dataset.sig = boardCellSignature(landedCell, cellIndex);
     }
-    if (captureResult.same) {
-      await showRuleBanner('same');
-      if (captureResult.plus && captureResult.plusHasExtra) await showRuleBanner('plus');
-    } else if (captureResult.plus) {
-      await showRuleBanner('plus');
-    }
-    if (captureResult.up && captureResult.upHasExtra) await showRuleBanner('up');
+    // Each rule's banner shows whenever that rule's own capture condition
+    // was met, independent of whether Same/Plus/Up happened to flip an
+    // overlapping set of cards this placement -- previously Plus and
+    // (especially) Up were gated behind a "did this add a flip the earlier
+    // banner didn't already cover" check, which made Up's banner silently
+    // skip itself any time its matches happened to overlap with Same's or
+    // Plus's, so it didn't animate as reliably as Same/Plus/Combo did.
+    if (captureResult.same) await showRuleBanner('same');
+    if (captureResult.plus) await showRuleBanner('plus');
+    if (captureResult.up) await showRuleBanner('up');
     const flipWaves = captureResult.flipWaves || [];
     const comboWaveIndices = captureResult.comboWaveIndices || [];
     const flipOrientations = captureResult.flipOrientations || {};
