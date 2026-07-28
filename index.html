@@ -960,6 +960,25 @@
     border-radius: 5px;
     gap: 5px;
   }
+  #spinnerFreePlayPrompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: -6px;
+    padding: 10px 14px;
+    background: rgba(110, 180, 230, 0.12);
+    border: 1px solid #3d5f75;
+    border-radius: 8px;
+  }
+  #spinnerFreePlayPrompt.hidden { display: none; }
+  #spinnerFreePlayPromptText { font-size: 13px; color: #cfe6f7; text-align: center; }
+  #spinnerSwitchToFreePlay {
+    padding: 9px 8px;
+    font-size: 10px;
+    border-radius: 5px;
+    gap: 5px;
+  }
   .board-info-hidden { visibility: hidden; }
   #board.board-not-summoned { display: none; }
   #firstPlayerArrow {
@@ -2546,6 +2565,10 @@
     <div id="firstPlayerSpinner" class="hidden">
       <div id="firstPlayerArrow"></div>
       <div id="firstPlayerLabel"></div>
+      <div id="spinnerFreePlayPrompt" class="hidden">
+        <div id="spinnerFreePlayPromptText">A Free Play game is open!</div>
+        <button class="menu-btn menu-btn-secondary" id="spinnerSwitchToFreePlay">Switch to Free Play</button>
+      </div>
       <button class="menu-btn menu-btn-secondary hidden" id="spinnerBackToMenu">Back to Menu</button>
     </div>
   </div>
@@ -2680,6 +2703,10 @@
         </div>
       </div>
       <audio id="bgAudio" loop></audio>
+    </div>
+    <div class="settings-section hidden" id="adminSettingsSection">
+      <h3>Admin</h3>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminGilRewardsToggle" checked> CPU / Free Play Gil Rewards</label></div>
     </div>
   </div>
 </div>
@@ -3253,6 +3280,13 @@ const USERS_ROOT = 'users';
 const ADMIN_EMAIL = 'skypilotsamurai@gmail.com';
 const LEADERBOARD_RANKED_ROOT = 'leaderboardRanked';
 const LEADERBOARD_FREEPLAY_ROOT = 'leaderboardFreeplay';
+const GAME_CONFIG_ROOT = 'gameConfig';
+let gilRewardsEnabled = true;
+rtdb.ref(`${GAME_CONFIG_ROOT}/gilRewardsEnabled`).on('value', snap => {
+  gilRewardsEnabled = snap.val() !== false;
+  const toggle = document.getElementById('adminGilRewardsToggle');
+  if (toggle) toggle.checked = gilRewardsEnabled;
+});
 let currentUser = null;
 let currentUserProfile = null;
 const authStateReady = new Promise(resolve => {
@@ -3527,6 +3561,68 @@ async function findOrCreateOpenRoom(playerName, root = ROOMS_ROOT) {
 }
 async function findOrCreateOpenRankedRoom(playerName) {
   return findOrCreateOpenRoom(playerName, RANKED_ROOMS_ROOT);
+}
+async function joinFreePlayGame() {
+  stopRankedFreePlayPrompt();
+  setMenuStatus('Finding a game...');
+  const name = currentDisplayName();
+  saveDisplayName(name);
+  setBoardInfoHidden(true);
+  state.mode = 'online';
+  updateTitleBarControls();
+  showGameScreen();
+  showWaitingForOpponent(null, true);
+  try {
+    const result = await findOrCreateOpenRoom(name);
+    if (!result) {
+      hideWaitingForOpponent();
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('mainMenu').classList.remove('hidden');
+      setMenuStatus('Could not find or create a room. Try again.');
+      return;
+    }
+    setMenuStatus('');
+    startOnlineRoom(result.roomId, result.seat);
+  } catch (err) {
+    hideWaitingForOpponent();
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
+    setMenuStatus('Connection error: ' + (err && err.message ? err.message : err));
+  }
+}
+// While a signed-in player is queued for Ranked and still waiting for an
+// opponent, this watches the Free Play open-room index and offers a "switch
+// over" prompt if a Free Play game is sitting open. The prompt disappears
+// the moment a ranked opponent shows up (see the bothSeatsFilled handling in
+// handleOnlineRoomSnapshot, which routes through hideWaitingForOpponent) or
+// whenever the player leaves the ranked queue by any other path.
+let rankedFreePlayPromptRef = null;
+let rankedFreePlayPromptCb = null;
+function updateRankedFreePlayPromptVisibility(hasOpenGame) {
+  const promptEl = document.getElementById('spinnerFreePlayPrompt');
+  if (!promptEl) return;
+  const stillWaitingForRanked = state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT && !state.rulesShownOnline;
+  promptEl.classList.toggle('hidden', !(hasOpenGame && stillWaitingForRanked));
+}
+function startRankedFreePlayPrompt() {
+  stopRankedFreePlayPrompt();
+  const ref = rtdb.ref(ROOM_ID_LIST_PATH);
+  const cb = snap => {
+    const hasOpenGame = snap.exists() && Object.keys(snap.val() || {}).length > 0;
+    updateRankedFreePlayPromptVisibility(hasOpenGame);
+  };
+  ref.on('value', cb);
+  rankedFreePlayPromptRef = ref;
+  rankedFreePlayPromptCb = cb;
+}
+function stopRankedFreePlayPrompt() {
+  if (rankedFreePlayPromptRef && rankedFreePlayPromptCb) {
+    rankedFreePlayPromptRef.off('value', rankedFreePlayPromptCb);
+  }
+  rankedFreePlayPromptRef = null;
+  rankedFreePlayPromptCb = null;
+  const promptEl = document.getElementById('spinnerFreePlayPrompt');
+  if (promptEl) promptEl.classList.add('hidden');
 }
 async function joinSpecificRoom(roomId, playerName, root = ROOMS_ROOT) {
   const roomRef = rtdb.ref(`${root}/${roomId}`);
@@ -4447,6 +4543,7 @@ const state = {
   pickerStockSource: 'unlimited',
   cpuOpponent: false,
   cpuDifficulty: 3,
+  cpuGilAwarded: false,
   cpuBehavior: 'normal',
   cpuPointBudget: null,
   cpuTimerEnabled: false,
@@ -4582,6 +4679,7 @@ function initGame(hands) {
   state.selected = null;
   state.gameOver = false;
   state.suppressOverlay = false;
+  state.cpuGilAwarded = false;
   state.rankedTriggerTally = { p1: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 }, p2: { same: 0, plus: 0, up: 0, elemental: 0, combo: 0 } };
   if (state.cpuOpponent) {
     state.turn = null;
@@ -5472,6 +5570,7 @@ function hideWaitingForOpponent() {
   overlay.classList.add('hidden');
   const spinnerBackBtn = document.getElementById('spinnerBackToMenu');
   if (spinnerBackBtn) spinnerBackBtn.classList.add('hidden');
+  stopRankedFreePlayPrompt();
   arrow.style.display = '';
   if (!overlay.classList.contains('no-box')) {
     const boardEl = document.getElementById('board');
@@ -7751,6 +7850,12 @@ const CPU_BEHAVIOR_SCORERS = {
   reflipper: cpuScoreReflipper,
   elemental: cpuScoreElementalFiend,
 };
+const CPU_GIL_BY_LEVEL = {
+  3: { win: 50, draw: 25 },
+  4: { win: 100, draw: 50 },
+  5: { win: 150, draw: 75 },
+};
+const FREE_PLAY_GIL = { win: 150, draw: 75 };
 function parseCpuDifficulty() {
   let level = parseInt(state.cpuDifficulty, 10);
   if (!Number.isFinite(level)) level = 3;
@@ -8542,6 +8647,7 @@ function updateTurnIndicator() {
   el.classList.toggle('turn-p2', state.turn === 'p2');
 }
 let lastGilResultKey = null;
+let lastFreePlayGilResultKey = null;
 function updateOverlay() {
   const overlay = document.getElementById('overlay');
   if (!state.gameOver || state.suppressOverlay) { overlay.classList.remove('show'); return; }
@@ -8638,8 +8744,39 @@ function updateOverlay() {
           }
         }).catch(() => {});
       }
+    } else if (gilRewardsEnabled && state.mode === 'practice' && state.cpuOpponent && (result === 'win' || result === 'draw') && currentUser
+        && CPU_GIL_BY_LEVEL[parseCpuDifficulty().level] && CPU_GIL_BY_LEVEL[parseCpuDifficulty().level][result]) {
+      const amount = CPU_GIL_BY_LEVEL[parseCpuDifficulty().level][result];
+      gilResultEl.classList.remove('hidden');
+      gilResultEl.textContent = `Gil Obtained: ${amount} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
+      if (!state.cpuGilAwarded) {
+        state.cpuGilAwarded = true;
+        addGilToUser(currentUser.uid, amount).then(() => {
+          if (state.gameOver && state.mode === 'practice' && state.cpuOpponent) {
+            gilResultEl.textContent = `Gil Obtained: ${amount} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
+          }
+        }).catch(() => {});
+      }
+    } else if (gilRewardsEnabled && state.mode === 'online' && state.roomRoot === ROOMS_ROOT && (result === 'win' || result === 'draw')
+        && state.seat && currentUser) {
+      // Free Play (non-ranked online) match -- dedup by roomId+dealId+seat,
+      // same pattern as ranked, so a rematch in the same room is treated as
+      // a fresh, separately-payable result.
+      const key = `${state.roomId}|${state.roomDealId || ''}|${state.seat}`;
+      const amount = FREE_PLAY_GIL[result];
+      gilResultEl.classList.remove('hidden');
+      gilResultEl.textContent = `Gil Obtained: ${amount} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
+      if (key !== lastFreePlayGilResultKey) {
+        lastFreePlayGilResultKey = key;
+        addGilToUser(currentUser.uid, amount).then(() => {
+          if (lastFreePlayGilResultKey === key) {
+            gilResultEl.textContent = `Gil Obtained: ${amount} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
+          }
+        }).catch(() => {});
+      }
     } else if (!(isRankedRoom && ts)) {
       lastGilResultKey = null;
+      lastFreePlayGilResultKey = null;
       gilResultEl.classList.add('hidden');
     }
   }
@@ -9404,6 +9541,11 @@ document.getElementById('spinnerBackToMenu').addEventListener('click', () => {
   leaveOnlineRoomOrSpectate();
   showMenuScreen();
 });
+document.getElementById('spinnerSwitchToFreePlay').addEventListener('click', () => {
+  playSfx('cursorMove');
+  leaveOnlineRoomOrSpectate();
+  joinFreePlayGame();
+});
 const settingsModal = document.getElementById('settingsModal');
 function openSettingsFromTitleBar() {
   settingsModal.classList.add('show');
@@ -9803,6 +9945,8 @@ function updateAuthUi() {
   if (adminBtn) adminBtn.classList.toggle('hidden', !isAdmin);
   const adminRestoreBtn = document.getElementById('menuAdminRestorePoints');
   if (adminRestoreBtn) adminRestoreBtn.classList.toggle('hidden', !isAdmin);
+  const adminSettingsSection = document.getElementById('adminSettingsSection');
+  if (adminSettingsSection) adminSettingsSection.classList.toggle('hidden', !isAdmin);
 }
 function setAccountError(msg) {
   const el = document.getElementById('accountError');
@@ -9854,33 +9998,9 @@ function initMainMenu() {
     showGameScreen();
     runPracticePickFlow();
   });
-  document.getElementById('menuPlay').addEventListener('click', async () => {
+  document.getElementById('menuPlay').addEventListener('click', () => {
     tryStartMusicIfEnabled();
-    setMenuStatus('Finding a game...');
-    const name = currentDisplayName();
-    saveDisplayName(name);
-    setBoardInfoHidden(true);
-    state.mode = 'online';
-    updateTitleBarControls();
-    showGameScreen();
-    showWaitingForOpponent(null, true);
-    try {
-      const result = await findOrCreateOpenRoom(name);
-      if (!result) {
-        hideWaitingForOpponent();
-        document.getElementById('gameScreen').classList.add('hidden');
-        document.getElementById('mainMenu').classList.remove('hidden');
-        setMenuStatus('Could not find or create a room. Try again.');
-        return;
-      }
-      setMenuStatus('');
-      startOnlineRoom(result.roomId, result.seat);
-    } catch (err) {
-      hideWaitingForOpponent();
-      document.getElementById('gameScreen').classList.add('hidden');
-      document.getElementById('mainMenu').classList.remove('hidden');
-      setMenuStatus('Connection error: ' + (err && err.message ? err.message : err));
-    }
+    joinFreePlayGame();
   });
   document.getElementById('menuRanked').addEventListener('click', async () => {
     tryStartMusicIfEnabled();
@@ -9896,6 +10016,7 @@ function initMainMenu() {
     updateTitleBarControls();
     showGameScreen();
     showWaitingForOpponent(null, true);
+    startRankedFreePlayPrompt();
     try {
       const result = await findOrCreateOpenRankedRoom(rankedName);
       if (!result) {
@@ -10213,6 +10334,10 @@ async function restoreLostRankedPoints() {
     if (btn) btn.disabled = false;
   }
 }
+document.getElementById('adminGilRewardsToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/gilRewardsEnabled`).set(e.target.checked).catch(() => {});
+});
 function initAdminGiveUi() {
   const cardSelect = document.getElementById('adminGiveCardSelect');
   if (cardSelect && !cardSelect.options.length) {
