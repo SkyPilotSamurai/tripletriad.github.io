@@ -190,6 +190,45 @@
     font-size: 12px;
     letter-spacing: 0.5px;
   }
+  .matchmaking-toggle-btn {
+    background: #2d3748;
+    color: #eee;
+    border: 1px solid #4a5568;
+    border-radius: 5px;
+    padding: 5px 0;
+    width: 40px;
+    box-sizing: border-box;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .matchmaking-toggle-btn.on {
+    background: #2f5c3a;
+    border-color: #4a8a5a;
+    color: #baf5c8;
+  }
+  #matchmakingPrompt {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 500;
+    max-width: 300px;
+    background: rgba(15, 19, 31, 0.95);
+    border: 1px solid #4a5568;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+  }
+  #matchmakingPrompt.hidden { display: none; }
+  #matchmakingPromptText { color: #eee; font-size: 14px; line-height: 1.4; }
+  #matchmakingPromptActions { display: flex; flex-wrap: wrap; gap: 8px; }
+  #matchmakingPromptActions button { flex: 1 1 auto; font-size: 12px; padding: 8px 10px; }
   #settingsModal {
     position: fixed;
     inset: 0;
@@ -2435,6 +2474,10 @@
       <button id="menuSfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
     </span>
     <span class="icon-label-group">
+      <span class="icon-label">Matchmaking</span>
+      <button id="matchmakingToggleBtn" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+    </span>
+    <span class="icon-label-group">
       <span class="icon-label">Settings</span>
       <button id="menuSettingsBtn" class="icon-btn" title="Settings">⚙</button>
     </span>
@@ -2496,6 +2539,10 @@
   </div>
   <div class="title-side title-right">
     <span class="icon-label-group">
+      <span class="icon-label">Matchmaking</span>
+      <button id="matchmakingToggleBtnGame" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+    </span>
+    <span class="icon-label-group">
       <span class="icon-label">Settings</span>
       <button id="settingsBtn" class="icon-btn" title="Settings">⚙</button>
     </span>
@@ -2521,6 +2568,10 @@
     </span>
   </div>
   <div class="title-side title-right">
+    <span class="icon-label-group">
+      <span class="icon-label">Matchmaking</span>
+      <button id="matchmakingToggleBtnOnline" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+    </span>
     <span class="icon-label-group">
       <span class="icon-label">Settings</span>
       <button id="onlineSettingsBtn" class="icon-btn" title="Settings">⚙</button>
@@ -2710,6 +2761,10 @@
     </div>
   </div>
 </div>
+<div id="matchmakingPrompt" class="hidden">
+  <div id="matchmakingPromptText"></div>
+  <div id="matchmakingPromptActions"></div>
+</div>
 <div id="accountModal">
   <div id="accountPanel">
     <button id="accountClose" aria-label="Close">✕</button>
@@ -2782,6 +2837,10 @@
     <span class="icon-label-group">
       <span class="icon-label">SFX</span>
       <button id="lobbySfxBtn" class="icon-btn" title="Toggle SFX">🔊</button>
+    </span>
+    <span class="icon-label-group">
+      <span class="icon-label">Matchmaking</span>
+      <button id="matchmakingToggleBtnLobby" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
     </span>
     <span class="icon-label-group">
       <span class="icon-label">Settings</span>
@@ -2926,6 +2985,10 @@
     </div>
     <div class="title-side title-right">
       <span class="icon-label-group">
+        <span class="icon-label">Matchmaking</span>
+        <button id="matchmakingToggleBtnPicker" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+      </span>
+      <span class="icon-label-group">
         <span class="icon-label">Settings</span>
         <button id="pickerSettingsBtn" class="icon-btn" title="Settings">⚙</button>
       </span>
@@ -3020,6 +3083,10 @@
     </div>
     <div class="title-side title-right">
       <span class="icon-label-group">
+        <span class="icon-label">Matchmaking</span>
+        <button id="matchmakingToggleBtnShop" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+      </span>
+      <span class="icon-label-group">
         <span class="icon-label">Settings</span>
         <button id="shopSettingsBtn" class="icon-btn" title="Settings">⚙</button>
       </span>
@@ -3075,6 +3142,10 @@
     </div>
     <div class="title-side title-right">
       <span class="icon-label-group">
+        <span class="icon-label">Matchmaking</span>
+        <button id="matchmakingToggleBtnTutorial" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+      </span>
+      <span class="icon-label-group">
         <span class="icon-label">Settings</span>
         <button id="tutorialListSettingsBtn" class="icon-btn" title="Settings">⚙</button>
       </span>
@@ -3119,6 +3190,10 @@
     </div>
     <div class="title-side title-right">
       <span class="icon-label-group">
+        <span class="icon-label">Matchmaking</span>
+        <button id="matchmakingToggleBtnIndex" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+      </span>
+      <span class="icon-label-group">
         <span class="icon-label">Settings</span>
         <button id="indexSettingsBtn" class="icon-btn" title="Settings">⚙</button>
       </span>
@@ -3150,6 +3225,10 @@
       </span>
     </div>
     <div class="title-side title-right">
+      <span class="icon-label-group">
+        <span class="icon-label">Matchmaking</span>
+        <button id="matchmakingToggleBtnCpuSetup" class="matchmaking-toggle-btn" title="Get notified when other online players are around">Off</button>
+      </span>
       <span class="icon-label-group">
         <span class="icon-label">Settings</span>
         <button id="cpuSetupSettingsBtn" class="icon-btn" title="Settings">⚙</button>
@@ -3569,6 +3648,8 @@ async function joinFreePlayGame() {
   saveDisplayName(name);
   setBoardInfoHidden(true);
   state.mode = 'online';
+  state.roomRoot = ROOMS_ROOT;
+  updateMatchmakingPresence();
   updateTitleBarControls();
   showGameScreen();
   showWaitingForOpponent(null, true);
@@ -3624,14 +3705,415 @@ function stopRankedFreePlayPrompt() {
   const promptEl = document.getElementById('spinnerFreePlayPrompt');
   if (promptEl) promptEl.classList.add('hidden');
 }
+async function startRankedMatchmaking() {
+  tryStartMusicIfEnabled();
+  if (!currentUser) {
+    setMenuStatus('Sign in to play Ranked.');
+    openAccountModal('signin');
+    return;
+  }
+  setMenuStatus('Finding a ranked match...');
+  const rankedName = (currentUserProfile && currentUserProfile.displayName) || currentUser.email || 'Player';
+  setBoardInfoHidden(true);
+  state.mode = 'online';
+  state.roomRoot = RANKED_ROOMS_ROOT;
+  updateMatchmakingPresence();
+  updateTitleBarControls();
+  showGameScreen();
+  showWaitingForOpponent(null, true);
+  startRankedFreePlayPrompt();
+  try {
+    const result = await findOrCreateOpenRankedRoom(rankedName);
+    if (!result) {
+      hideWaitingForOpponent();
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('mainMenu').classList.remove('hidden');
+      setMenuStatus('Could not find or create a ranked room. Try again.');
+      return;
+    }
+    setMenuStatus('');
+    startOnlineRoom(result.roomId, result.seat, RANKED_ROOMS_ROOT);
+  } catch (err) {
+    hideWaitingForOpponent();
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
+    setMenuStatus('Connection error: ' + (err && err.message ? err.message : err));
+  }
+}
+// ---- Cross-player "Matchmaking" presence/nudge/challenge system ----
+// Opt-in (persisted, default off). While on, each client writes a small
+// presence record (name + idle/ranked/freeplay/inMatch status) to
+// MATCHMAKING_PRESENCE_ROOT. Other opted-in clients watch that list and:
+//   - if someone else is actively searching Ranked/Free Play, an idle local
+//     player is nudged to join that queue (or, for Ranked, offered a
+//     Free Play counter-request instead);
+//   - if two opted-in players are both idle, each is offered the chance to
+//     challenge the other to Ranked or Free Play.
+// Direct challenges are stored per-target at MATCHMAKING_CHALLENGES_ROOT and
+// resolved into a deterministic, shared room id (matchmakingPairRoomId) so
+// both sides land in the same room without any extra coordination -- the
+// existing online-room/lobby machinery takes it from there.
+const MATCHMAKING_PRESENCE_ROOT = 'matchmakingUsers';
+const MATCHMAKING_CHALLENGES_ROOT = 'matchmakingChallenges';
+const MATCHMAKING_RESULTS_ROOT = 'matchmakingChallengeResults';
+const MATCHMAKING_STORAGE_KEY = 'tripleTriadMatchmakingOn';
+const MATCHMAKING_PRESENCE_STALE_MS = 20000;
+const MATCHMAKING_TOGGLE_BTN_IDS = [
+  'matchmakingToggleBtn', 'matchmakingToggleBtnGame', 'matchmakingToggleBtnOnline',
+  'matchmakingToggleBtnLobby', 'matchmakingToggleBtnPicker', 'matchmakingToggleBtnShop',
+  'matchmakingToggleBtnTutorial', 'matchmakingToggleBtnIndex', 'matchmakingToggleBtnCpuSetup',
+];
+let matchmakingOn = (() => {
+  try { return localStorage.getItem(MATCHMAKING_STORAGE_KEY) === '1'; } catch (e) { return false; }
+})();
+let matchmakingUsersRef = null;
+let matchmakingUsersCb = null;
+let matchmakingChallengesRef = null;
+let matchmakingChallengesCb = null;
+let matchmakingResultsRef = null;
+let matchmakingResultsCb = null;
+let matchmakingDisconnectHook = null;
+let matchmakingPresenceIntervalId = null;
+let matchmakingPromptKind = null; // 'nudge' | 'mutual' | 'incoming' | 'mismatch' | null
+let matchmakingPromptOtherId = null;
+let matchmakingDismissedKey = null;
+function matchmakingPairRoomId(idA, idB, mode) {
+  const safe = s => String(s).replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+  const sorted = [safe(idA), safe(idB)].sort();
+  return `mm_${mode}_${sorted[0]}_${sorted[1]}`;
+}
+function matchmakingCurrentStatus() {
+  if (state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT) {
+    return state.rulesShownOnline ? 'inMatch' : 'ranked';
+  }
+  if (state.mode === 'online' && state.roomRoot === ROOMS_ROOT) {
+    return state.rulesShownOnline ? 'inMatch' : 'freeplay';
+  }
+  return 'idle';
+}
+function updateMatchmakingPresence() {
+  if (!matchmakingOn) return;
+  const status = matchmakingCurrentStatus();
+  rtdb.ref(`${MATCHMAKING_PRESENCE_ROOT}/${localPlayerId}`).set({
+    name: currentDisplayName() || 'Player',
+    status,
+    ts: Date.now(),
+  }).catch(() => {});
+  if (status === 'inMatch') {
+    // Just hide anything currently on screen -- the challenge itself is left
+    // untouched in Firebase (not declined) so it's still waiting once the
+    // player leaves the match.
+    if (matchmakingPromptKind === 'incoming' || matchmakingPromptKind === 'mismatch') hideMatchmakingPrompt();
+  } else {
+    // Left a match (or otherwise became free) -- re-check for any challenge
+    // that arrived, or was held back, while busy.
+    recheckPendingMatchmakingChallenges();
+  }
+}
+function recheckPendingMatchmakingChallenges() {
+  rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${localPlayerId}`).once('value')
+    .then(snap => evaluateIncomingChallenges(snap.val() || {}))
+    .catch(() => {});
+}
+function updateMatchmakingToggleUi() {
+  MATCHMAKING_TOGGLE_BTN_IDS.forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.textContent = matchmakingOn ? 'On' : 'Off';
+    btn.classList.toggle('on', matchmakingOn);
+  });
+}
+function startMatchmaking() {
+  matchmakingOn = true;
+  try { localStorage.setItem(MATCHMAKING_STORAGE_KEY, '1'); } catch (e) {}
+  const presenceRef = rtdb.ref(`${MATCHMAKING_PRESENCE_ROOT}/${localPlayerId}`);
+  if (matchmakingDisconnectHook) { matchmakingDisconnectHook.cancel().catch(() => {}); }
+  matchmakingDisconnectHook = presenceRef.onDisconnect();
+  matchmakingDisconnectHook.remove();
+  updateMatchmakingPresence();
+  if (matchmakingPresenceIntervalId) clearInterval(matchmakingPresenceIntervalId);
+  matchmakingPresenceIntervalId = setInterval(updateMatchmakingPresence, 4000);
+  attachMatchmakingListeners();
+  updateMatchmakingToggleUi();
+}
+function stopMatchmaking() {
+  matchmakingOn = false;
+  try { localStorage.setItem(MATCHMAKING_STORAGE_KEY, '0'); } catch (e) {}
+  if (matchmakingDisconnectHook) { matchmakingDisconnectHook.cancel().catch(() => {}); matchmakingDisconnectHook = null; }
+  rtdb.ref(`${MATCHMAKING_PRESENCE_ROOT}/${localPlayerId}`).remove().catch(() => {});
+  rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${localPlayerId}`).remove().catch(() => {});
+  rtdb.ref(`${MATCHMAKING_RESULTS_ROOT}/${localPlayerId}`).remove().catch(() => {});
+  if (matchmakingPresenceIntervalId) { clearInterval(matchmakingPresenceIntervalId); matchmakingPresenceIntervalId = null; }
+  detachMatchmakingListeners();
+  hideMatchmakingPrompt();
+  updateMatchmakingToggleUi();
+}
+function attachMatchmakingListeners() {
+  detachMatchmakingListeners();
+  const usersRef = rtdb.ref(MATCHMAKING_PRESENCE_ROOT);
+  const usersCb = snap => evaluateMatchmakingCandidates(snap.val() || {});
+  usersRef.on('value', usersCb);
+  matchmakingUsersRef = usersRef;
+  matchmakingUsersCb = usersCb;
+  const challengesRef = rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${localPlayerId}`);
+  const challengesCb = snap => evaluateIncomingChallenges(snap.val() || {});
+  challengesRef.on('value', challengesCb);
+  matchmakingChallengesRef = challengesRef;
+  matchmakingChallengesCb = challengesCb;
+  // Only the accepting/declining side writes here -- this is how the
+  // original sender of a one-way challenge learns the outcome and, if
+  // accepted, joins the same shared room the accepter is already heading to.
+  const resultsRef = rtdb.ref(`${MATCHMAKING_RESULTS_ROOT}/${localPlayerId}`);
+  const resultsCb = snap => evaluateMatchmakingChallengeResults(snap.val() || {});
+  resultsRef.on('value', resultsCb);
+  matchmakingResultsRef = resultsRef;
+  matchmakingResultsCb = resultsCb;
+}
+function detachMatchmakingListeners() {
+  if (matchmakingUsersRef && matchmakingUsersCb) matchmakingUsersRef.off('value', matchmakingUsersCb);
+  matchmakingUsersRef = null;
+  matchmakingUsersCb = null;
+  if (matchmakingChallengesRef && matchmakingChallengesCb) matchmakingChallengesRef.off('value', matchmakingChallengesCb);
+  matchmakingChallengesRef = null;
+  matchmakingChallengesCb = null;
+  if (matchmakingResultsRef && matchmakingResultsCb) matchmakingResultsRef.off('value', matchmakingResultsCb);
+  matchmakingResultsRef = null;
+  matchmakingResultsCb = null;
+}
+function hideMatchmakingPrompt(dismissedKey) {
+  matchmakingPromptKind = null;
+  matchmakingPromptOtherId = null;
+  if (dismissedKey) matchmakingDismissedKey = dismissedKey;
+  const el = document.getElementById('matchmakingPrompt');
+  if (el) el.classList.add('hidden');
+}
+function renderMatchmakingPrompt(text, buttons) {
+  const el = document.getElementById('matchmakingPrompt');
+  const textEl = document.getElementById('matchmakingPromptText');
+  const actionsEl = document.getElementById('matchmakingPromptActions');
+  if (!el || !textEl || !actionsEl) return;
+  textEl.textContent = text;
+  actionsEl.innerHTML = '';
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'menu-btn menu-btn-secondary';
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => { playSfx('cursorMove'); b.action(); });
+    actionsEl.appendChild(btn);
+  });
+  el.classList.remove('hidden');
+}
+function evaluateMatchmakingCandidates(users) {
+  if (!matchmakingOn) return;
+  // An active challenge negotiation always takes priority over a passive nudge.
+  if (matchmakingPromptKind === 'incoming' || matchmakingPromptKind === 'mismatch') return;
+  const myStatus = matchmakingCurrentStatus();
+  if (myStatus !== 'idle') { hideMatchmakingPrompt(); return; }
+  const now = Date.now();
+  const others = Object.keys(users)
+    .filter(id => id !== localPlayerId)
+    .map(id => ({ id, ...users[id] }))
+    .filter(u => u && u.name && (now - (u.ts || 0)) < MATCHMAKING_PRESENCE_STALE_MS);
+  if (!others.length) { hideMatchmakingPrompt(); return; }
+  const searching = others.find(u => u.status === 'ranked' || u.status === 'freeplay');
+  if (searching) { showMatchmakingNudge(searching); return; }
+  const idleOther = others.find(u => u.status === 'idle');
+  if (idleOther) { showMatchmakingMutualPrompt(idleOther); return; }
+  hideMatchmakingPrompt();
+}
+function showMatchmakingNudge(other) {
+  const key = `nudge:${other.id}:${other.status}`;
+  if (key === matchmakingDismissedKey) return;
+  if (matchmakingPromptKind === 'nudge' && matchmakingPromptOtherId === other.id) return;
+  matchmakingPromptKind = 'nudge';
+  matchmakingPromptOtherId = other.id;
+  const modeLabel = other.status === 'ranked' ? 'Ranked' : 'Free Play';
+  const buttons = [
+    { label: `Join ${modeLabel}`, action: () => {
+      hideMatchmakingPrompt();
+      if (other.status === 'ranked') startRankedMatchmaking(); else joinFreePlayGame();
+    } },
+  ];
+  // Free Play is always the offered fallback -- there's no reverse "ask them
+  // to switch to Ranked" option, since that would force a rank commitment on
+  // someone who never opted into it.
+  if (other.status === 'ranked') {
+    buttons.push({ label: 'Ask for Free Play instead', action: () => sendMatchmakingChallenge(other, 'freeplay') });
+  }
+  buttons.push({ label: 'Dismiss', action: () => hideMatchmakingPrompt(key) });
+  renderMatchmakingPrompt(`${other.name} is looking for a ${modeLabel} match.`, buttons);
+}
+function showMatchmakingMutualPrompt(other) {
+  const key = `mutual:${other.id}`;
+  if (key === matchmakingDismissedKey) return;
+  if (matchmakingPromptKind === 'mutual' && matchmakingPromptOtherId === other.id) return;
+  matchmakingPromptKind = 'mutual';
+  matchmakingPromptOtherId = other.id;
+  const buttons = [];
+  if (currentUser) buttons.push({ label: 'Challenge: Ranked', action: () => sendMatchmakingChallenge(other, 'ranked') });
+  buttons.push({ label: 'Challenge: Free Play', action: () => sendMatchmakingChallenge(other, 'freeplay') });
+  buttons.push({ label: 'Dismiss', action: () => hideMatchmakingPrompt(key) });
+  renderMatchmakingPrompt(`${other.name} is also online and open to a match.`, buttons);
+}
+async function sendMatchmakingChallenge(other, mode) {
+  if (mode === 'ranked' && !currentUser) { setMenuStatus('Sign in to send a Ranked challenge.'); return; }
+  hideMatchmakingPrompt();
+  const myName = currentDisplayName() || 'Player';
+  await rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${other.id}/${localPlayerId}`).set({
+    fromName: myName, mode, ts: Date.now(),
+  }).catch(() => {});
+  setMenuStatus(`Challenge sent to ${other.name}. Waiting for a response...`);
+}
+async function clearMatchmakingChallengePair(otherId) {
+  await rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${localPlayerId}/${otherId}`).remove().catch(() => {});
+  await rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${otherId}/${localPlayerId}`).remove().catch(() => {});
+}
+async function evaluateIncomingChallenges(challenges) {
+  if (!matchmakingOn) return;
+  const senderIds = Object.keys(challenges || {});
+  if (!senderIds.length) {
+    if (matchmakingPromptKind === 'incoming' || matchmakingPromptKind === 'mismatch') hideMatchmakingPrompt();
+    return;
+  }
+  // Never surface a challenge while already matched (playing or on the
+  // victory screen) -- but leave it alone (don't decline) so it's still
+  // here waiting once the player is free again. See updateMatchmakingPresence,
+  // which re-checks this the moment status leaves 'inMatch'.
+  if (matchmakingCurrentStatus() === 'inMatch') {
+    if (matchmakingPromptKind === 'incoming' || matchmakingPromptKind === 'mismatch') hideMatchmakingPrompt();
+    return;
+  }
+  senderIds.sort((a, b) => (challenges[b].ts || 0) - (challenges[a].ts || 0));
+  const fromId = senderIds[0];
+  const incoming = challenges[fromId];
+  if (!incoming) return;
+  // A held challenge might have been sitting here since before the sender
+  // went offline, turned matchmaking off, or started a match of their own --
+  // only honor it if they're still around and still offering it.
+  const senderSnap = await rtdb.ref(`${MATCHMAKING_PRESENCE_ROOT}/${fromId}`).once('value');
+  const sender = senderSnap.val();
+  const senderStillOffering = !!sender && sender.status !== 'inMatch'
+    && (Date.now() - (sender.ts || 0)) < MATCHMAKING_PRESENCE_STALE_MS;
+  if (!senderStillOffering) {
+    await clearMatchmakingChallengePair(fromId);
+    if (matchmakingPromptKind === 'incoming' || matchmakingPromptKind === 'mismatch') hideMatchmakingPrompt();
+    return;
+  }
+  // Check for a crossed invite -- have I also already challenged them?
+  const mySnap = await rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${fromId}/${localPlayerId}`).once('value');
+  const mine = mySnap.val();
+  if (mine) {
+    if (mine.mode === incoming.mode) {
+      // Same mode both ways is already mutual agreement -- start right away.
+      await clearMatchmakingChallengePair(fromId);
+      beginMatchmakingMatchedRoom(fromId, incoming.mode);
+      return;
+    }
+    // Mismatch: Free Play is always the fallback, so only the side that
+    // wanted Ranked gets asked whether they'll switch to Free Play instead.
+    if (mine.mode === 'ranked') {
+      showMatchmakingModeMismatchPrompt(fromId, incoming.fromName);
+    }
+    return;
+  }
+  showMatchmakingIncomingChallenge(fromId, incoming);
+}
+function showMatchmakingModeMismatchPrompt(fromId, fromName) {
+  matchmakingPromptKind = 'mismatch';
+  matchmakingPromptOtherId = fromId;
+  renderMatchmakingPrompt(`${fromName} wants to play Free Play instead.`, [
+    { label: 'Switch to Free Play', action: () => acceptMatchmakingChallenge(fromId, 'freeplay') },
+    { label: 'Decline', action: () => declineMatchmakingChallenge(fromId) },
+  ]);
+}
+function showMatchmakingIncomingChallenge(fromId, incoming) {
+  matchmakingPromptKind = 'incoming';
+  matchmakingPromptOtherId = fromId;
+  const modeLabel = incoming.mode === 'ranked' ? 'Ranked' : 'Free Play';
+  renderMatchmakingPrompt(`${incoming.fromName} wants to play you in ${modeLabel}.`, [
+    { label: 'Accept', action: () => acceptMatchmakingChallenge(fromId, incoming.mode) },
+    { label: 'Decline', action: () => declineMatchmakingChallenge(fromId) },
+  ]);
+}
+async function acceptMatchmakingChallenge(fromId, mode) {
+  hideMatchmakingPrompt();
+  if (mode === 'ranked' && !currentUser) { setMenuStatus('Sign in to accept a Ranked challenge.'); return; }
+  await clearMatchmakingChallengePair(fromId);
+  // Tell the original sender the challenge was accepted (and which mode) so
+  // their client also heads into the same shared room -- without this, only
+  // the accepting side would ever actually end up in the match.
+  await rtdb.ref(`${MATCHMAKING_RESULTS_ROOT}/${fromId}/${localPlayerId}`).set({
+    accepted: true, mode, fromName: currentDisplayName() || 'Player', ts: Date.now(),
+  }).catch(() => {});
+  beginMatchmakingMatchedRoom(fromId, mode);
+}
+async function declineMatchmakingChallenge(fromId) {
+  hideMatchmakingPrompt();
+  await clearMatchmakingChallengePair(fromId);
+  await rtdb.ref(`${MATCHMAKING_RESULTS_ROOT}/${fromId}/${localPlayerId}`).set({
+    accepted: false, fromName: currentDisplayName() || 'Player', ts: Date.now(),
+  }).catch(() => {});
+}
+function evaluateMatchmakingChallengeResults(results) {
+  if (!matchmakingOn) return;
+  Object.keys(results || {}).forEach(responderId => {
+    const result = results[responderId];
+    rtdb.ref(`${MATCHMAKING_RESULTS_ROOT}/${localPlayerId}/${responderId}`).remove().catch(() => {});
+    if (!result) return;
+    if (result.accepted) {
+      beginMatchmakingMatchedRoom(responderId, result.mode);
+    } else {
+      setMenuStatus(`${result.fromName || 'They'} declined your challenge.`);
+    }
+  });
+}
+function beginMatchmakingMatchedRoom(otherId, mode) {
+  tryStartMusicIfEnabled();
+  const root = mode === 'ranked' ? RANKED_ROOMS_ROOT : ROOMS_ROOT;
+  const roomId = matchmakingPairRoomId(localPlayerId, otherId, mode);
+  const name = currentDisplayName();
+  saveDisplayName(name);
+  setBoardInfoHidden(true);
+  state.mode = 'online';
+  state.roomRoot = root;
+  updateMatchmakingPresence();
+  updateTitleBarControls();
+  showGameScreen();
+  showWaitingForOpponent(null, true);
+  setMenuStatus('');
+  joinSpecificRoom(roomId, name, root).then(result => {
+    if (!result) {
+      hideWaitingForOpponent();
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('mainMenu').classList.remove('hidden');
+      setMenuStatus('Could not join the match. Try again.');
+      return;
+    }
+    startOnlineRoom(result.roomId, result.seat, root);
+  }).catch(err => {
+    hideWaitingForOpponent();
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
+    setMenuStatus('Connection error: ' + (err && err.message ? err.message : err));
+  });
+}
 async function joinSpecificRoom(roomId, playerName, root = ROOMS_ROOT) {
   const roomRef = rtdb.ref(`${root}/${roomId}`);
-  const snap = await roomRef.once('value');
-  if (!snap.exists()) {
-    await roomRef.set(root === RANKED_ROOMS_ROOT ? emptyRankedRoomState() : emptyRoomState());
-    await rtdb.ref(`${roomIndexPathFor(root)}/${roomId}`).set(true);
-    await rtdb.ref(`${roomWatchIndexPathFor(root)}/${roomId}`).set(true);
-  }
+  // A transaction (rather than a plain check-then-set) matters here because
+  // matchmaking's deterministic room ids mean both matched players can call
+  // this for the very same brand-new roomId at almost the same instant --
+  // a plain set() would let the second call clobber the first player's
+  // already-claimed seat back to empty. The transaction guarantees only the
+  // first writer actually creates the room; the second sees it already
+  // exists and leaves it untouched.
+  await roomRef.transaction(current => {
+    if (current === null) {
+      return root === RANKED_ROOMS_ROOT ? emptyRankedRoomState() : emptyRoomState();
+    }
+    return current;
+  });
+  await rtdb.ref(`${roomIndexPathFor(root)}/${roomId}`).set(true).catch(() => {});
+  await rtdb.ref(`${roomWatchIndexPathFor(root)}/${roomId}`).set(true).catch(() => {});
   const seat = await tryClaimOpenSeat(roomId, playerName, root);
   return seat ? { roomId, seat } : null;
 }
@@ -5571,6 +6053,7 @@ function hideWaitingForOpponent() {
   const spinnerBackBtn = document.getElementById('spinnerBackToMenu');
   if (spinnerBackBtn) spinnerBackBtn.classList.add('hidden');
   stopRankedFreePlayPrompt();
+  updateMatchmakingPresence();
   arrow.style.display = '';
   if (!overlay.classList.contains('no-box')) {
     const boardEl = document.getElementById('board');
@@ -7122,6 +7605,7 @@ function leaveOnlineRoomOrSpectate() {
   // per-session state, so leaving a spectate/replay session shouldn't reset
   // it back to off.
   document.body.classList.remove('spectate-purple-bg', 'online-full-opacity');
+  updateMatchmakingPresence();
 }
 function requestRematch(sameRulesAndPoints) {
   if (state.mode !== 'online' || !state.roomId || !state.seat) return;
@@ -9556,6 +10040,16 @@ if (onlineSettingsBtn) onlineSettingsBtn.addEventListener('click', openSettingsF
 const pickerSettingsBtn = document.getElementById('pickerSettingsBtn');
 if (pickerSettingsBtn) pickerSettingsBtn.addEventListener('click', openSettingsFromTitleBar);
 document.getElementById('menuSettingsBtn').addEventListener('click', openSettingsFromTitleBar);
+MATCHMAKING_TOGGLE_BTN_IDS.forEach(id => {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    playSfx('cursorMove');
+    if (matchmakingOn) stopMatchmaking(); else startMatchmaking();
+  });
+});
+updateMatchmakingToggleUi();
+if (matchmakingOn) startMatchmaking();
 const shopSettingsBtn = document.getElementById('shopSettingsBtn');
 if (shopSettingsBtn) shopSettingsBtn.addEventListener('click', openSettingsFromTitleBar);
 const indexSettingsBtn = document.getElementById('indexSettingsBtn');
@@ -10002,38 +10496,8 @@ function initMainMenu() {
     tryStartMusicIfEnabled();
     joinFreePlayGame();
   });
-  document.getElementById('menuRanked').addEventListener('click', async () => {
-    tryStartMusicIfEnabled();
-    if (!currentUser) {
-      setMenuStatus('Sign in to play Ranked.');
-      openAccountModal('signin');
-      return;
-    }
-    setMenuStatus('Finding a ranked match...');
-    const rankedName = (currentUserProfile && currentUserProfile.displayName) || currentUser.email || 'Player';
-    setBoardInfoHidden(true);
-    state.mode = 'online';
-    updateTitleBarControls();
-    showGameScreen();
-    showWaitingForOpponent(null, true);
-    startRankedFreePlayPrompt();
-    try {
-      const result = await findOrCreateOpenRankedRoom(rankedName);
-      if (!result) {
-        hideWaitingForOpponent();
-        document.getElementById('gameScreen').classList.add('hidden');
-        document.getElementById('mainMenu').classList.remove('hidden');
-        setMenuStatus('Could not find or create a ranked room. Try again.');
-        return;
-      }
-      setMenuStatus('');
-      startOnlineRoom(result.roomId, result.seat, RANKED_ROOMS_ROOT);
-    } catch (err) {
-      hideWaitingForOpponent();
-      document.getElementById('gameScreen').classList.add('hidden');
-      document.getElementById('mainMenu').classList.remove('hidden');
-      setMenuStatus('Connection error: ' + (err && err.message ? err.message : err));
-    }
+  document.getElementById('menuRanked').addEventListener('click', () => {
+    startRankedMatchmaking();
   });
   document.getElementById('menuCardShop').addEventListener('click', () => {
     if (!currentUser) {
