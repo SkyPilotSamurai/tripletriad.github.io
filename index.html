@@ -3377,6 +3377,10 @@ const authStateReady = new Promise(resolve => {
       currentUserProfile = null;
     }
     updateAuthUi();
+    // Signing in may unlock a Ranked challenge that was held back while the
+    // player was a guest (see the currentUser check in
+    // evaluateIncomingChallenges) -- recheck now that it might apply.
+    recheckPendingMatchmakingChallenges();
     resolve();
   });
 });
@@ -3811,6 +3815,7 @@ function updateMatchmakingPresence() {
   }
 }
 function recheckPendingMatchmakingChallenges() {
+  if (!matchmakingOn) return;
   rtdb.ref(`${MATCHMAKING_CHALLENGES_ROOT}/${localPlayerId}`).once('value')
     .then(snap => evaluateIncomingChallenges(snap.val() || {}))
     .catch(() => {});
@@ -4016,6 +4021,13 @@ async function evaluateIncomingChallenges(challenges) {
     }
     return;
   }
+  // Guests can never accept a Ranked challenge -- don't even show it, but
+  // leave it pending in Firebase in case they sign in later (the auth-state
+  // hook re-checks pending challenges the moment currentUser appears).
+  if (incoming.mode === 'ranked' && !currentUser) {
+    if (matchmakingPromptKind === 'incoming' || matchmakingPromptKind === 'mismatch') hideMatchmakingPrompt();
+    return;
+  }
   showMatchmakingIncomingChallenge(fromId, incoming);
 }
 function showMatchmakingModeMismatchPrompt(fromId, fromName) {
@@ -4068,6 +4080,24 @@ function evaluateMatchmakingChallengeResults(results) {
   });
 }
 function beginMatchmakingMatchedRoom(otherId, mode) {
+  // Last-line-of-defense sign-in check: acceptMatchmakingChallenge already
+  // guards its own path, but this function is also reached by the crossed-
+  // invite auto-start and the sender-side "they accepted" result handler,
+  // neither of which had their own check -- a user who signs out between
+  // sending/crossing a Ranked challenge and it resolving must still be
+  // blocked here rather than sliding into a ranked room unauthenticated.
+  if (mode === 'ranked' && !currentUser) {
+    setMenuStatus('Sign in to play Ranked.');
+    openAccountModal('signin');
+    return;
+  }
+  // A player can be lured over to a challenge while still sitting in their
+  // own Ranked/Free Play room (e.g. accepting a Free Play request while
+  // still queued for Ranked) -- leave that room properly first so the old
+  // seat/presence is released instead of leaking a stuck occupant behind.
+  if (state.mode === 'online' && state.roomId) {
+    leaveOnlineRoomOrSpectate();
+  }
   tryStartMusicIfEnabled();
   const root = mode === 'ranked' ? RANKED_ROOMS_ROOT : ROOMS_ROOT;
   const roomId = matchmakingPairRoomId(localPlayerId, otherId, mode);
