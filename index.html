@@ -9050,7 +9050,42 @@ function boardCellSignature(cell, i) {
   const elem = state.rules.elemental && state.boardElements[i] ? state.boardElements[i] : '';
   return `${cell.card.id}|${owner}|${justLanding ? 'landing' : 'settled'}|${elem}|${state.elementalStatsMode}|${state.elementalMode}`;
 }
+// The Card Index's "seen" tracking is specific to Ranked: a normal (non-
+// Closed) opponent hand is visible in full from the start of the match, so
+// every card in it counts as seen right away. A Closed/Closed Single card
+// that's currently hidden only becomes seen once it's actually revealed by
+// landing on the board. Not tracked in practice/CPU/Free Play, spectating,
+// replays, or the tutorial's scripted demos -- only real Ranked matches.
+function isRankedSeenTrackingActive() {
+  return state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT && !!state.seat;
+}
+function markCardSeen(cardId) {
+  if (!currentUser || !currentUserProfile) return;
+  if (currentUserProfile.seenCardIds && currentUserProfile.seenCardIds[cardId]) return;
+  currentUserProfile.seenCardIds = currentUserProfile.seenCardIds || {};
+  currentUserProfile.seenCardIds[cardId] = true;
+  rtdb.ref(`${USERS_ROOT}/${currentUser.uid}/seenCardIds/${cardId}`).set(true).catch(() => {});
+}
+function markRankedSeenCards() {
+  if (!currentUser || !currentUserProfile) return;
+  if (!isRankedSeenTrackingActive()) return;
+  // Board cards are always visible once played, closed or not.
+  state.board.forEach(cell => {
+    if (cell && cell.card) markCardSeen(cell.card.id);
+  });
+  // The opponent's hand is visible up front except for whichever card the
+  // Closed/Closed Single rule is currently hiding -- that one stays unseen
+  // until it shows up on the board above.
+  const opponentSeat = state.seat === 'p1' ? 'p2' : 'p1';
+  const opponentHand = state.hands && state.hands[opponentSeat];
+  if (opponentHand) {
+    opponentHand.forEach(card => {
+      if (!isHandCardHiddenFromViewer(opponentSeat, card)) markCardSeen(card.id);
+    });
+  }
+}
 function renderBoard() {
+  markRankedSeenCards();
   const container = document.getElementById('board');
   const existingCells = container.children;
   state.board.forEach((cell, i) => {
@@ -9407,6 +9442,10 @@ function renderTradeOverlay(ts) {
     ts.pool.forEach(p => {
       const card = CARD_DB.find(c => c.id === p.cardId);
       if (!card) return;
+      // Winning a Closed-hand opponent surfaces cards here that may never
+      // have touched the board during the match itself -- seeing them in
+      // the pick pool counts as seeing them for the Card Index.
+      if (iAmWinner) markCardSeen(card.id);
       const el = createCardElement({ ...card }, ts.winner, null, false);
       if (iAmWinner) {
         el.addEventListener('click', () => {
@@ -9448,6 +9487,7 @@ function renderTradeOverlay(ts) {
   }
   const picked = ts.picked[idx];
   const card = CARD_DB.find(c => c.id === picked.cardId);
+  if (iAmWinner) markCardSeen(picked.cardId);
   cardStage.innerHTML = '';
   labelStage.className = '';
   labelStage.textContent = '';
