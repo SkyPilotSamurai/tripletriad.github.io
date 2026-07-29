@@ -3842,7 +3842,7 @@
     <button id="shopClose" title="Back to Menu">✕</button>
     <div id="shopHeader">
       <div id="shopTitleRow">
-        <div id="shopTitle">Ranked - Card Shop</div>
+        <div id="shopTitle">Card Shop</div>
         <!-- Only shown once the player has a Campaign save to buy/sell into
              (see updateShopStoreToggle()) -- swaps which collection the shop
              reads/writes, Ranked/Free Play's or Campaign's separate one. Gil
@@ -15752,12 +15752,15 @@ function closeCardShop() {
 // the shop was entered via one of the two dedicated Campaign/Ranked
 // entry points (shopContextLocked) -- that entry point already picked the
 // store, so there's nothing left to swap. Also keeps #shopTitle itself in
-// sync ("Campaign Card Shop"/"Ranked Card Shop") so the screen always
-// names the store you're actually in, matching the two dedicated buttons'
-// own labels on the Campaign Locations screen.
+// sync -- when entered via one of the two dedicated Campaign Locations
+// buttons (shopContextLocked), it names the store you're actually in
+// ("Campaign - Card Shop"/"Ranked - Card Shop"), matching those buttons'
+// own labels. The plain main-menu "Card Shop" entry isn't locked to either
+// store (it's the one with the swap toggle), so it just keeps the generic
+// "Card Shop" title regardless of which store the toggle is currently on.
 function updateShopStoreToggle() {
   const titleEl = document.getElementById('shopTitle');
-  if (titleEl) titleEl.textContent = shopCampaignMode ? 'Campaign - Card Shop' : 'Ranked - Card Shop';
+  if (titleEl) titleEl.textContent = shopContextLocked ? (shopCampaignMode ? 'Campaign - Card Shop' : 'Ranked - Card Shop') : 'Card Shop';
   const btn = document.getElementById('shopStoreToggleBtn');
   if (!btn) return;
   const canToggle = !!currentCampaignSave && !shopContextLocked;
