@@ -2759,6 +2759,7 @@
   #campaignHomeBoard { margin-top: 6vh; }
   #campaignLocationsShortcuts {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 16px;
   }
@@ -3841,7 +3842,7 @@
     <button id="shopClose" title="Back to Menu">✕</button>
     <div id="shopHeader">
       <div id="shopTitleRow">
-        <div id="shopTitle">Card Shop</div>
+        <div id="shopTitle">Ranked - Card Shop</div>
         <!-- Only shown once the player has a Campaign save to buy/sell into
              (see updateShopStoreToggle()) -- swaps which collection the shop
              reads/writes, Ranked/Free Play's or Campaign's separate one. Gil
@@ -4003,7 +4004,8 @@
     </div>
     <div id="campaignLocationsShortcuts">
       <button class="menu-btn menu-btn-secondary" id="campaignOpenCardIndexBtn">Card Index</button>
-      <button class="menu-btn menu-btn-secondary" id="campaignOpenCardShopBtn">Card Shop</button>
+      <button class="menu-btn menu-btn-secondary" id="campaignOpenCardShopBtn">Campaign - Card Shop</button>
+      <button class="menu-btn menu-btn-secondary" id="campaignOpenCardShopRankedBtn">Ranked - Card Shop</button>
     </div>
     <div id="campaignLocationsGrid"></div>
   </div>
@@ -10042,7 +10044,11 @@ document.getElementById('campaignOpenCardIndexBtn').addEventListener('click', ()
 });
 document.getElementById('campaignOpenCardShopBtn').addEventListener('click', () => {
   playSfx('cursorMove');
-  openCampaignCardShop();
+  openCampaignCardShop(true);
+});
+document.getElementById('campaignOpenCardShopRankedBtn').addEventListener('click', () => {
+  playSfx('cursorMove');
+  openCampaignCardShop(false);
 });
 document.getElementById('campaignNpcClose').addEventListener('click', () => {
   playSfx('cursorCancel');
@@ -10107,6 +10113,21 @@ function isRoomGenuinelyLive(room) {
   if (!room || room.gameOver) return false;
   const presence = room.presence || {};
   const seats = room.seats || {};
+  // Before the hands are actually dealt (room._dealt), the match can't
+  // progress at all without BOTH players still around -- there's no
+  // disconnect-forfeit timer covering the rules/hand-pick phase (see
+  // watchDisconnectForfeit, which explicitly skips !room._dealt rooms), so a
+  // room where one seat's occupant left before dealing is permanently
+  // stuck. The old any-one-seat check let that stale room keep reading as
+  // "Live" in the Watch list forever off the other seat's presence flag
+  // alone, so clicking in landed on an eternal "waiting for players to pick
+  // hands"/"choose their cards" screen that could never resolve. Once
+  // dealt, a match can legitimately continue being watched off just one
+  // seat's presence (that's the actual in-progress game), so the looser
+  // check still applies there.
+  if (!room._dealt) {
+    return !!(seats.p1 && presence.p1 === true && seats.p2 && presence.p2 === true);
+  }
   return !!((seats.p1 && presence.p1 === true) || (seats.p2 && presence.p2 === true));
 }
 async function pickRandomActiveRoom(excludeId) {
@@ -12228,6 +12249,23 @@ function updateMatchupBox() {
   document.getElementById('matchupP2Name').textContent = displayNameForSeat('p2') || 'Player 2';
 }
 function displayNameForSeat(seat, seatsOverride) {
+  // Campaign is just another cpuOpponent practice match under the hood (see
+  // startCampaignBattle), but the matchup box/turn indicator should show the
+  // actual NPC's name (Edea, Balamb Receptionist, etc.) instead of the
+  // generic "CPU" every other Vs CPU match uses, and the player's own saved
+  // display name instead of the generic "Player 1" fallback -- both are
+  // readily available (campaignFindNpc/state.campaignNpcId for the NPC,
+  // currentUserProfile/currentUser for the player, same source used for
+  // Ranked's name elsewhere in this file) and just weren't being read here.
+  if (state.campaignNpcId) {
+    if (seat === 'p2') {
+      const npc = campaignFindNpc(state.campaignNpcId);
+      return (npc && npc.name) || 'CPU';
+    }
+    if (seat === 'p1') {
+      return (currentUserProfile && currentUserProfile.displayName) || (currentUser && currentUser.email) || 'Player';
+    }
+  }
   if (state.cpuOpponent && seat === 'p2') return 'CPU';
   const seats = seatsOverride || state.roomSeats;
   if (state.mode === 'practice' || !seats) return null;
@@ -15616,11 +15654,22 @@ let shopSelectedBoosterId = null;
 // either way (see refreshShopGilBalance/addGilToUser), only the card
 // collection side differs.
 let shopCampaignMode = false;
+// True when the shop was entered via one of the two dedicated Campaign
+// Locations screen buttons (Campaign Shop / Ranked Shop --
+// campaignOpenCardShopBtn / campaignOpenCardShopRankedBtn) that already fix
+// which store you're browsing -- hides the in-shop Store toggle (see
+// updateShopStoreToggle) so there's nothing to "swap" once you're already
+// in the store you asked for. The plain main-menu "Card Shop" button
+// (menuCardShop) does NOT set this -- it stays the original generic entry
+// point, toggle and all.
+let shopContextLocked = false;
 // Separate from shopCampaignMode (which the in-shop Store toggle button
-// freely flips back and forth) -- this remembers which screen the shop was
-// actually opened from, so Back/Close always returns there regardless of
-// whatever store the player ends up leaving the toggle on.
-let shopOpenedFromCampaign = false;
+// freely flips back and forth) -- this remembers whether the shop was
+// actually opened FROM the Campaign Locations screen (either of its two
+// dedicated buttons above), as opposed to the main menu's own "Card Shop"
+// button, so Back/Close always returns to the right place regardless of
+// which store the player ends up leaving the toggle on.
+let shopReturnToCampaignLocations = false;
 function activeShopCollection() {
   return shopCampaignMode ? currentCampaignSave : currentUserProfile;
 }
@@ -15638,10 +15687,17 @@ async function shopRemoveCard(cardId, count) {
     await removeCardsFromCollection(currentUser.uid, cardId, count);
   }
 }
-function openCardShop(campaignMode) {
+function openCardShop(campaignMode, opts) {
+  opts = opts || {};
   shopCampaignMode = !!campaignMode;
-  shopOpenedFromCampaign = shopCampaignMode;
-  if (!shopCampaignMode) document.getElementById('mainMenu').classList.add('hidden');
+  shopContextLocked = !!opts.lockContext;
+  shopReturnToCampaignLocations = !!opts.returnToCampaignLocations;
+  // Only skip hiding the main menu when we're arriving from the Campaign
+  // Locations screen, where it's already hidden -- both dedicated main-menu
+  // entry points (Campaign Shop, Ranked Shop) are launched WITH the main
+  // menu still visible, so they need it hidden same as the old Ranked-only
+  // entry always did.
+  if (!shopReturnToCampaignLocations) document.getElementById('mainMenu').classList.add('hidden');
   document.getElementById('shopScreen').classList.remove('hidden');
   tryStartMusicIfEnabled();
   shopSelectedCardId = null;
@@ -15652,15 +15708,37 @@ function openCardShop(campaignMode) {
   refreshShopGilBalance();
   refreshShopBuySlot();
 }
-function openCampaignCardShop() {
+// Both of the Campaign Locations screen's two shop buttons (Campaign Shop,
+// Ranked Shop) route through here -- always returns to Locations on close,
+// and always locks the in-shop Store toggle (lockContext) since each button
+// already committed to a specific store; there's nothing left to swap.
+function openCampaignCardShop(campaignMode) {
   document.getElementById('campaignLocationsScreen').classList.add('hidden');
-  openCardShop(true);
+  openCardShop(!!campaignMode, { returnToCampaignLocations: true, lockContext: true });
+  if (campaignMode) maybeShowCampaignShopRankedNotice();
+}
+// One-time (per account, not per browser -- persisted on the profile so it
+// doesn't pop up again on another device either) heads-up shown the first
+// time a player opens the Campaign Card Shop specifically: cards bought
+// there only ever land in the Campaign save's own collection
+// (activeShopCollection/campaignAwardCard), never the shared Ranked/Free
+// Play one, so a player who doesn't already know the shops are separate
+// could easily expect a purchase here to show up in a Ranked match. Mirrors
+// the seenCardIds/pendingRankedNotice pattern already used elsewhere for
+// persisted per-user "has this been shown" flags, rather than a
+// browser-local localStorage flag.
+function maybeShowCampaignShopRankedNotice() {
+  if (!currentUser || !currentUserProfile || currentUserProfile.hasSeenCampaignShopRankedNotice) return;
+  currentUserProfile.hasSeenCampaignShopRankedNotice = true;
+  rtdb.ref(`${USERS_ROOT}/${currentUser.uid}/hasSeenCampaignShopRankedNotice`).set(true).catch(() => {});
+  window.alert("Heads up: cards bought in the Campaign Card Shop only go into your Campaign save - they don't carry over to Ranked/Free Play. Use the Ranked Card Shop instead if you want cards for those.");
 }
 function closeCardShop() {
   document.getElementById('shopScreen').classList.add('hidden');
   shopCampaignMode = false;
-  if (shopOpenedFromCampaign) {
-    shopOpenedFromCampaign = false;
+  shopContextLocked = false;
+  if (shopReturnToCampaignLocations) {
+    shopReturnToCampaignLocations = false;
     openCampaignLocations();
   } else {
     document.getElementById('mainMenu').classList.remove('hidden');
@@ -15670,11 +15748,19 @@ function closeCardShop() {
 // The store toggle is only meaningful once the player actually has a
 // Campaign save to buy/sell into -- otherwise (browsing the shop from the
 // main menu with no Campaign game started yet) it stays hidden and the
-// shop is always the Ranked/Free Play store.
+// shop is always the Ranked/Free Play store. It also stays hidden whenever
+// the shop was entered via one of the two dedicated Campaign/Ranked
+// entry points (shopContextLocked) -- that entry point already picked the
+// store, so there's nothing left to swap. Also keeps #shopTitle itself in
+// sync ("Campaign Card Shop"/"Ranked Card Shop") so the screen always
+// names the store you're actually in, matching the two dedicated buttons'
+// own labels on the Campaign Locations screen.
 function updateShopStoreToggle() {
+  const titleEl = document.getElementById('shopTitle');
+  if (titleEl) titleEl.textContent = shopCampaignMode ? 'Campaign - Card Shop' : 'Ranked - Card Shop';
   const btn = document.getElementById('shopStoreToggleBtn');
   if (!btn) return;
-  const canToggle = !!currentCampaignSave;
+  const canToggle = !!currentCampaignSave && !shopContextLocked;
   btn.classList.toggle('hidden', !canToggle);
   btn.textContent = shopCampaignMode ? 'Campaign' : 'Ranked';
 }
@@ -16148,7 +16234,7 @@ let indexCampaignMode = false;
 // changed by the in-screen toggle -- kept separate from indexCampaignMode
 // (which the toggle button freely flips) so the Back button always returns
 // to the right screen even after switching stores, exactly like the shop's
-// shopOpenedFromCampaign/shopCampaignMode split.
+// shopReturnToCampaignLocations/shopCampaignMode split.
 let indexOpenedFromCampaign = false;
 function activeIndexProfile() {
   if (indexCampaignMode) {
