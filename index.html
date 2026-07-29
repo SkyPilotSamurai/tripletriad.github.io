@@ -7351,6 +7351,45 @@ function campaignRollForcedRareCards(npc, baseBudget) {
   const picked = candidates[Math.floor(Math.random() * candidates.length)];
   return { pointBudget: baseBudget, forcedRareCardIds: [picked.id] };
 }
+// Campaign NPC counterpart to ensureElementalCardsInHand (which only ever
+// runs for the plain Practice/Ranked CPU, via state.cpuBehavior) -- every
+// Campaign NPC is guaranteed at least 1 elemental card in their dealt hand,
+// or at least 2 if their own cpuBehavior is 'elemental' (Elemental Fiend),
+// so that behavior's on-tile bonus scoring (cpuScoreElementalFiend) actually
+// has something to work with instead of depending on the luck of the draw.
+// Operates on `others` (the ordinary filler slots) only, before any forced
+// rare card gets spliced in -- a forced rare (npc.rewardCardId or a card won
+// off the player) is never swapped out, though if it happens to already be
+// elemental (some GFs are) it still counts toward the minimum, so a swap
+// only kicks in for whatever shortfall remains. Silently no-ops if the
+// NPC's own pool has zero elemental cards to draw from (an admin-curated
+// cardPool override could be built that way) rather than looping forever.
+function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards) {
+  const minElemental = npc.cpuBehavior === 'elemental' ? 2 : 1;
+  const rareElementalCount = (rareCards || []).reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
+  let elementalCount = rareElementalCount + others.reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
+  if (elementalCount >= minElemental) return others;
+  const elementalPool = pool.filter(c => c.element);
+  if (!elementalPool.length) return others;
+  const result = others.slice();
+  const totalSpent = () => result.reduce((sum, c) => sum + c.level, 0);
+  while (elementalCount < minElemental) {
+    const nonElementalIdxs = result.map((c, i) => i).filter(i => !result[i].element);
+    if (nonElementalIdxs.length === 0) break;
+    const outIdx = nonElementalIdxs.reduce((best, i) => (result[i].level < result[best].level ? i : best), nonElementalIdxs[0]);
+    const outCard = result[outIdx];
+    const spentWithoutOut = totalSpent() - outCard.level;
+    const budgetForSwap = otherBudget - spentWithoutOut;
+    const candidates = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
+    if (candidates.length === 0) break;
+    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
+    const best = candidates.filter(c => c.level === highestLevel);
+    const inCard = best[Math.floor(Math.random() * best.length)];
+    result[outIdx] = { ...inCard };
+    elementalCount++;
+  }
+  return result;
+}
 function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
   // The ordinary filler pool is now campaignActiveCardPool(npc) -- either an
   // admin-set cardPool override (see the Admin NPC Editor's Card Pool
@@ -7452,8 +7491,9 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
     others.push({ ...card });
     spent += card.level;
   }
-  if (!rareCards.length) return others;
-  const hand = others.slice();
+  const filledOthers = ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards);
+  if (!rareCards.length) return filledOthers;
+  const hand = filledOthers.slice();
   rareCards.forEach(rareCard => {
     hand.splice(Math.floor(Math.random() * (hand.length + 1)), 0, { ...rareCard });
   });
