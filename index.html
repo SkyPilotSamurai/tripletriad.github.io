@@ -9558,7 +9558,17 @@ function renderCampaignNpcList(location) {
   if (!list || !currentCampaignSave) return;
   list.innerHTML = '';
   const unlockedCount = campaignUnlockedLocationCount(currentCampaignSave);
-  location.npcs.forEach(npc => {
+  // Always display weakest-to-strongest by cpuDifficulty, regardless of
+  // location.npcs' actual array order -- that order only reflects
+  // authoring/insertion history (a custom NPC added via the Admin NPC
+  // Editor always gets pushed to the END of the array in
+  // loadCampaignAdminOverrides, and editing an existing NPC's Skill there
+  // doesn't move it either), so sorting a copy here is what actually keeps
+  // the list in skill order no matter how/when an NPC was added or
+  // re-leveled, instead of just matching whatever order happened to be
+  // hand-written in CAMPAIGN_LOCATIONS originally.
+  const sortedNpcs = location.npcs.slice().sort((a, b) => (a.cpuDifficulty || 0) - (b.cpuDifficulty || 0));
+  sortedNpcs.forEach(npc => {
     const defeated = !!(currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[npc.id]);
     const locked = campaignIsNpcLocked(npc, currentCampaignSave);
     const row = document.createElement('button');
