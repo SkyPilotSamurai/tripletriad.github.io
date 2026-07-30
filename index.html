@@ -3218,32 +3218,9 @@
   body.mobile-mode .campaign-npc-name { font-size: 19px; }
   body.mobile-mode .campaign-npc-desc { font-size: 14px; }
 
-  /* Campaign location thumbnails: bigger, fixed rows of 3. Font size clamps
-     down so longer location names (e.g. "Deep Sea Research Center") don't
-     overflow the narrower 3-column tiles on small phones. */
-  body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  body.mobile-mode .campaign-location-btn { height: 150px; font-size: clamp(11px, 3.6vw, 16px); padding: 6px; }
-
-  /* Main Menu: stack the button grids to one column so each button is a
-     full-width tap target instead of two cramped side-by-side buttons. */
-  body.mobile-mode .menu-section-grid { grid-template-columns: 1fr; gap: 10px; }
-
-  /* Tutorial menu: same one-column treatment, plus bigger touch targets and
-     headings. */
-  body.mobile-mode .tutorial-rule-grid { grid-template-columns: 1fr; gap: 10px; }
-  body.mobile-mode .tutorial-rule-btn { font-size: 19px; padding: 16px 14px; }
-  body.mobile-mode #tutorialListTitle { font-size: 30px; }
-  body.mobile-mode #tutorialListSubtitle { font-size: 15px; }
-  body.mobile-mode .tutorial-list-group-label { font-size: 21px; }
-
-  /* Campaign NPC select/challenge list: bigger tap targets and make sure the
-     name/desc column can actually shrink and wrap instead of overflowing
-     next to the difficulty/status column. */
-  body.mobile-mode #campaignNpcList { gap: 14px; }
-  body.mobile-mode .campaign-npc-row { padding: 16px 16px; gap: 12px; }
-  body.mobile-mode .campaign-npc-row > div:first-child { min-width: 0; flex: 1; }
-  body.mobile-mode .campaign-npc-difficulty { font-size: 14px; }
-  body.mobile-mode .campaign-npc-status { font-size: 13px; }
+  /* Campaign location thumbnails: bigger, fixed rows of 3. */
+  body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); }
+  body.mobile-mode .campaign-location-btn { height: 150px; font-size: 16px; }
 
   /* Card selection in hand: skip the slide-into-place animation entirely on
      mobile much faster for both hands (still there, just quicker) instead
@@ -4621,33 +4598,12 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).on('value', snap => 
   const toggle = document.getElementById('adminCampaignRandomIgnoresPointsToggle');
   if (toggle) toggle.checked = campaignRandomIgnoresPointsEnabled;
 });
-function applyMobileModeViewport(enabled) {
-  // All Mobile Mode CSS lives inside @media (max-width: 700px). Without a
-  // viewport meta tag, phones report their default ~980px layout viewport
-  // for media-query purposes (not the real screen width), so that query
-  // never matches and none of Mobile Mode's styling ever shows up on an
-  // actual phone. Injecting the tag only while Mobile Mode is on makes the
-  // media query evaluate against the real device width; removing it when
-  // off restores the original no-tag behavior everywhere else.
-  let meta = document.querySelector('meta[name="viewport"]');
-  if (enabled) {
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.setAttribute('name', 'viewport');
-      document.head.insertBefore(meta, document.head.firstChild);
-    }
-    meta.setAttribute('content', 'width=device-width, initial-scale=1');
-  } else if (meta) {
-    meta.remove();
-  }
-}
 let mobileModeEnabled = false;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).on('value', snap => {
   mobileModeEnabled = snap.val() === true;
   const toggle = document.getElementById('adminMobileModeToggle');
   if (toggle) toggle.checked = mobileModeEnabled;
   document.body.classList.toggle('mobile-mode', mobileModeEnabled);
-  applyMobileModeViewport(mobileModeEnabled);
 });
 let campaignRegionCardBiasPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
