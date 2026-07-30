@@ -13560,6 +13560,22 @@ const RULE_BANNERS = {
   combo: "Cards/FF8/icons/text/combo.png",
   up: "Cards/FF8/icons/text/up.png",
 };
+// Eagerly fetches+decodes every rule banner image right away, instead of
+// leaving each one to load lazily the first time showRuleBanner() sets it
+// as #ruleBanner's src. Loaded off local disk (file://) this makes no
+// visible difference -- effectively instant either way. Hosted over a real
+// network (e.g. GitHub Pages), though, the FIRST time a given banner type
+// is triggered mid-match the browser has to actually fetch+decode it from
+// scratch, and showRuleBanner's timing (650ms shown + 200ms fade) runs on
+// its own fixed clock regardless of whether the image has actually
+// finished loading yet -- so a slow first fetch can still be arriving (and
+// popping in abruptly, un-faded) after the .show class meant to animate it
+// has already come and gone. That's exactly the "only flickers wrong the
+// very first time it's shown, fine every time after" symptom -- once
+// browser-cached, later shows of the same banner never hit this. Doing
+// this once here means every banner type is already cached and instantly
+// decodable well before any match can ever need one.
+Object.values(RULE_BANNERS).forEach(src => { const img = new Image(); img.src = src; });
 const RESULT_GRAPHICS = {
   win: "Cards/FF8/icons/text/you_win.png",
   lose: "Cards/FF8/icons/text/you_lose.png",
@@ -13626,6 +13642,32 @@ const SFX = {
   cardObtained: "Sound/Card Obtained.wav",
   shopPurchase: "Sound/Shop Purchase.wav",
 };
+// Small/cheap assets that are effectively guaranteed to be needed early and
+// often -- same "flickers/pops-in/delays wrong only the very first time,
+// fine after that" risk over a real hosted connection as RULE_BANNERS
+// above, just for a few other asset categories: the win/lose/draw result
+// graphics (every single match ends by showing one), the 8 elemental
+// tile-icon strips (CSS background-images, which the browser doesn't fetch
+// until a matching element actually renders -- i.e. the first Fire/Ice/etc.
+// card played on an elemental tile), and the face-down card-back art (hit
+// on turn 1 of literally every match). Fetched+decoded once here, right
+// away, same lightweight new Image() trick as RULE_BANNERS.
+[
+  ...Object.values(RESULT_GRAPHICS),
+  ...ELEMENTS.map(e => `Cards/FF8/icons/elements/${e.toLowerCase()}_strip.png`),
+  `${CARD_IMG_PATH}${LOGO_CARD_IMAGE}`,
+].forEach(src => { const img = new Image(); img.src = src; });
+// SFX priming: .load() (not .play()) fetches+decodes the audio without
+// needing a user gesture -- unlike playback, which autoplay policy blocks
+// until the page's first click/keypress (see unlockSfxPlayback below,
+// which primes exactly one of these 8, cursorMove, purely to satisfy that
+// gesture requirement). This covers the other 7 too, so no SFX's very
+// first play() has to wait on a cold network fetch.
+Object.values(SFX).forEach(src => {
+  const audio = new Audio(src);
+  audio.preload = 'auto';
+  audio.load();
+});
 const sfxState = { enabled: true, cursorVolume: 0.2, cardVolume: 0.2, hoverEnabled: false };
 const SFX_CATEGORY = {
   cursorMove: 'cursor',
@@ -14237,6 +14279,59 @@ initSfxControls();
 initMainMenu();
 initWatchFromUrl();
 loadCampaignAdminOverrides();
+// --- Background bulk asset preloading -------------------------------------
+// Card art (CARD_DB, ~110 images/~10MB), booster/location thumbnails, and
+// Campaign/Shop wallpaper backgrounds are all far too large to eagerly fetch
+// all at once the way the small assets above are (SFX, RESULT_GRAPHICS,
+// elemental icons, RULE_BANNERS) -- doing so would compete with and delay
+// whatever the player is actually trying to do first, right when the page
+// loads. Instead, once the main menu is up and everything else here has
+// already run, trickle these in a few at a time in the background via
+// requestIdleCallback (falls back to a plain setTimeout drip for browsers
+// without it, e.g. Safari), so by the time a player actually opens a deck
+// picker, a Campaign location, or a specific booster pack, there's a good
+// chance its art is already warm in the browser's cache -- avoiding the
+// same cold-fetch-racing-a-fixed-animation risk the RULE_BANNERS fix
+// addressed, just for these much bigger asset sets.
+function preloadImagesInBackground(paths) {
+  const unique = [...new Set(paths.filter(Boolean))];
+  const batchSize = 4;
+  let i = 0;
+  function scheduleNext() {
+    if (i >= unique.length) return;
+    const runIdle = window.requestIdleCallback
+      || (cb => setTimeout(() => cb({ timeRemaining: () => 0, didTimeout: true }), 200));
+    runIdle(() => {
+      for (let n = 0; n < batchSize && i < unique.length; n++, i++) {
+        const img = new Image();
+        img.src = unique[i];
+      }
+      scheduleNext();
+    }, { timeout: 2000 });
+  }
+  scheduleNext();
+}
+function startBackgroundAssetPreload() {
+  // Same CARD_IMG_PATH + card.image concatenation createCardElement uses --
+  // including for the 2 custom "Streamer" cards, whose image field is
+  // itself a "../../Streamer/whatever.png" relative escape, by design.
+  const cardImagePaths = CARD_DB.map(c => `${CARD_IMG_PATH}${c.image}`);
+  const thumbPaths = [
+    ...BOOSTER_PACKS.map(p => `${BOOSTER_IMG_PATH}${p.image}`),
+    ...CAMPAIGN_LOCATIONS.map(l => (l.image ? `${BOOSTER_IMG_PATH}${l.image}` : null)),
+  ];
+  const backgroundPaths = [
+    ...Object.values(BOOSTER_PACK_BG_FILE),
+    ...Object.values(CAMPAIGN_LOCATION_BG_FILE),
+    CAMPAIGN_WORLD_MAP_BG_FILE,
+  ].map(f => `Backgrounds/${f}`);
+  // Roughly ordered by how soon a typical player reaches them: deck-picker
+  // card art first (virtually every mode's card picker needs it almost
+  // immediately), then the smaller shop/location thumbnails, then the much
+  // larger Campaign/Shop wallpaper backgrounds last.
+  preloadImagesInBackground([...cardImagePaths, ...thumbPaths, ...backgroundPaths]);
+}
+startBackgroundAssetPreload();
 function initWatchFromUrl() {
   let watchParam = null;
   try {
