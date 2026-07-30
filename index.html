@@ -10522,8 +10522,19 @@ function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDo
     // banner didn't already cover" check, which made Up's banner silently
     // skip itself any time its matches happened to overlap with Same's or
     // Plus's, so it didn't animate as reliably as Same/Plus/Combo did.
+    // Plus is the one exception: it defers to BOTH Same and Up. If Same
+    // triggered and Plus didn't flip anything beyond what Same already
+    // flipped (plusHasExtra false -- Same and Plus fired off the exact same
+    // set of neighbors), Plus's banner is skipped, Same wins. Same deal
+    // against Up (plusHasExtraBeyondUp false -- Plus's flips are entirely
+    // covered by Up's), Up wins and Plus is skipped there too. Either way,
+    // if Plus flipped something the other rule didn't, it's still a
+    // genuinely separate trigger and still gets its own banner. Up itself
+    // is never suppressed by Plus (or by Same) -- only Plus ever defers.
     if (captureResult.same) await showRuleBanner('same');
-    if (captureResult.plus) await showRuleBanner('plus');
+    if (captureResult.plus
+      && (!captureResult.same || captureResult.plusHasExtra)
+      && (!captureResult.up || captureResult.plusHasExtraBeyondUp)) await showRuleBanner('plus');
     if (captureResult.up) await showRuleBanner('up');
     const flipWaves = captureResult.flipWaves || [];
     const comboWaveIndices = captureResult.comboWaveIndices || [];
@@ -11182,9 +11193,15 @@ function resolveCaptures(index, owner) {
     }
   }
   const plusHasExtra = [...plusFlipIndices].some(i => !sameFlipIndices.has(i));
+  // Same pattern as plusHasExtra above, but against Up's own flips instead
+  // of Same's -- true only when Plus flipped something Up didn't. Used to
+  // decide whether Plus's banner is redundant with Up's (see
+  // playCardPlacementSequence): if every cell Plus flipped is also one Up
+  // flipped, Up already announced it and Plus's banner is skipped.
+  const plusHasExtraBeyondUp = [...plusFlipIndices].some(i => !upFlipIndices.has(i));
   const upHasExtra = [...upFlipIndices].some(i => !sameFlipIndices.has(i) && !plusFlipIndices.has(i));
   const elementalHit = placedElementalMod > 0 && toFlip.size > 0;
-  return { same: sameHit, plus: plusHit, plusHasExtra, up: upHit, upHasExtra, elemental: elementalHit, combo: chainAddedMore, flipWaves, comboWaveIndices, flipOrientations };
+  return { same: sameHit, plus: plusHit, plusHasExtra, plusHasExtraBeyondUp, up: upHit, upHasExtra, elemental: elementalHit, combo: chainAddedMore, flipWaves, comboWaveIndices, flipOrientations };
 }
 function flipCells(indices, newOwner) {
   indices.forEach(i => {
@@ -13413,8 +13430,24 @@ const RESULT_GRAPHICS = {
   lose: "Cards/FF8/icons/text/you_lose.png",
   draw: "Cards/FF8/icons/text/draw.png",
 };
+// #ruleBanner is one single shared element reused for every Same/Plus/Up/
+// Combo popup, and nothing prevents two independent
+// playCardPlacementSequence() calls from being in flight at once (e.g. in
+// local hotseat Practice, canAct() only checks whose turn it is -- turn
+// flips synchronously in placeCard() well before that move's own animation
+// finishes, so the other local player can already place their next card,
+// or a fast-arriving online opponent move via applyRoomSnapshotNow, while
+// this move's banner sequence is still mid-flight). Without a queue, a
+// later call's el.src/'.show' write can land in the middle of an earlier
+// call's still-running setTimeout chain, which is exactly what caused Plus
+// (or any other banner) to flash briefly over what should have been a
+// clean, standalone Same popup. Queuing every call through this shared
+// promise chain guarantees banners always play out fully, one at a time,
+// in the order they were requested, regardless of how many moves race to
+// request one.
+let ruleBannerQueue = Promise.resolve();
 function showRuleBanner(name) {
-  return new Promise(resolve => {
+  const run = () => new Promise(resolve => {
     const el = document.getElementById('ruleBanner');
     el.src = RULE_BANNERS[name];
     el.classList.toggle('rule-up', name === 'up');
@@ -13425,6 +13458,9 @@ function showRuleBanner(name) {
       setTimeout(resolve, 200);
     }, 650);
   });
+  const result = ruleBannerQueue.then(run);
+  ruleBannerQueue = result.catch(() => {});
+  return result;
 }
 const SFX = {
   cardFlip: "Sound/Card Flip.wav",
