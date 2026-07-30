@@ -1007,10 +1007,8 @@
   .hand.stack .card.selected { z-index: 60; }
   .hand.stack .card:hover { z-index: 50; }
   .hand .card:hover { z-index: 50; }
-  @media (hover: hover) and (pointer: fine) {
-    #handP1 .card:not(.selected):hover .card-inner { transform: translateX(24px); }
-    #handP2 .card:not(.selected):hover .card-inner { transform: translateX(-24px); }
-  }
+  #handP1 .card:not(.selected):hover .card-inner { transform: translateX(24px); }
+  #handP2 .card:not(.selected):hover .card-inner { transform: translateX(-24px); }
   #handP1 .card.selected .card-inner { transform: translateX(24px) translateY(-15px); }
   #handP2 .card.selected .card-inner { transform: translateX(-24px) translateY(-15px); }
   body.shape-natural .hand.stack .card { margin-top: -58.824px; }
@@ -4609,12 +4607,35 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).on('value', snap => 
   const toggle = document.getElementById('adminCampaignRandomIgnoresPointsToggle');
   if (toggle) toggle.checked = campaignRandomIgnoresPointsEnabled;
 });
+function applyMobileModeViewport(enabled) {
+  // Mobile Mode's menu/campaign/tutorial CSS lives inside @media (max-width:
+  // 700px). Without a viewport meta tag, phones report their default ~980px
+  // layout viewport for media-query purposes (not the real screen width),
+  // so that query doesn't reliably reflect the actual device. Injecting the
+  // tag only while Mobile Mode is on makes those menu screens reactive to
+  // the real width; removing it when off restores the original no-tag
+  // behavior everywhere (including the match/picker/shop screens, which
+  // still rely on that auto-shrink-to-fit behavior and don't yet have
+  // dedicated mobile layouts).
+  let meta = document.querySelector('meta[name="viewport"]');
+  if (enabled) {
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'viewport');
+      document.head.insertBefore(meta, document.head.firstChild);
+    }
+    meta.setAttribute('content', 'width=device-width, initial-scale=1');
+  } else if (meta) {
+    meta.remove();
+  }
+}
 let mobileModeEnabled = false;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).on('value', snap => {
   mobileModeEnabled = snap.val() === true;
   const toggle = document.getElementById('adminMobileModeToggle');
   if (toggle) toggle.checked = mobileModeEnabled;
   document.body.classList.toggle('mobile-mode', mobileModeEnabled);
+  applyMobileModeViewport(mobileModeEnabled);
 });
 let mobileMenuButtonScalePercent = 150;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).on('value', snap => {
@@ -11405,9 +11426,7 @@ function renderHand(owner) {
     const freshEl = createCardElement(card, owner, undefined, isHandCardHiddenFromViewer(owner, card));
     freshEl.dataset.sig = sig;
     freshEl.classList.toggle('marked-hidden', isOwnCardMarkedHidden(owner, card));
-    if (idx === selected) {
-      freshEl.classList.add('selected');
-    }
+    const shouldBeSelected = idx === selected;
     freshEl.classList.toggle('turn-forced', allowedIdx != null && idx === allowedIdx);
     freshEl.classList.toggle('turn-restricted', allowedIdx != null && idx !== allowedIdx);
     if (showDisabled) {
@@ -11427,6 +11446,22 @@ function renderHand(owner) {
       el.replaceWith(freshEl);
     } else {
       container.appendChild(freshEl);
+    }
+    if (shouldBeSelected) {
+      // This card is a freshly-created element (its render signature just
+      // changed, e.g. a hidden P2 card getting revealed right as the CPU
+      // selects it) that should start selected. Adding .selected
+      // synchronously here would apply the selected transform before the
+      // element's first paint, so there's no "before" state for the CSS
+      // transition to animate from -- it would just appear already in
+      // place instead of sliding in. Deferring the class by two frames
+      // lets the browser commit the unselected state first, so the slide
+      // (P1's own hand, and CPU/P2's hand alike) actually plays.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          freshEl.classList.add('selected');
+        });
+      });
     }
     if (freshEl.matches(':hover')) {
       const inner = freshEl.querySelector('.card-inner');
