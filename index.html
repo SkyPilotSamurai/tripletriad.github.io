@@ -2146,11 +2146,13 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #3a8fe6;
+    /* Same reasoning as #pickerConfirm above -- follows the chosen player
+       color instead of a fixed blue. */
+    background: var(--p1-color-a, #3a8fe6);
     margin-left: 7px;
     vertical-align: middle;
   }
-  #pickerTabs.picker-tabs-p2 .picker-tab-dot { background: #ff4fa3; }
+  #pickerTabs.picker-tabs-p2 .picker-tab-dot { background: var(--p2-color-a, #ff4fa3); }
   #pickerBoard {
     position: relative;
     display: flex;
@@ -2490,7 +2492,11 @@
   }
   #pickerBackToMenu.hidden { display: none; }
   #pickerConfirm {
-    background: #3a8fe6;
+    /* Matches whichever player color the seat currently owns this hand
+       (see --p1-color-a/--p2-color-a on body up top, and picker-confirm-p2
+       below/its toggle in the script) instead of a fixed blue, so it always
+       reads as "my color" no matter what the player picked in Settings. */
+    background: var(--p1-color-a, #3a8fe6);
     color: #fff;
     border: none;
     border-radius: 9px;
@@ -2498,12 +2504,13 @@
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
   }
-  #pickerConfirm:hover:not(:disabled) { transform: translateY(-1px); background: #4a9dff; }
+  /* A brightness bump works for any chosen color without needing a second
+     hand-picked "hover" hex per preset. */
+  #pickerConfirm:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.15); }
   #pickerConfirm:disabled { opacity: 0.45; cursor: default; }
-  #pickerConfirm.picker-confirm-p2 { background: #ff4fa3; }
-  #pickerConfirm.picker-confirm-p2:hover:not(:disabled) { background: #ff6bb3; }
+  #pickerConfirm.picker-confirm-p2 { background: var(--p2-color-a, #ff4fa3); }
   #pickerAuto {
     background: var(--btn-bg, #2d3748);
     color: #eee;
