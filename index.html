@@ -3182,7 +3182,11 @@
      Widens key menu panels and bumps text size across menus/buttons so the
      site is easier to use on a phone. Off by default; every rule here is
      scoped under body.mobile-mode so nothing changes unless the admin
-     switches it on, and it reverts instantly when switched off. */
+     switches it on, and it reverts instantly when switched off. Also wrapped
+     in @media (max-width: 700px) so the toggle can never affect how the
+     site looks on desktop -- it only takes effect on screens that are
+     actually mobile-sized, regardless of the admin setting. */
+  @media (max-width: 700px) {
   body.mobile-mode #menuPanel { width: min(98vw, 920px); }
   body.mobile-mode #tutorialListBoard { max-width: 960px; }
   body.mobile-mode #campaignHomeBoard,
@@ -3215,6 +3219,32 @@
   /* Campaign location thumbnails: bigger, fixed rows of 3. */
   body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); }
   body.mobile-mode .campaign-location-btn { height: 150px; font-size: 16px; }
+
+  /* Touch devices don't have real hover -- a tap can leave a phantom/sticky
+     hover state that fights with tap-driven class changes, which is why the
+     selected hand card was snapping instead of smoothly transitioning into
+     place (its hover-fan rule and its .selected rule were both trying to
+     drive the same transform at once). Neutralizing hover-triggered
+     transforms/shadows/filters removes that conflict and cuts wasted
+     paint/composite work on mobile. This only touches :hover rules --
+     .card.selected's own transform+transition (and every other non-hover
+     animation: card flip/capture, flying-card, etc.) is untouched, so the
+     selection now animates cleanly via that existing 0.15s transition. */
+  body.mobile-mode #handP1 .card:not(.selected):hover .card-inner,
+  body.mobile-mode #handP2 .card:not(.selected):hover .card-inner { transform: none; }
+  body.mobile-mode #overlay button:hover:not(:disabled) { transform: none; box-shadow: none; }
+  body.mobile-mode #tradePool .card:hover { transform: none; }
+  body.mobile-mode .menu-btn:hover { transform: none; box-shadow: none; }
+  body.mobile-mode .menu-btn-secondary:hover { transform: none; box-shadow: none; }
+  body.mobile-mode #pickerConfirm:hover:not(:disabled) { transform: none; filter: none; }
+  body.mobile-mode #pickerAuto:hover:not(:disabled) { transform: none; }
+  body.mobile-mode #boosterOpenCardWrap .booster-pack-card:hover { transform: none; }
+  body.mobile-mode #boosterOpenNextBtn:hover { transform: none; }
+  body.mobile-mode #shopBuyBtn:hover:not(:disabled) { transform: none; }
+  body.mobile-mode #shopSellBtn:hover:not(:disabled) { transform: none; }
+  body.mobile-mode .tutorial-rule-btn:hover { transform: none; }
+  body.mobile-mode .campaign-location-btn:hover { transform: none; }
+  }
 </style>
 </head>
 <body class="layout-og shape-natural theme-default">
