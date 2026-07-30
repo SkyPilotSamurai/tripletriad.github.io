@@ -1505,7 +1505,7 @@
     border-radius: 14px;
     padding: 40px 44px 34px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    width: min(98vw, 920px);
+    width: min(96vw, 720px);
     max-height: calc(100vh - 100px);
     overflow-y: auto;
   }
@@ -2631,7 +2631,7 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 960px;
+    max-width: 900px;
     box-sizing: border-box;
     padding: 20px 20px 8px;
     background: var(--panel-bg, #1a2130);
@@ -2742,7 +2742,7 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 960px;
+    max-width: 720px;
     box-sizing: border-box;
     padding: 24px 20px;
     background: var(--panel-bg, #1a2130);
@@ -3177,6 +3177,44 @@
     border: 2px solid #1a2130;
     cursor: pointer;
   }
+
+  /* --- Mobile Mode (admin toggle, body.mobile-mode) ---
+     Widens key menu panels and bumps text size across menus/buttons so the
+     site is easier to use on a phone. Off by default; every rule here is
+     scoped under body.mobile-mode so nothing changes unless the admin
+     switches it on, and it reverts instantly when switched off. */
+  body.mobile-mode #menuPanel { width: min(98vw, 920px); }
+  body.mobile-mode #tutorialListBoard { max-width: 960px; }
+  body.mobile-mode #campaignHomeBoard,
+  body.mobile-mode #campaignLocationsBoard,
+  body.mobile-mode #campaignNpcBoard,
+  body.mobile-mode #campaignIntroBoard { max-width: 960px; }
+
+  body.mobile-mode #menuTitle { font-size: 48px; }
+  body.mobile-mode .menu-btn { font-size: 24px; padding: 20px 18px; }
+  body.mobile-mode .menu-panel-actions .menu-btn { font-size: 18px; }
+  body.mobile-mode .menu-section-label { font-size: 15px; }
+  body.mobile-mode #settingsPanel h2,
+  body.mobile-mode #rulesPanel h2,
+  body.mobile-mode #leaderboardModalPanel h2,
+  body.mobile-mode #watchModalPanel h2,
+  body.mobile-mode #adminGivePanel h2,
+  body.mobile-mode #adminEditLbPanel h2,
+  body.mobile-mode #adminNpcEditorPanel h2 { font-size: 30px; }
+  body.mobile-mode .settings-section h3 { font-size: 19px; }
+  body.mobile-mode .settings-row label { font-size: 17px; }
+  body.mobile-mode #campaignHomeTitle,
+  body.mobile-mode #campaignLocationsTitle,
+  body.mobile-mode #campaignNpcLocationName { font-size: 32px; }
+  body.mobile-mode #campaignHomeSubtitle,
+  body.mobile-mode #campaignLocationsSubtitle,
+  body.mobile-mode #campaignNpcLocationDesc { font-size: 16px; }
+  body.mobile-mode .campaign-npc-name { font-size: 19px; }
+  body.mobile-mode .campaign-npc-desc { font-size: 14px; }
+
+  /* Campaign location thumbnails: bigger, fixed rows of 3. */
+  body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); }
+  body.mobile-mode .campaign-location-btn { height: 150px; font-size: 16px; }
 </style>
 </head>
 <body class="layout-og shape-natural theme-default">
@@ -3581,6 +3619,9 @@
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignSellingToggle"> Allow Selling in Campaign Shop</label></div>
       <div class="settings-row checkbox-row" title="When the Random rule is active in Campaign, both sides draw fully at random from whatever they have access to, ignoring the match's point total entirely. Only affects Campaign -- Ranked/Free Play's Random rule already ignores points.">
         <label><input type="checkbox" id="adminCampaignRandomIgnoresPointsToggle"> Random Rule Ignores Points (Campaign)</label>
+      </div>
+      <div class="settings-row checkbox-row" title="Widens the Main Menu, Tutorial, Campaign Locations, and NPC Select/Challenge panels, and increases text size across menus and buttons site-wide. Applies live to every player -- no per-player override.">
+        <label><input type="checkbox" id="adminMobileModeToggle"> Mobile Mode</label>
       </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
@@ -4521,6 +4562,13 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).on('value', snap => 
   campaignRandomIgnoresPointsEnabled = snap.val() === true;
   const toggle = document.getElementById('adminCampaignRandomIgnoresPointsToggle');
   if (toggle) toggle.checked = campaignRandomIgnoresPointsEnabled;
+});
+let mobileModeEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).on('value', snap => {
+  mobileModeEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminMobileModeToggle');
+  if (toggle) toggle.checked = mobileModeEnabled;
+  document.body.classList.toggle('mobile-mode', mobileModeEnabled);
 });
 let campaignRegionCardBiasPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
@@ -13773,6 +13821,10 @@ document.getElementById('adminCampaignSellingToggle').addEventListener('change',
 document.getElementById('adminCampaignRandomIgnoresPointsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminMobileModeToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
