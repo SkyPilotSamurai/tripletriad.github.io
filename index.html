@@ -3196,31 +3196,34 @@
   body.mobile-mode #campaignNpcBoard,
   body.mobile-mode #campaignIntroBoard { max-width: 960px; }
 
-  body.mobile-mode #menuTitle { font-size: 48px; }
-  body.mobile-mode .menu-btn { font-size: 24px; padding: 20px 18px; }
+  body.mobile-mode #menuTitle { font-size: calc(40px * var(--mobile-btn-scale, 1.5)); }
+  body.mobile-mode .menu-btn {
+    font-size: calc(20px * var(--mobile-btn-scale, 1.5));
+    padding: calc(18px * var(--mobile-btn-scale, 1.5)) calc(16px * var(--mobile-btn-scale, 1.5));
+  }
   body.mobile-mode .menu-panel-actions .menu-btn { font-size: 18px; }
-  body.mobile-mode .menu-section-label { font-size: 15px; }
+  body.mobile-mode .menu-section-label { font-size: calc(13px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #settingsPanel h2,
   body.mobile-mode #rulesPanel h2,
-  body.mobile-mode #leaderboardModalPanel h2,
-  body.mobile-mode #watchModalPanel h2,
   body.mobile-mode #adminGivePanel h2,
-  body.mobile-mode #adminEditLbPanel h2,
-  body.mobile-mode #adminNpcEditorPanel h2 { font-size: 30px; }
-  body.mobile-mode .settings-section h3 { font-size: 19px; }
-  body.mobile-mode .settings-row label { font-size: 17px; }
+  body.mobile-mode #adminEditLbPanel h2 { font-size: calc(24px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #leaderboardModalPanel h2,
+  body.mobile-mode #watchModalPanel h2 { font-size: calc(28px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #adminNpcEditorPanel h2 { font-size: calc(22px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .settings-section h3 { font-size: calc(16px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .settings-row label { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #campaignHomeTitle,
   body.mobile-mode #campaignLocationsTitle,
-  body.mobile-mode #campaignNpcLocationName { font-size: 32px; }
+  body.mobile-mode #campaignNpcLocationName { font-size: calc(26px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #campaignHomeSubtitle,
   body.mobile-mode #campaignLocationsSubtitle,
-  body.mobile-mode #campaignNpcLocationDesc { font-size: 16px; }
-  body.mobile-mode .campaign-npc-name { font-size: 19px; }
-  body.mobile-mode .campaign-npc-desc { font-size: 14px; }
+  body.mobile-mode #campaignNpcLocationDesc { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .campaign-npc-name { font-size: calc(16px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .campaign-npc-desc { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
 
   /* Campaign location thumbnails: bigger, fixed rows of 3. */
   body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); }
-  body.mobile-mode .campaign-location-btn { height: 150px; font-size: 16px; }
+  body.mobile-mode .campaign-location-btn { height: 150px; font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
 
   /* Card selection in hand: skip the slide-into-place animation entirely on
      mobile much faster for both hands (still there, just quicker) instead
@@ -3657,6 +3660,14 @@
       </div>
       <div class="settings-row checkbox-row" title="Widens the Main Menu, Tutorial, Campaign Locations, and NPC Select/Challenge panels, and increases text size across menus and buttons site-wide. Applies live to every player -- no per-player override.">
         <label><input type="checkbox" id="adminMobileModeToggle"> Mobile Mode</label>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Scales menu button size and title text while Mobile Mode is on.">
+        <label for="adminMobileBtnScaleSlider">Mobile Menu Button Size: <span id="adminMobileBtnScaleValue">150%</span></label>
+        <input type="range" id="adminMobileBtnScaleSlider" min="100" max="250" step="5" value="150">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Scales general text (panel headers, labels, campaign titles/descriptions, NPC list text) while Mobile Mode is on.">
+        <label for="adminMobileTextScaleSlider">Mobile General Text Size: <span id="adminMobileTextScaleValue">125%</span></label>
+        <input type="range" id="adminMobileTextScaleSlider" min="100" max="200" step="5" value="125">
       </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
@@ -4604,6 +4615,26 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).on('value', snap => {
   const toggle = document.getElementById('adminMobileModeToggle');
   if (toggle) toggle.checked = mobileModeEnabled;
   document.body.classList.toggle('mobile-mode', mobileModeEnabled);
+});
+let mobileMenuButtonScalePercent = 150;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  mobileMenuButtonScalePercent = Number.isFinite(v) ? Math.max(100, Math.min(250, v)) : 150;
+  document.body.style.setProperty('--mobile-btn-scale', mobileMenuButtonScalePercent / 100);
+  const slider = document.getElementById('adminMobileBtnScaleSlider');
+  const label = document.getElementById('adminMobileBtnScaleValue');
+  if (slider && document.activeElement !== slider) slider.value = mobileMenuButtonScalePercent;
+  if (label) label.textContent = `${mobileMenuButtonScalePercent}%`;
+});
+let mobileGeneralTextScalePercent = 125;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  mobileGeneralTextScalePercent = Number.isFinite(v) ? Math.max(100, Math.min(200, v)) : 125;
+  document.body.style.setProperty('--mobile-text-scale', mobileGeneralTextScalePercent / 100);
+  const slider = document.getElementById('adminMobileTextScaleSlider');
+  const label = document.getElementById('adminMobileTextScaleValue');
+  if (slider && document.activeElement !== slider) slider.value = mobileGeneralTextScalePercent;
+  if (label) label.textContent = `${mobileGeneralTextScalePercent}%`;
 });
 let campaignRegionCardBiasPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
@@ -13860,6 +13891,26 @@ document.getElementById('adminCampaignRandomIgnoresPointsToggle').addEventListen
 document.getElementById('adminMobileModeToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminMobileBtnScaleSlider').addEventListener('input', e => {
+  const v = Math.max(100, Math.min(250, Number(e.target.value) || 150));
+  const label = document.getElementById('adminMobileBtnScaleValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminMobileBtnScaleSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(100, Math.min(250, Number(e.target.value) || 150));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).set(v).catch(() => {});
+});
+document.getElementById('adminMobileTextScaleSlider').addEventListener('input', e => {
+  const v = Math.max(100, Math.min(200, Number(e.target.value) || 125));
+  const label = document.getElementById('adminMobileTextScaleValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminMobileTextScaleSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(100, Math.min(200, Number(e.target.value) || 125));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).set(v).catch(() => {});
 });
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
