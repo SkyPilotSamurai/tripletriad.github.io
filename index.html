@@ -3410,6 +3410,10 @@
         <label for="adminBoosterRareChanceSlider">Booster One-of-a-Kind Odds: <span id="adminBoosterRareChanceValue">12.5%</span></label>
         <input type="range" id="adminBoosterRareChanceSlider" min="0" max="100" step="0.5" value="12.5">
       </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminNpcOneOfAKindHoldCapInput">Campaign NPC One-of-a-Kind Hold Cap</label>
+        <input type="number" id="adminNpcOneOfAKindHoldCapInput" min="0" max="5" step="1" value="1">
+      </div>
       <div id="adminGilAmountsSection"></div>
     </div>
   </div>
@@ -4369,6 +4373,20 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/boosterOneOfAKindPullChancePercent`).on('value', s
   const label = document.getElementById('adminBoosterRareChanceValue');
   if (slider && document.activeElement !== slider) slider.value = boosterOneOfAKindPullChancePercent;
   if (label) label.textContent = `${boosterOneOfAKindPullChancePercent}%`;
+});
+// Campaign NPC One-of-a-Kind Hold Cap -- how many of the player's
+// one-of-a-kind (level 8-10 / PuPu-style) cards a single Campaign NPC is
+// allowed to be holding at once from having won them off the player. Once
+// an NPC is at/over this cap, card-winning logic (match trade-up and
+// forfeits) prefers picking a non-one-of-a-kind card from the available
+// pool instead, only falling back to a one-of-a-kind pick if that's all
+// that's left to take.
+let campaignNpcOneOfAKindHoldCap = 1;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNpcOneOfAKindHoldCap`).on('value', snap => {
+  const v = Number(snap.val());
+  campaignNpcOneOfAKindHoldCap = Number.isFinite(v) ? Math.max(0, Math.min(5, Math.round(v))) : 1;
+  const input = document.getElementById('adminNpcOneOfAKindHoldCapInput');
+  if (input && document.activeElement !== input) input.value = campaignNpcOneOfAKindHoldCap;
 });
 let currentUser = null;
 let currentUserProfile = null;
@@ -11677,8 +11695,16 @@ async function campaignClearActiveMatch(uid) {
 async function campaignForfeitCardToNpc(uid, npc, handCardIds) {
   if (!npc || !handCardIds || !handCardIds.length) return null;
   const ownedIds = handCardIds.filter(id => campaignCollectionStockOf(currentCampaignSave, id) > 0);
-  const pool = ownedIds.length ? ownedIds : handCardIds;
+  let pool = ownedIds.length ? ownedIds : handCardIds;
   if (!pool.length) return null;
+  // Same soft-avoidance as buildCampaignTradeState's NPC-wins pick: once
+  // this NPC already holds campaignNpcOneOfAKindHoldCap of the player's
+  // one-of-a-kind cards, prefer a non-one-of-a-kind forfeit if one's
+  // available in the pool.
+  if (campaignNpcState(npc.id).wonCardIds.length >= campaignNpcOneOfAKindHoldCap) {
+    const nonOneOfAKind = pool.filter(id => !isOneOfAKindCardId(id));
+    if (nonOneOfAKind.length) pool = nonOneOfAKind;
+  }
   const cardId = pool[Math.floor(Math.random() * pool.length)];
   await campaignRemoveCard(uid, cardId);
   const card = CARD_DB.find(c => c.id === cardId);
@@ -11776,7 +11802,20 @@ function buildCampaignTradeState(result) {
   if (takeCount === 0) return { token, winner, loser, pool: [], takeCount: 0, picked: [], revealIndex: 0, done: true };
   if (winner === 'p2') {
     // The CPU "picks" instantly -- there's no human on that side to wait on.
-    const pick = pool[Math.floor(Math.random() * pool.length)];
+    // Soft-avoid the player's one-of-a-kind cards once this NPC is already
+    // holding campaignNpcOneOfAKindHoldCap of them (from previous wins) --
+    // prefer a non-one-of-a-kind card from the pool, only falling back to a
+    // one-of-a-kind pick if that's genuinely all that's left to take.
+    const npc = state.campaignNpcId ? campaignFindNpc(state.campaignNpcId) : null;
+    let pickPool = pool;
+    if (npc) {
+      const heldCount = campaignNpcState(npc.id).wonCardIds.length;
+      if (heldCount >= campaignNpcOneOfAKindHoldCap) {
+        const nonOneOfAKind = pool.filter(p => !isOneOfAKindCardId(p.cardId));
+        if (nonOneOfAKind.length) pickPool = nonOneOfAKind;
+      }
+    }
+    const pick = pickPool[Math.floor(Math.random() * pickPool.length)];
     return { token, winner, loser, pool: pool.filter(p => p.poolKey !== pick.poolKey), takeCount, picked: [pick], revealIndex: 0, done: false };
   }
   return { token, winner, loser, pool, takeCount, picked: [], revealIndex: 0, done: false };
@@ -11790,7 +11829,7 @@ function campaignPickTradeCard(poolKey) {
   const target = pool.find(p => p.poolKey === poolKey);
   if (!target) return;
   ts.pool = pool.filter(p => p.poolKey !== poolKey);
-  ts.picked = [...picked, target];
+  ts.picked = [...picked, annotateCampaignTradePick(target, ts.winner)];
   updateOverlay();
   watchCampaignTradeReveal();
 }
@@ -11840,11 +11879,18 @@ async function advanceCampaignTradeReveal() {
     const pickedCard = CARD_DB.find(c => c.id === picked.cardId);
     const isOneOfAKind = !!pickedCard && isShopPurchaseLimited(pickedCard);
     if (winnerIsPlayer) {
-      await campaignAwardCard(currentUser.uid, picked.cardId);
+      if (picked.duplicateRefund) {
+        const refund = picked.refundAmount || 0;
+        if (refund > 0) await addGilToUser(currentUser.uid, refund);
+      } else {
+        await campaignAwardCard(currentUser.uid, picked.cardId);
+      }
       // A one-of-a-kind card just taken away is gone from this NPC's box
       // for good -- either their own guarded card (never offered again) or
       // one they'd previously won off the player and are now losing right
-      // back (removed from wonCardIds so it stops showing up for them).
+      // back (removed from wonCardIds so it stops showing up for them). This
+      // still applies even when it was converted to gil instead of granted
+      // as a card -- the NPC no longer has it either way.
       if (npcForTrade && isOneOfAKind) {
         if (picked.cardId === npcForTrade.rewardCardId) {
           await campaignMarkNpcRareCardLost(currentUser.uid, npcForTrade.id);
@@ -11999,6 +12045,26 @@ async function annotateTradePicksWithDuplicates(winnerUid, pickedList, winnerSea
     grantedSoFar[p.cardId] = 1;
     return { ...p, oneOfAKind: true, duplicateRefund: false, refundAmount: 0 };
   });
+}
+// Campaign's own version of the above -- a Campaign match is solo/local
+// (no synced room, no other player's profile to fetch over the network),
+// so this checks currentCampaignSave's collection synchronously right when
+// the player picks the card instead of needing an async round-trip. Also
+// deliberately uses the Campaign store's own sell price (sellPrice(id,
+// true), i.e. CAMPAIGN_SELL_PERCENT) as the gil reference rather than the
+// Ranked version's full cardPrice() -- kept fully separate by design.
+function annotateCampaignTradePick(pick, winnerSeat) {
+  if (winnerSeat && pick.originalOwner === winnerSeat) {
+    return { ...pick, oneOfAKind: false, duplicateRefund: false, refundAmount: 0, selfReturn: true };
+  }
+  const card = CARD_DB.find(c => c.id === pick.cardId);
+  const oneOfAKind = !!card && isShopPurchaseLimited(card);
+  if (!oneOfAKind) return { ...pick, oneOfAKind: false, duplicateRefund: false, refundAmount: 0 };
+  const alreadyOwned = campaignCollectionStockOf(currentCampaignSave, pick.cardId) > 0;
+  if (alreadyOwned) {
+    return { ...pick, oneOfAKind: true, duplicateRefund: true, refundAmount: sellPrice(pick.cardId, true) };
+  }
+  return { ...pick, oneOfAKind: true, duplicateRefund: false, refundAmount: 0 };
 }
 async function updateLeaderboardEntry(root, key, name, statsOverride, statsField = 'rankedStats') {
   let stats = statsOverride;
@@ -12956,6 +13022,10 @@ function renderCampaignTradeOverlay(ts) {
     cardStage.classList.add('settled');
     labelStage.textContent = iAmWinner ? `Obtained: ${card ? card.name : ''}` : `Lost: ${card ? card.name : ''}`;
     labelStage.className = iAmWinner ? 'show obtained' : 'show lost';
+    if (iAmWinner && picked.duplicateRefund) {
+      dupNoteStage.innerHTML = `<div class="dup-tag">One of a Kind</div><div>Converted to gil: <span class="dup-gil">+${picked.refundAmount || 0}</span></div>`;
+      dupNoteStage.className = 'show';
+    }
     playSfx(iAmWinner ? 'cardObtained' : 'cardPlace');
   });
   setTimeout(() => {
@@ -15028,6 +15098,12 @@ document.getElementById('adminBoosterRareChanceSlider').addEventListener('change
   playSfx('cursorMove');
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/boosterOneOfAKindPullChancePercent`).set(v).catch(() => {});
+});
+document.getElementById('adminNpcOneOfAKindHoldCapInput').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(5, Math.round(Number(e.target.value)) || 0));
+  e.target.value = v;
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNpcOneOfAKindHoldCap`).set(v).catch(() => {});
 });
 // -- Admin: editable gil reward amounts -----------------------------------
 // Each entry is one number the admin can tune at runtime: which live
