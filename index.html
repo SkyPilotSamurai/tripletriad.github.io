@@ -766,6 +766,148 @@
   #adminNpcEditorButtons.hidden { display: none; }
   #adminNpcEditorButtons .menu-btn { flex: 1; padding: 10px 14px; font-size: 15px; }
   #adminNpcEditorStatus { min-height: 16px; font-size: 13px; color: #ffa64f; text-align: center; }
+  #adminCpuWeightsModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 310;
+  }
+  #adminCpuWeightsModal.show { display: flex; }
+  #adminCpuWeightsPanel {
+    position: relative;
+    background: var(--panel-bg, #1a2130);
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 12px;
+    padding: 12px 20px 14px;
+    width: 720px;
+    max-width: 96vw;
+    max-height: 97vh;
+    overflow-y: auto;
+    margin-top: 2px;
+    color: #e6e6e6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #adminCpuWeightsPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
+  #adminCpuWeightsClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #adminCpuWeightsClose:hover { color: #eee; }
+  #adminCpuWeightsPanel .settings-row { width: 100%; }
+  #adminCpuWeightsPanel .settings-row select {
+    background: #1c2333;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 6px;
+    color: #eee;
+    padding: 6px 9px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  #adminCpuWeightsSubtitle { font-size: 12px; color: #8a92a6; text-align: center; margin: -4px 0 2px; }
+  #adminCpuWeightsGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-height: 62vh;
+    overflow-y: auto;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #1c2333;
+  }
+  .admin-cpu-weight-row {
+    display: grid;
+    grid-template-columns: 1fr 90px;
+    align-items: center;
+    gap: 10px;
+  }
+  .admin-cpu-weight-row label {
+    font-size: 12.5px;
+    color: #c3cadb;
+    line-height: 1.3;
+  }
+  .admin-cpu-weight-row input {
+    background: #10151f;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 6px;
+    color: #eee;
+    padding: 6px 8px;
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+    text-align: right;
+  }
+  .admin-cpu-weight-row input:focus { outline: none; border-color: #ffffff; }
+  .admin-cpu-weight-row input.overridden { border-color: #ffa64f; color: #ffa64f; }
+  #adminCpuWeightsButtons { display: flex; gap: 8px; width: 100%; }
+  #adminCpuWeightsButtons .menu-btn { flex: 1; padding: 10px 14px; font-size: 15px; }
+  #adminCpuWeightsStatus { min-height: 16px; font-size: 13px; color: #ffa64f; text-align: center; }
+  #adminCpuWeightsPanel .admin-tabs { display: flex; gap: 6px; width: 100%; margin-bottom: 2px; }
+  #adminCpuWeightsPanel .admin-tab-btn {
+    flex: 1;
+    background: #1c2333;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 6px;
+    color: #c3cadb;
+    padding: 7px 10px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #adminCpuWeightsPanel .admin-tab-btn.active { background: #2a3348; color: #fff; border-color: #ffffff; }
+  #adminCpuWeightsPanel .admin-tab-btn:hover { color: #fff; }
+  #adminCpuWeightsTypeSection, #adminCpuWeightsLevelSection { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  #adminCpuWeightsTypeSection.hidden, #adminCpuWeightsLevelSection.hidden { display: none; }
+  #adminCpuWeightsLevelSubtitle { font-size: 12px; color: #8a92a6; text-align: center; }
+  #adminCpuWeightsLevelGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    max-height: 62vh;
+    overflow-y: auto;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #1c2333;
+  }
+  .admin-cpu-level-metric { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--panel-border, #4a5568); }
+  .admin-cpu-level-metric:last-child { border-bottom: none; }
+  .admin-cpu-level-metric-label { font-size: 13px; color: #eee; font-weight: bold; }
+  .admin-cpu-level-metric-hint { font-size: 11.5px; color: #8a92a6; line-height: 1.3; }
+  .admin-cpu-level-inputs { display: flex; gap: 6px; align-items: flex-end; }
+  .admin-cpu-level-input-group { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+  .admin-cpu-level-input-group span { font-size: 10.5px; color: #8a92a6; }
+  .admin-cpu-level-input-group input {
+    width: 100%;
+    background: #10151f;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 6px;
+    color: #eee;
+    padding: 5px 4px;
+    font-size: 13px;
+    text-align: center;
+    font-family: inherit;
+  }
+  .admin-cpu-level-input-group input:focus { outline: none; border-color: #ffffff; }
+  .admin-cpu-level-input-group input.overridden { border-color: #ffa64f; color: #ffa64f; }
+  #adminCpuWeightsLevelButtons { display: flex; gap: 8px; width: 100%; }
+  #adminCpuWeightsLevelButtons .menu-btn { flex: 1; padding: 10px 14px; font-size: 15px; }
   .settings-section { margin-bottom: 20px; }
   .settings-section h3 {
     color: #fff;
@@ -3315,6 +3457,7 @@
           <button class="menu-btn" id="menuAdminGive">Give Cards</button>
           <button class="menu-btn" id="menuAdminEditLeaderboard">Edit Leaderboard</button>
           <button class="menu-btn" id="menuAdminNpcEditor">Edit Campaign NPCs</button>
+          <button class="menu-btn" id="menuAdminCpuWeights">CPU AI Weights</button>
         </div>
       </div>
     </div>
@@ -4078,6 +4221,44 @@
     <div id="adminNpcEditorStatus"></div>
   </div>
 </div>
+<div id="adminCpuWeightsModal">
+  <div id="adminCpuWeightsPanel">
+    <button id="adminCpuWeightsClose" aria-label="Close">✕</button>
+    <h2>CPU AI Weights</h2>
+    <div id="adminCpuWeightsSubtitle">Tunes the move-scoring formula for each CPU personality, live, everywhere it's used (Campaign, Vs CPU, Practice).</div>
+    <div class="admin-tabs">
+      <button type="button" class="admin-tab-btn active" id="adminCpuWeightsTabType">By CPU Type</button>
+      <button type="button" class="admin-tab-btn" id="adminCpuWeightsTabLevel">By Skill Level</button>
+    </div>
+    <div id="adminCpuWeightsTypeSection">
+      <div class="settings-row">
+        <label for="adminCpuWeightsBehaviorSelect">CPU Type</label>
+        <select id="adminCpuWeightsBehaviorSelect">
+          <option value="normal">Normal</option>
+          <option value="safe">Safe</option>
+          <option value="risky">Risky</option>
+          <option value="elemental">Elemental Fiend</option>
+          <option value="combo">Combo Starter</option>
+          <option value="reflipper">Reflipper</option>
+        </select>
+      </div>
+      <div id="adminCpuWeightsGrid"></div>
+      <div id="adminCpuWeightsButtons">
+        <button class="menu-btn menu-btn-secondary" id="adminCpuWeightsSaveDefaults" title="Snapshots the values currently shown for this CPU type and makes them the new baseline that Reset To Default returns to.">Save as New Default</button>
+        <button class="menu-btn menu-btn-secondary" id="adminCpuWeightsReset">Reset This Type to Default</button>
+      </div>
+    </div>
+    <div id="adminCpuWeightsLevelSection" class="hidden">
+      <div id="adminCpuWeightsLevelSubtitle">Applies to every CPU type. Difficulty (1-5) is set per-NPC (or in Vs CPU/Practice setup) and drives how much risk-awareness and lookahead a move gets.</div>
+      <div id="adminCpuWeightsLevelGrid"></div>
+      <div id="adminCpuWeightsLevelButtons">
+        <button class="menu-btn menu-btn-secondary" id="adminCpuWeightsLevelSaveDefaults" title="Snapshots the skill-level scaling values currently shown and makes them the new baseline that Reset returns to.">Save as New Default</button>
+        <button class="menu-btn menu-btn-secondary" id="adminCpuWeightsLevelReset">Reset Skill Scaling to Default</button>
+      </div>
+    </div>
+    <div id="adminCpuWeightsStatus"></div>
+  </div>
+</div>
 <div id="leaderboardModal">
   <div id="leaderboardModalPanel">
     <button id="leaderboardModalClose" aria-label="Close">✕</button>
@@ -4656,6 +4837,30 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).on('value', snap =
   const label = document.getElementById('adminMobileTextScaleValue');
   if (slider && document.activeElement !== slider) slider.value = mobileGeneralTextScalePercent;
   if (label) label.textContent = `${mobileGeneralTextScalePercent}%`;
+});
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights`).on('value', snap => {
+  cpuWeightOverrides = snap.val() || {};
+  if (typeof renderAdminCpuWeightsGrid === 'function') renderAdminCpuWeightsGrid();
+});
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeightDefaults`).on('value', snap => {
+  cpuWeightDefaults = snap.val() || {};
+  if (typeof renderAdminCpuWeightsGrid === 'function') renderAdminCpuWeightsGrid();
+});
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeights`).on('value', snap => {
+  cpuLevelWeightOverrides = snap.val() || {};
+  if (typeof renderAdminCpuLevelGrid === 'function') renderAdminCpuLevelGrid();
+});
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholds`).on('value', snap => {
+  cpuLevelThresholdOverrides = snap.val() || {};
+  if (typeof renderAdminCpuLevelGrid === 'function') renderAdminCpuLevelGrid();
+});
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeightDefaults`).on('value', snap => {
+  cpuLevelWeightDefaults = snap.val() || {};
+  if (typeof renderAdminCpuLevelGrid === 'function') renderAdminCpuLevelGrid();
+});
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholdDefaults`).on('value', snap => {
+  cpuLevelThresholdDefaults = snap.val() || {};
+  if (typeof renderAdminCpuLevelGrid === 'function') renderAdminCpuLevelGrid();
 });
 let campaignRegionCardBiasPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
@@ -7208,7 +7413,11 @@ function campaignRollForcedRareCards(npc, baseBudget) {
   return { pointBudget: baseBudget, forcedRareCardIds: [picked.id] };
 }
 function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards) {
-  const minElemental = npc.cpuBehavior === 'elemental' ? 2 : 1;
+  // Only worth burning a hand slot on an elemental card if the Elemental board
+  // rule is actually active this match -- otherwise element never matters and
+  // this was just picking a worse card for no reason.
+  if (!state.rules.elemental) return others;
+  const minElemental = npc.cpuBehavior === 'elemental' ? 3 : 1;
   const rareElementalCount = (rareCards || []).reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
   let elementalCount = rareElementalCount + others.reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
   if (elementalCount >= minElemental) return others;
@@ -9015,6 +9224,7 @@ async function openCampaignHome() {
   const continueBtn = document.getElementById('campaignContinueBtn');
   statusEl.textContent = 'Checking for a saved game...';
   continueBtn.disabled = true;
+  await campaignSaveWriteChain;
   loadCampaignSave(currentUser.uid).then(save => {
     if (document.getElementById('campaignHomeScreen').classList.contains('hidden')) return;
     if (save) {
@@ -9041,6 +9251,7 @@ async function campaignStartNewGame() {
 async function campaignContinueGame() {
   if (!currentUser) return;
   playSfx('cursorMove');
+  await campaignSaveWriteChain;
   await continueCampaignSave(currentUser.uid);
   await resolveAbandonedCampaignMatchIfAny(currentUser.uid);
   document.getElementById('campaignHomeScreen').classList.add('hidden');
@@ -10171,9 +10382,7 @@ function evaluateHypotheticalCaptures(board, index, card, owner) {
   return evaluateMove(board, index, card, owner).flips.size;
 }
 function cpuComboRiskWeight(level) {
-  if (level === 3) return 0.2;
-  if (level === 4) return 0.4;
-  return 0.6;
+  return cpuLevelWeight('comboRiskWeight', level);
 }
 function comboDiscountedThreat(board, index, card, owner, level) {
   const { flips, comboFlipCount } = evaluateMove(board, index, card, owner);
@@ -10296,13 +10505,10 @@ function generateCandidateMoves(hand, openCells) {
   });
   return moves;
 }
-function cpuUsesTwoPly(level) { return level >= 4; }
-function cpuUsesThreePly(level) { return level >= 5; }
+function cpuUsesTwoPly(level) { return level >= cpuLevelThreshold('twoPlyLevel'); }
+function cpuUsesThreePly(level) { return level >= cpuLevelThreshold('threePlyLevel'); }
 function cpuPoolFraction(level) {
-  if (level <= 2) return 0.5;
-  if (level === 3) return 0.2;
-  if (level === 4) return 0.1;
-  return 0;
+  return cpuLevelWeight('poolFraction', level);
 }
 function pickFromScored(scored, level) {
   if (scored.length === 0) return null;
@@ -10317,12 +10523,9 @@ function pickFromScored(scored, level) {
   const pool = scored.slice(0, poolSize);
   return pool[Math.floor(Math.random() * pool.length)];
 }
-function cpuUsesRiskCheck(level) { return level >= 3; }
+function cpuUsesRiskCheck(level) { return level >= cpuLevelThreshold('riskCheckLevel'); }
 function cpuRiskWeightMultiplier(level) {
-  if (level <= 2) return 0;
-  if (level === 3) return 0.65;
-  if (level === 4) return 1;
-  return 1.35;
+  return cpuLevelWeight('riskWeightMultiplier', level);
 }
 function cpuRiskAssessment(move, owner, level, boardAfter) {
   const empty = { opponentBestReply: 0, ownBestFollowUp: 0, opponentBestCounterReply: 0 };
@@ -10334,44 +10537,200 @@ function cpuRiskAssessment(move, owner, level, boardAfter) {
   const { opponentBestReply, ownBestFollowUp } = twoPlyLookahead(boardAfter, move.card, owner, level);
   return { opponentBestReply, ownBestFollowUp, opponentBestCounterReply: 0 };
 }
+// Every scoring constant below is admin-tunable live (see "CPU AI Weights" in
+// the Admin menu) instead of hardcoded. CPU_WEIGHT_DEFS declares each knob's
+// default (matching the original hand-tuned values), range, and label; cpuWeight()
+// looks up the live rtdb-synced override for a given behavior, falling back to
+// the default when no override is set.
+const CPU_WEIGHT_DEFS = {
+  normal: [
+    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.5 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 8, min: 0, max: 30, step: 0.5 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 4, min: 0, max: 20, step: 0.5 },
+  ],
+  safe: [
+    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.5 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 15, min: 0, max: 40, step: 0.5 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 3, min: 0, max: 20, step: 0.5 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 7, min: 0, max: 30, step: 0.5 },
+  ],
+  risky: [
+    { key: 'captureWeight', label: 'Capture Value', default: 14, min: 0, max: 30, step: 0.5 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'overkillPenaltyPerLevel', label: 'Overkill Penalty (per card level)', default: 0.6, min: 0, max: 5, step: 0.1 },
+    { key: 'openingReservePenalty', label: 'Opening-Move Reserve Penalty', default: 20, min: 0, max: 50, step: 1 },
+    { key: 'exposureWeightNoPayoff', label: 'Exposure Penalty (no-capture move)', default: 12, min: 0, max: 40, step: 0.5 },
+    { key: 'exposureWeightPayoff', label: 'Exposure Penalty (capturing move)', default: 3, min: 0, max: 20, step: 0.5 },
+    { key: 'counterWeightNoPayoff', label: 'Counter-Reply Penalty (no-capture move)', default: 6, min: 0, max: 30, step: 0.5 },
+    { key: 'counterWeightPayoff', label: 'Counter-Reply Penalty (capturing move)', default: 1.5, min: 0, max: 15, step: 0.25 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 5, min: 0, max: 20, step: 0.5 },
+  ],
+  elemental: [
+    { key: 'captureWeight', label: 'Capture Value', default: 9, min: 0, max: 30, step: 0.5 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'matchBonus', label: 'Elemental Tile Match Bonus', default: 12, min: 0, max: 40, step: 1 },
+    { key: 'buffBonus', label: 'Elemental Buff-Enabled Capture Bonus', default: 18, min: 0, max: 40, step: 1 },
+    { key: 'tileAvailablePenalty', label: 'Wasted-Element-Match Penalty', default: 6, min: 0, max: 30, step: 0.5 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 3.5, min: 0, max: 20, step: 0.5 },
+  ],
+  combo: [
+    { key: 'captureWeight', label: 'Capture Value', default: 6, min: 0, max: 30, step: 0.5 },
+    { key: 'comboBonus', label: 'Combo-Chain Trigger Bonus', default: 20, min: 0, max: 50, step: 1 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 6, min: 0, max: 30, step: 0.5 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 3, min: 0, max: 20, step: 0.5 },
+  ],
+  reflipper: [
+    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.5 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'reclaimBonusPerCard', label: 'Reclaim-Own-Card Bonus', default: 22, min: 0, max: 50, step: 1 },
+    { key: 'planBonusBase', label: 'Bait Plan Bonus (base)', default: 10, min: 0, max: 40, step: 1 },
+    { key: 'planBonusPerFlip', label: 'Bait Plan Bonus (per recaptured card)', default: 6, min: 0, max: 30, step: 0.5 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 8, min: 0, max: 30, step: 0.5 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 4, min: 0, max: 20, step: 0.5 },
+  ],
+};
+const CPU_BEHAVIOR_LABELS = {
+  normal: 'Normal',
+  safe: 'Safe',
+  risky: 'Risky',
+  elemental: 'Elemental Fiend',
+  combo: 'Combo Starter',
+  reflipper: 'Reflipper',
+};
+let cpuWeightOverrides = {};
+// A saved custom baseline, distinct from the hardcoded CPU_WEIGHT_DEFS.default
+// values -- set via "Save as New Default" in the admin panel. Reset always
+// clears cpuWeightOverrides, which then falls through to this layer if present,
+// or the hardcoded default if not.
+let cpuWeightDefaults = {};
+function cpuEffectiveDefault(behavior, key) {
+  const defs = CPU_WEIGHT_DEFS[behavior];
+  const def = defs && defs.find(d => d.key === key);
+  const hardDefault = def ? def.default : 0;
+  const saved = cpuWeightDefaults && cpuWeightDefaults[behavior] ? cpuWeightDefaults[behavior][key] : undefined;
+  return (typeof saved === 'number' && Number.isFinite(saved)) ? saved : hardDefault;
+}
+function cpuWeight(behavior, key) {
+  const fallback = cpuEffectiveDefault(behavior, key);
+  const override = cpuWeightOverrides && cpuWeightOverrides[behavior] ? cpuWeightOverrides[behavior][key] : undefined;
+  return (typeof override === 'number' && Number.isFinite(override)) ? override : fallback;
+}
+// Difficulty-level scaling: shared across every CPU personality. Each metric has
+// one value per level 1-5 (levels below where a mechanic kicks in just aren't
+// read, e.g. riskWeightMultiplier at level 1-2 is never consulted while
+// riskCheckLevel is 3+, but a value still exists so lowering the threshold
+// doesn't leave a gap).
+const CPU_LEVEL_WEIGHT_DEFS = {
+  riskWeightMultiplier: {
+    label: 'Risk Weight Multiplier',
+    hint: 'How hard captures/risk-avoidance/lookahead terms get weighted once risk-awareness is on. 0 = ignore risk entirely, 1 = full weight.',
+    min: 0, max: 3, step: 0.05,
+    defaults: { 1: 0, 2: 0, 3: 0.65, 4: 1, 5: 1.35 },
+  },
+  poolFraction: {
+    label: 'Move Randomness (Pool Fraction)',
+    hint: 'Instead of always playing the single best-scored move, picks randomly from the top X% of scored moves. 0 = always best move, 1 = fully random.',
+    min: 0, max: 1, step: 0.05,
+    defaults: { 1: 0.5, 2: 0.5, 3: 0.2, 4: 0.1, 5: 0 },
+  },
+  comboRiskWeight: {
+    label: 'Opponent Same/Plus Threat Discount',
+    hint: 'When judging how dangerous an opponent reply is, how much to discount a threat that only works via Same/Plus/Up (0 = ignore that threat, 1 = treat it exactly like a normal capture).',
+    min: 0, max: 1, step: 0.05,
+    defaults: { 1: 0.6, 2: 0.6, 3: 0.2, 4: 0.4, 5: 0.6 },
+  },
+};
+const CPU_LEVEL_THRESHOLD_DEFS = [
+  { key: 'riskCheckLevel', label: 'Risk-Awareness starts at level', hint: 'Below this level the CPU only counts captures and ignores risk entirely.', default: 3, min: 1, max: 5, step: 1 },
+  { key: 'twoPlyLevel', label: '2-Ply Lookahead starts at level', hint: 'At this level+ the CPU also looks at its own best follow-up after the opponent replies.', default: 4, min: 1, max: 5, step: 1 },
+  { key: 'threePlyLevel', label: '3-Ply Lookahead starts at level', hint: 'At this level+ the CPU also looks one move further, at the opponent\'s best counter-reply.', default: 5, min: 1, max: 5, step: 1 },
+];
+let cpuLevelWeightOverrides = {};
+let cpuLevelThresholdOverrides = {};
+let cpuLevelWeightDefaults = {};
+let cpuLevelThresholdDefaults = {};
+function cpuLevelEffectiveDefault(metric, level) {
+  const def = CPU_LEVEL_WEIGHT_DEFS[metric];
+  const hardDefault = def && def.defaults[level] != null ? def.defaults[level] : 0;
+  const savedForMetric = cpuLevelWeightDefaults && cpuLevelWeightDefaults[metric];
+  const saved = savedForMetric ? savedForMetric[level] : undefined;
+  return (typeof saved === 'number' && Number.isFinite(saved)) ? saved : hardDefault;
+}
+function cpuLevelThresholdEffectiveDefault(key) {
+  const def = CPU_LEVEL_THRESHOLD_DEFS.find(d => d.key === key);
+  const hardDefault = def ? def.default : 3;
+  const saved = cpuLevelThresholdDefaults ? cpuLevelThresholdDefaults[key] : undefined;
+  return (typeof saved === 'number' && Number.isFinite(saved)) ? Math.round(saved) : hardDefault;
+}
+function cpuLevelWeight(metric, level) {
+  const fallback = cpuLevelEffectiveDefault(metric, level);
+  const overridesForMetric = cpuLevelWeightOverrides && cpuLevelWeightOverrides[metric];
+  const override = overridesForMetric ? overridesForMetric[level] : undefined;
+  return (typeof override === 'number' && Number.isFinite(override)) ? override : fallback;
+}
+function cpuLevelThreshold(key) {
+  const fallback = cpuLevelThresholdEffectiveDefault(key);
+  const override = cpuLevelThresholdOverrides ? cpuLevelThresholdOverrides[key] : undefined;
+  return (typeof override === 'number' && Number.isFinite(override)) ? Math.round(override) : fallback;
+}
 function cpuScoreNormal(move, owner, level) {
-  const { flips } = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
   const captures = flips.size;
-  if (!cpuUsesRiskCheck(level)) return captures * 10;
+  const excitementBonus = comboFlipCount * cpuWeight('normal', 'excitementPerFlip');
+  const captureWeight = cpuWeight('normal', 'captureWeight');
+  if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
   const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfter);
   const riskWeight = cpuRiskWeightMultiplier(level);
-  return captures * 10 - opponentBestReply * 8 * riskWeight + ownBestFollowUp * 4 - opponentBestCounterReply * 4 * riskWeight;
+  return captures * captureWeight + excitementBonus
+    - opponentBestReply * cpuWeight('normal', 'opponentReplyWeight') * riskWeight
+    + ownBestFollowUp * cpuWeight('normal', 'ownFollowUpWeight')
+    - opponentBestCounterReply * cpuWeight('normal', 'opponentCounterWeight') * riskWeight;
 }
 function cpuScoreSafe(move, owner, level) {
-  const { flips } = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
   const captures = flips.size;
-  if (!cpuUsesRiskCheck(level)) return captures * 10;
+  const excitementBonus = comboFlipCount * cpuWeight('safe', 'excitementPerFlip');
+  const captureWeight = cpuWeight('safe', 'captureWeight');
+  if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
   const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfter);
   const riskWeight = cpuRiskWeightMultiplier(level);
-  return captures * 10 - opponentBestReply * 15 * riskWeight + ownBestFollowUp * 3 - opponentBestCounterReply * 7 * riskWeight;
+  return captures * captureWeight + excitementBonus
+    - opponentBestReply * cpuWeight('safe', 'opponentReplyWeight') * riskWeight
+    + ownBestFollowUp * cpuWeight('safe', 'ownFollowUpWeight')
+    - opponentBestCounterReply * cpuWeight('safe', 'opponentCounterWeight') * riskWeight;
 }
 function cpuScoreRisky(move, owner, level) {
-  const { flips } = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
   const captures = flips.size;
+  const excitementBonus = comboFlipCount * cpuWeight('risky', 'excitementPerFlip');
+  const captureWeight = cpuWeight('risky', 'captureWeight');
   const noPayoff = captures === 0;
-  const overkillPenalty = move.card.level * 0.6;
+  const overkillPenalty = move.card.level * cpuWeight('risky', 'overkillPenaltyPerLevel');
   const isOpeningMove = state.board.every(cell => cell === null);
   let openingReservePenalty = 0;
   if (isOpeningMove) {
     const strongestLevel = Math.max(...state.hands[owner].map(c => c.level));
-    if (move.card.level === strongestLevel) openingReservePenalty = 20;
+    if (move.card.level === strongestLevel) openingReservePenalty = cpuWeight('risky', 'openingReservePenalty');
   }
-  if (!cpuUsesRiskCheck(level)) return captures * 14 - overkillPenalty - openingReservePenalty;
+  if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus - overkillPenalty - openingReservePenalty;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
   const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfter);
   const riskWeight = cpuRiskWeightMultiplier(level);
-  const exposureWeight = noPayoff ? 12 : 3;
-  const counterWeight = noPayoff ? 6 : 1.5;
-  return captures * 14
+  const exposureWeight = noPayoff ? cpuWeight('risky', 'exposureWeightNoPayoff') : cpuWeight('risky', 'exposureWeightPayoff');
+  const counterWeight = noPayoff ? cpuWeight('risky', 'counterWeightNoPayoff') : cpuWeight('risky', 'counterWeightPayoff');
+  return captures * captureWeight
+    + excitementBonus
     - opponentBestReply * exposureWeight * riskWeight
-    + ownBestFollowUp * 5
+    + ownBestFollowUp * cpuWeight('risky', 'ownFollowUpWeight')
     - opponentBestCounterReply * counterWeight * riskWeight
     - overkillPenalty
     - openingReservePenalty;
@@ -10383,40 +10742,48 @@ function elementalMatchBonus(cellIndex, card) {
   return card.element === tileElem ? 1 : 0;
 }
 function cpuScoreElementalFiend(move, owner, level) {
-  const { flips } = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
   const captures = flips.size;
   const isMatch = elementalMatchBonus(move.cellIndex, move.card) > 0;
-  let elementalBonus = 0;
+  let elementalBonus = comboFlipCount * cpuWeight('elemental', 'excitementPerFlip');
   if (isMatch) {
-    elementalBonus = 12;
+    elementalBonus += cpuWeight('elemental', 'matchBonus');
     const { flips: flipsWithoutBuff } = evaluateMove(
       state.board, move.cellIndex,
       { ...move.card, element: null },
       owner
     );
-    if (flips.size > flipsWithoutBuff.size) elementalBonus += 18;
+    if (flips.size > flipsWithoutBuff.size) elementalBonus += cpuWeight('elemental', 'buffBonus');
   } else if (state.rules.elemental) {
     const tileElem = state.boardElements[move.cellIndex];
     if (tileElem && state.elementalMode !== 'buff') {
       const betterCardAvailable = state.hands[owner].some(c => c.id !== move.card.id && c.element === tileElem);
-      if (betterCardAvailable) elementalBonus -= 6;
+      if (betterCardAvailable) elementalBonus -= cpuWeight('elemental', 'tileAvailablePenalty');
     }
   }
-  if (!cpuUsesRiskCheck(level)) return captures * 9 + elementalBonus;
+  const captureWeight = cpuWeight('elemental', 'captureWeight');
+  if (!cpuUsesRiskCheck(level)) return captures * captureWeight + elementalBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
   const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfter);
   const riskWeight = cpuRiskWeightMultiplier(level);
-  return captures * 9 + elementalBonus - opponentBestReply * 7 * riskWeight + ownBestFollowUp * 4 - opponentBestCounterReply * 3.5 * riskWeight;
+  return captures * captureWeight + elementalBonus
+    - opponentBestReply * cpuWeight('elemental', 'opponentReplyWeight') * riskWeight
+    + ownBestFollowUp * cpuWeight('elemental', 'ownFollowUpWeight')
+    - opponentBestCounterReply * cpuWeight('elemental', 'opponentCounterWeight') * riskWeight;
 }
 function cpuScoreComboStarter(move, owner, level) {
   const { flips, comboTriggered } = evaluateMove(state.board, move.cellIndex, move.card, owner);
   const captures = flips.size;
-  const comboBonus = comboTriggered ? 20 : 0;
-  if (!cpuUsesRiskCheck(level)) return captures * 6 + comboBonus;
+  const comboBonus = comboTriggered ? cpuWeight('combo', 'comboBonus') : 0;
+  const captureWeight = cpuWeight('combo', 'captureWeight');
+  if (!cpuUsesRiskCheck(level)) return captures * captureWeight + comboBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
   const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfter);
   const riskWeight = cpuRiskWeightMultiplier(level);
-  return captures * 6 + comboBonus - opponentBestReply * 6 * riskWeight + ownBestFollowUp * 4 - opponentBestCounterReply * 3 * riskWeight;
+  return captures * captureWeight + comboBonus
+    - opponentBestReply * cpuWeight('combo', 'opponentReplyWeight') * riskWeight
+    + ownBestFollowUp * cpuWeight('combo', 'ownFollowUpWeight')
+    - opponentBestCounterReply * cpuWeight('combo', 'opponentCounterWeight') * riskWeight;
 }
 function findReflipRecapture(boardAfterOpponentReply, exposedIndex, owner, ownCard) {
   const opponent = owner === 'p1' ? 'p2' : 'p1';
@@ -10460,13 +10827,19 @@ function ownCardsReclaimedByMove(move, owner) {
   return reclaimed;
 }
 function cpuScoreReflipper(move, owner, level) {
-  const baseScore = cpuScoreNormal(move, owner, level);
-  const reclaimBonus = ownCardsReclaimedByMove(move, owner) * 22;
+  const reclaimBonus = ownCardsReclaimedByMove(move, owner) * cpuWeight('reflipper', 'reclaimBonusPerCard');
   const boardAfterOwnMove = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
   const opponent = owner === 'p1' ? 'p2' : 'p1';
   const replyHand = opponentVisibleHand(owner);
   const openCellsAfter = boardAfterOwnMove.map((cell, i) => (cell === null ? i : -1)).filter(i => i !== -1);
-  let reflipBonus = 0;
+  // Look for a verified bait-and-recapture line: a reply that lets the opponent
+  // take move.cellIndex, followed by a recapture that findReflipRecapture has
+  // already confirmed the opponent can't immediately flip back. When that exists,
+  // losing the card at move.cellIndex IS the plan working, not a blunder -- so it
+  // shouldn't get double-penalized by the same risk math that scares off an
+  // accidental exposure, which is what was making Reflippers play too cautiously
+  // to ever actually set up their signature bait.
+  let bestPlan = null;
   if (cpuUsesTwoPly(level)) {
     replyHand.forEach(oppCard => {
       openCellsAfter.forEach(oppCellIndex => {
@@ -10475,12 +10848,29 @@ function cpuScoreReflipper(move, owner, level) {
         const boardAfterOpponentReply = simulateBoardAfterMove(boardAfterOwnMove, oppCellIndex, oppCard, opponent);
         const recapture = findReflipRecapture(boardAfterOpponentReply, move.cellIndex, owner, move.card);
         if (recapture) {
-          reflipBonus = Math.max(reflipBonus, 5 + recapture.recaptureFlips * 4);
+          const bonus = cpuWeight('reflipper', 'planBonusBase') + recapture.recaptureFlips * cpuWeight('reflipper', 'planBonusPerFlip');
+          if (!bestPlan || bonus > bestPlan.bonus) bestPlan = { bonus, oppFlips: oppFlips.size };
         }
       });
     });
   }
-  return baseScore + reflipBonus + reclaimBonus;
+  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const captures = flips.size;
+  const captureWeight = cpuWeight('reflipper', 'captureWeight');
+  const excitementBonus = comboFlipCount * cpuWeight('reflipper', 'excitementPerFlip');
+  const planBonus = bestPlan ? bestPlan.bonus : 0;
+  if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus + planBonus + reclaimBonus;
+  const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfterOwnMove);
+  const riskWeight = cpuRiskWeightMultiplier(level);
+  const plannedExposure = bestPlan ? Math.min(opponentBestReply, bestPlan.oppFlips) : 0;
+  const netExposure = opponentBestReply - plannedExposure;
+  return captures * captureWeight
+    + excitementBonus
+    - netExposure * cpuWeight('reflipper', 'opponentReplyWeight') * riskWeight
+    + ownBestFollowUp * cpuWeight('reflipper', 'ownFollowUpWeight')
+    - opponentBestCounterReply * cpuWeight('reflipper', 'opponentCounterWeight') * riskWeight
+    + planBonus
+    + reclaimBonus;
 }
 const CPU_BEHAVIOR_SCORERS = {
   normal: cpuScoreNormal,
@@ -10860,6 +11250,24 @@ async function addGilToUser(uid, amount) {
   }
 }
 let currentCampaignSave = null;
+// Tracks in-flight campaign-save writes (card removal/award, NPC won-card
+// tracking, etc.) that happen asynchronously in the background (e.g. via
+// advanceCampaignTradeReveal, which runs on its own timer, decoupled from
+// button clicks). Without this, a player who navigates back to Campaign
+// Home quickly after a match -- before the loss's card-removal write has
+// actually landed on the server -- could trigger loadCampaignSave() to
+// fetch a stale snapshot that still shows the card, silently overwriting
+// the correct in-memory removal. That looked like the NPC "duplicating"
+// a one-of-a-kind card: the NPC's won-card write went through, but the
+// player's local view got reverted to pre-removal state by the stale
+// reload. Any code that both mutates currentCampaignSave AND could race
+// against a fresh loadCampaignSave() call should chain onto this and any
+// loadCampaignSave() call site should await it first.
+let campaignSaveWriteChain = Promise.resolve();
+function trackCampaignSaveWrite(promiseFactory) {
+  campaignSaveWriteChain = campaignSaveWriteChain.then(promiseFactory).catch(() => {});
+  return campaignSaveWriteChain;
+}
 function campaignDefaultSave() {
   const collection = {};
   CAMPAIGN_STARTER_CARD_IDS.forEach(id => { collection[id] = (collection[id] || 0) + 1; });
@@ -11043,12 +11451,12 @@ function watchCampaignTradeReveal() {
   if (campaignTradeRevealTimer) return;
   campaignTradeRevealTimer = setTimeout(() => {
     campaignTradeRevealTimer = null;
-    advanceCampaignTradeReveal();
+    trackCampaignSaveWrite(() => advanceCampaignTradeReveal());
   }, TRADE_REVEAL_STEP_MS);
 }
 function skipCampaignTradeReveal() {
   clearCampaignTradeRevealTimer();
-  advanceCampaignTradeReveal();
+  trackCampaignSaveWrite(() => advanceCampaignTradeReveal());
 }
 async function advanceCampaignTradeReveal() {
   const ts = state.campaignTradeState;
@@ -13655,6 +14063,7 @@ function initMainMenu() {
   initAdminGiveUi();
   initAdminEditLbUi();
   initAdminNpcEditorUi();
+  initAdminCpuWeightsUi();
 }
 function initAccountUi() {
   updateAuthUi();
@@ -14817,6 +15226,310 @@ function initAdminNpcEditorUi() {
         statusEl.textContent = (err && err.message) ? err.message : 'Failed to delete.';
       } finally {
         deleteBtn.disabled = false;
+      }
+    });
+  }
+}
+let adminCpuWeightsBehavior = 'normal';
+let adminCpuWeightsWriteTimers = {};
+function writeAdminCpuWeight(behavior, key, value) {
+  const timerKey = `${behavior}:${key}`;
+  clearTimeout(adminCpuWeightsWriteTimers[timerKey]);
+  adminCpuWeightsWriteTimers[timerKey] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights/${behavior}/${key}`).set(value).catch(() => {});
+  }, 350);
+}
+function renderAdminCpuWeightsGrid() {
+  const grid = document.getElementById('adminCpuWeightsGrid');
+  if (!grid) return;
+  const behavior = adminCpuWeightsBehavior;
+  const defs = CPU_WEIGHT_DEFS[behavior] || [];
+  const overridesForBehavior = (cpuWeightOverrides && cpuWeightOverrides[behavior]) || {};
+  if (grid.dataset.behavior !== behavior) {
+    grid.innerHTML = '';
+    grid.dataset.behavior = behavior;
+    defs.forEach(def => {
+      const row = document.createElement('div');
+      row.className = 'admin-cpu-weight-row';
+      const inputId = `adminCpuWeight_${behavior}_${def.key}`;
+      const label = document.createElement('label');
+      label.setAttribute('for', inputId);
+      label.textContent = def.label;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = inputId;
+      input.min = String(def.min);
+      input.max = String(def.max);
+      input.step = String(def.step);
+      input.addEventListener('input', () => {
+        const raw = Number(input.value);
+        const clamped = Number.isFinite(raw) ? Math.max(def.min, Math.min(def.max, raw)) : cpuEffectiveDefault(behavior, def.key);
+        input.classList.add('overridden');
+        writeAdminCpuWeight(behavior, def.key, clamped);
+      });
+      row.appendChild(label);
+      row.appendChild(input);
+      grid.appendChild(row);
+    });
+  }
+  defs.forEach(def => {
+    const input = document.getElementById(`adminCpuWeight_${behavior}_${def.key}`);
+    if (!input || document.activeElement === input) return;
+    const hasOverride = typeof overridesForBehavior[def.key] === 'number' && Number.isFinite(overridesForBehavior[def.key]);
+    const effectiveDefault = cpuEffectiveDefault(behavior, def.key);
+    input.value = String(hasOverride ? overridesForBehavior[def.key] : effectiveDefault);
+    input.classList.toggle('overridden', hasOverride);
+    input.title = `Default: ${effectiveDefault}`;
+  });
+}
+function writeAdminCpuLevelWeight(metric, level, value) {
+  const timerKey = `level:${metric}:${level}`;
+  clearTimeout(adminCpuWeightsWriteTimers[timerKey]);
+  adminCpuWeightsWriteTimers[timerKey] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeights/${metric}/${level}`).set(value).catch(() => {});
+  }, 350);
+}
+function writeAdminCpuLevelThreshold(key, value) {
+  const timerKey = `threshold:${key}`;
+  clearTimeout(adminCpuWeightsWriteTimers[timerKey]);
+  adminCpuWeightsWriteTimers[timerKey] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholds/${key}`).set(value).catch(() => {});
+  }, 350);
+}
+function renderAdminCpuLevelGrid() {
+  const grid = document.getElementById('adminCpuWeightsLevelGrid');
+  if (!grid) return;
+  const built = grid.dataset.built === 'true';
+  if (!built) {
+    grid.innerHTML = '';
+    grid.dataset.built = 'true';
+    Object.keys(CPU_LEVEL_WEIGHT_DEFS).forEach(metric => {
+      const def = CPU_LEVEL_WEIGHT_DEFS[metric];
+      const wrap = document.createElement('div');
+      wrap.className = 'admin-cpu-level-metric';
+      const labelEl = document.createElement('div');
+      labelEl.className = 'admin-cpu-level-metric-label';
+      labelEl.textContent = def.label;
+      const hintEl = document.createElement('div');
+      hintEl.className = 'admin-cpu-level-metric-hint';
+      hintEl.textContent = def.hint;
+      const inputsRow = document.createElement('div');
+      inputsRow.className = 'admin-cpu-level-inputs';
+      for (let level = 1; level <= 5; level++) {
+        const group = document.createElement('div');
+        group.className = 'admin-cpu-level-input-group';
+        const span = document.createElement('span');
+        span.textContent = `Lv${level}`;
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = String(def.min);
+        input.max = String(def.max);
+        input.step = String(def.step);
+        input.id = `adminCpuLevel_${metric}_${level}`;
+        input.addEventListener('input', () => {
+          const raw = Number(input.value);
+          const clamped = Number.isFinite(raw) ? Math.max(def.min, Math.min(def.max, raw)) : cpuLevelEffectiveDefault(metric, level);
+          input.classList.add('overridden');
+          writeAdminCpuLevelWeight(metric, level, clamped);
+        });
+        group.appendChild(span);
+        group.appendChild(input);
+        inputsRow.appendChild(group);
+      }
+      wrap.appendChild(labelEl);
+      wrap.appendChild(hintEl);
+      wrap.appendChild(inputsRow);
+      grid.appendChild(wrap);
+    });
+    const thresholdWrap = document.createElement('div');
+    thresholdWrap.className = 'admin-cpu-level-metric';
+    const thresholdLabel = document.createElement('div');
+    thresholdLabel.className = 'admin-cpu-level-metric-label';
+    thresholdLabel.textContent = 'Lookahead Thresholds';
+    thresholdWrap.appendChild(thresholdLabel);
+    CPU_LEVEL_THRESHOLD_DEFS.forEach(def => {
+      const row = document.createElement('div');
+      row.className = 'admin-cpu-weight-row';
+      const label = document.createElement('label');
+      label.setAttribute('for', `adminCpuLevelThreshold_${def.key}`);
+      label.textContent = def.label;
+      label.title = def.hint;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = `adminCpuLevelThreshold_${def.key}`;
+      input.min = String(def.min);
+      input.max = String(def.max);
+      input.step = String(def.step);
+      input.addEventListener('input', () => {
+        const raw = Math.round(Number(input.value));
+        const clamped = Number.isFinite(raw) ? Math.max(def.min, Math.min(def.max, raw)) : cpuLevelThresholdEffectiveDefault(def.key);
+        input.classList.add('overridden');
+        writeAdminCpuLevelThreshold(def.key, clamped);
+      });
+      row.appendChild(label);
+      row.appendChild(input);
+      thresholdWrap.appendChild(row);
+    });
+    grid.appendChild(thresholdWrap);
+  }
+  Object.keys(CPU_LEVEL_WEIGHT_DEFS).forEach(metric => {
+    const overridesForMetric = (cpuLevelWeightOverrides && cpuLevelWeightOverrides[metric]) || {};
+    for (let level = 1; level <= 5; level++) {
+      const input = document.getElementById(`adminCpuLevel_${metric}_${level}`);
+      if (!input || document.activeElement === input) continue;
+      const hasOverride = typeof overridesForMetric[level] === 'number' && Number.isFinite(overridesForMetric[level]);
+      const effectiveDefault = cpuLevelEffectiveDefault(metric, level);
+      input.value = String(hasOverride ? overridesForMetric[level] : effectiveDefault);
+      input.classList.toggle('overridden', hasOverride);
+      input.title = `Default: ${effectiveDefault}`;
+    }
+  });
+  CPU_LEVEL_THRESHOLD_DEFS.forEach(def => {
+    const input = document.getElementById(`adminCpuLevelThreshold_${def.key}`);
+    if (!input || document.activeElement === input) return;
+    const override = cpuLevelThresholdOverrides ? cpuLevelThresholdOverrides[def.key] : undefined;
+    const hasOverride = typeof override === 'number' && Number.isFinite(override);
+    const effectiveDefault = cpuLevelThresholdEffectiveDefault(def.key);
+    input.value = String(hasOverride ? override : effectiveDefault);
+    input.classList.toggle('overridden', hasOverride);
+    input.title = `Default: ${effectiveDefault}`;
+  });
+}
+function setAdminCpuWeightsTab(tab) {
+  const typeSection = document.getElementById('adminCpuWeightsTypeSection');
+  const levelSection = document.getElementById('adminCpuWeightsLevelSection');
+  const typeTab = document.getElementById('adminCpuWeightsTabType');
+  const levelTab = document.getElementById('adminCpuWeightsTabLevel');
+  if (typeSection) typeSection.classList.toggle('hidden', tab !== 'type');
+  if (levelSection) levelSection.classList.toggle('hidden', tab !== 'level');
+  if (typeTab) typeTab.classList.toggle('active', tab === 'type');
+  if (levelTab) levelTab.classList.toggle('active', tab === 'level');
+  if (tab === 'level') renderAdminCpuLevelGrid();
+}
+function openAdminCpuWeightsModal() {
+  playSfx('cursorMove');
+  const select = document.getElementById('adminCpuWeightsBehaviorSelect');
+  if (select) select.value = adminCpuWeightsBehavior;
+  const statusEl = document.getElementById('adminCpuWeightsStatus');
+  if (statusEl) statusEl.textContent = '';
+  document.getElementById('adminCpuWeightsModal').classList.add('show');
+  setAdminCpuWeightsTab('type');
+  renderAdminCpuWeightsGrid();
+}
+function closeAdminCpuWeightsModal() {
+  document.getElementById('adminCpuWeightsModal').classList.remove('show');
+}
+function initAdminCpuWeightsUi() {
+  const adminBtn = document.getElementById('menuAdminCpuWeights');
+  if (adminBtn) adminBtn.addEventListener('click', openAdminCpuWeightsModal);
+  const closeBtn = document.getElementById('adminCpuWeightsClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeAdminCpuWeightsModal(); });
+  const modal = document.getElementById('adminCpuWeightsModal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      if (e.target.id === 'adminCpuWeightsModal') { playSfx('cursorCancel'); closeAdminCpuWeightsModal(); }
+    });
+  }
+  const tabType = document.getElementById('adminCpuWeightsTabType');
+  if (tabType) tabType.addEventListener('click', () => { playSfx('cursorMove'); setAdminCpuWeightsTab('type'); });
+  const tabLevel = document.getElementById('adminCpuWeightsTabLevel');
+  if (tabLevel) tabLevel.addEventListener('click', () => { playSfx('cursorMove'); setAdminCpuWeightsTab('level'); });
+  const select = document.getElementById('adminCpuWeightsBehaviorSelect');
+  if (select) {
+    select.addEventListener('change', () => {
+      playSfx('cursorMove');
+      adminCpuWeightsBehavior = select.value;
+      renderAdminCpuWeightsGrid();
+    });
+  }
+  const resetBtn = document.getElementById('adminCpuWeightsReset');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      playSfx('cursorMove');
+      const statusEl = document.getElementById('adminCpuWeightsStatus');
+      const behavior = adminCpuWeightsBehavior;
+      resetBtn.disabled = true;
+      try {
+        await rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights/${behavior}`).remove();
+        if (statusEl) statusEl.textContent = `Reset ${CPU_BEHAVIOR_LABELS[behavior] || behavior} to defaults.`;
+      } catch (err) {
+        if (statusEl) statusEl.textContent = (err && err.message) ? err.message : 'Failed to reset.';
+      } finally {
+        resetBtn.disabled = false;
+      }
+    });
+  }
+  const saveDefaultsBtn = document.getElementById('adminCpuWeightsSaveDefaults');
+  if (saveDefaultsBtn) {
+    saveDefaultsBtn.addEventListener('click', async () => {
+      playSfx('cursorMove');
+      const statusEl = document.getElementById('adminCpuWeightsStatus');
+      const behavior = adminCpuWeightsBehavior;
+      const defs = CPU_WEIGHT_DEFS[behavior] || [];
+      const values = {};
+      defs.forEach(def => { values[def.key] = cpuWeight(behavior, def.key); });
+      saveDefaultsBtn.disabled = true;
+      try {
+        // Snapshot the current effective values as the new baseline, then clear
+        // the live override so the inputs read back as "default" (not orange)
+        // and any admin session's Reset lands here instead of the original
+        // hardcoded numbers.
+        await rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeightDefaults/${behavior}`).set(values);
+        await rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights/${behavior}`).remove();
+        if (statusEl) statusEl.textContent = `Saved current ${CPU_BEHAVIOR_LABELS[behavior] || behavior} values as the new default.`;
+      } catch (err) {
+        if (statusEl) statusEl.textContent = (err && err.message) ? err.message : 'Failed to save.';
+      } finally {
+        saveDefaultsBtn.disabled = false;
+      }
+    });
+  }
+  const levelResetBtn = document.getElementById('adminCpuWeightsLevelReset');
+  if (levelResetBtn) {
+    levelResetBtn.addEventListener('click', async () => {
+      playSfx('cursorMove');
+      const statusEl = document.getElementById('adminCpuWeightsStatus');
+      levelResetBtn.disabled = true;
+      try {
+        await Promise.all([
+          rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeights`).remove(),
+          rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholds`).remove(),
+        ]);
+        if (statusEl) statusEl.textContent = 'Reset skill-level scaling to defaults.';
+      } catch (err) {
+        if (statusEl) statusEl.textContent = (err && err.message) ? err.message : 'Failed to reset.';
+      } finally {
+        levelResetBtn.disabled = false;
+      }
+    });
+  }
+  const levelSaveDefaultsBtn = document.getElementById('adminCpuWeightsLevelSaveDefaults');
+  if (levelSaveDefaultsBtn) {
+    levelSaveDefaultsBtn.addEventListener('click', async () => {
+      playSfx('cursorMove');
+      const statusEl = document.getElementById('adminCpuWeightsStatus');
+      levelSaveDefaultsBtn.disabled = true;
+      try {
+        const weightValues = {};
+        Object.keys(CPU_LEVEL_WEIGHT_DEFS).forEach(metric => {
+          weightValues[metric] = {};
+          for (let level = 1; level <= 5; level++) {
+            weightValues[metric][level] = cpuLevelWeight(metric, level);
+          }
+        });
+        const thresholdValues = {};
+        CPU_LEVEL_THRESHOLD_DEFS.forEach(def => { thresholdValues[def.key] = cpuLevelThreshold(def.key); });
+        await Promise.all([
+          rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeightDefaults`).set(weightValues),
+          rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholdDefaults`).set(thresholdValues),
+          rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeights`).remove(),
+          rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholds`).remove(),
+        ]);
+        if (statusEl) statusEl.textContent = 'Saved current skill-level scaling as the new default.';
+      } catch (err) {
+        if (statusEl) statusEl.textContent = (err && err.message) ? err.message : 'Failed to save.';
+      } finally {
+        levelSaveDefaultsBtn.disabled = false;
       }
     });
   }
