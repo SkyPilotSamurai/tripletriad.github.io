@@ -11365,14 +11365,15 @@ function evaluateHypotheticalCaptures(board, index, card, owner) {
 // half at level 4), never the CPU's own follow-up. Level 3 ("Average") is
 // deliberately much less combo-aware than its general capture awareness --
 // it still rates ordinary threats at its usual 0.65x risk weight but treats
-// combo threats as far less dangerous on top of that. Level 4 ("Skilled")
-// only gets a slight discount versus its full 1.0x general risk weight, per
-// request. Level 5 ("Expert") and levels 1-2 (no risk-check at all) are
-// untouched.
+// combo threats as far less dangerous on top of that (0.25x). Level 4
+// ("Skilled") gets a more moderate discount (0.5x) versus its full 1.0x
+// general risk weight. Level 5 ("Expert") is the least discounted of the
+// three (0.75x) but still shy of full 1.0x combo awareness. Levels 1-2 (no
+// risk-check at all) are untouched.
 function cpuComboRiskWeight(level) {
-  if (level === 3) return 0.4;
-  if (level === 4) return 0.8;
-  return 1;
+  if (level === 3) return 0.25;
+  if (level === 4) return 0.5;
+  return 0.75;
 }
 // Same idea as evaluateHypotheticalCaptures, but discounts the portion of
 // the flip count attributable to a Same/Plus/Up combo by cpuComboRiskWeight
