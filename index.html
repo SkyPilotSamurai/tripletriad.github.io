@@ -3814,6 +3814,10 @@
         <input type="number" id="adminNpcOneOfAKindHoldCapInput" min="0" max="5" step="1" value="1">
       </div>
       <div class="settings-row admin-region-bias-row">
+        <label for="adminOneOfAKindPlayChanceSlider">One-of-a-Kind Play Chance: <span id="adminOneOfAKindPlayChanceValue">100%</span></label>
+        <input type="range" id="adminOneOfAKindPlayChanceSlider" min="0" max="100" step="5" value="100">
+      </div>
+      <div class="settings-row admin-region-bias-row">
         <label for="adminMatchTextIntensitySlider">Match Text Color Intensity: <span id="adminMatchTextIntensityValue">0%</span> lower</label>
         <input type="range" id="adminMatchTextIntensitySlider" min="0" max="100" step="5" value="0">
       </div>
@@ -4180,6 +4184,10 @@
         <div class="admin-npc-editor-field" title="Overrides the global Region Card Bias % (Admin Settings) for this NPC only. Leave unchecked to keep using the global default.">
           <label class="admin-npc-editor-checkbox-label"><input type="checkbox" id="adminNpcEditorRegionBiasOverride"> Override Region Card Bias %</label>
           <input type="number" id="adminNpcEditorRegionBiasPercent" min="0" max="100" step="5" value="0" disabled>
+        </div>
+        <div class="admin-npc-editor-field" title="Overrides the global One-of-a-Kind Play Chance % (Admin Settings) for this NPC only. Leave unchecked to keep using the global default.">
+          <label class="admin-npc-editor-checkbox-label"><input type="checkbox" id="adminNpcEditorOneOfAKindPlayOverride"> Override One-of-a-Kind Play Chance %</label>
+          <input type="number" id="adminNpcEditorOneOfAKindPlayPercent" min="0" max="100" step="5" value="100" disabled>
         </div>
         <div class="admin-npc-editor-field">
           Rules
@@ -4804,6 +4812,22 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNpcOneOfAKindHoldCap`).on('value', snap =>
   campaignNpcOneOfAKindHoldCap = Number.isFinite(v) ? Math.max(0, Math.min(5, Math.round(v))) : 1;
   const input = document.getElementById('adminNpcOneOfAKindHoldCapInput');
   if (input && document.activeElement !== input) input.value = campaignNpcOneOfAKindHoldCap;
+});
+// One-of-a-Kind Play Chance -- 0-100%, defaults to 100 (always allowed,
+// i.e. unchanged from the old behavior) so existing games aren't silently
+// affected until an admin actively dials it down. See chooseCpuMove's use
+// of campaignEffectiveOneOfAKindPlayChancePercent for what this actually
+// does at match time: a Campaign NPC holding a one-of-a-kind (level 8-10 /
+// PuPu-style) card in hand only gets to consider playing it this often each
+// turn, same live-sync pattern as Region Card Bias above.
+let campaignOneOfAKindPlayChancePercent = 100;
+rtdb.ref(`${GAME_CONFIG_ROOT}/oneOfAKindPlayChancePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  campaignOneOfAKindPlayChancePercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100;
+  const slider = document.getElementById('adminOneOfAKindPlayChanceSlider');
+  const label = document.getElementById('adminOneOfAKindPlayChanceValue');
+  if (slider && document.activeElement !== slider) slider.value = campaignOneOfAKindPlayChancePercent;
+  if (label) label.textContent = `${campaignOneOfAKindPlayChancePercent}%`;
 });
 // Match Text Color Intensity -- how many percentage points to drop off the
 // saturation of card stat Numbers and the in-match player/NPC name labels
@@ -6334,6 +6358,14 @@ function campaignAdminApplyNpcFields(npc, data) {
     if (data.regionBiasPercent != null) npc.regionBiasPercent = Math.max(0, Math.min(100, Number(data.regionBiasPercent) || 0));
     else delete npc.regionBiasPercent;
   }
+  // Per-NPC One-of-a-Kind Play Chance override -- see
+  // campaignEffectiveOneOfAKindPlayChancePercent. Same 'in' check reasoning
+  // as regionBiasPercent above (an explicit 0% override, and clearing the
+  // override entirely, both need to work).
+  if ('oneOfAKindPlayChancePercent' in data) {
+    if (data.oneOfAKindPlayChancePercent != null) npc.oneOfAKindPlayChancePercent = Math.max(0, Math.min(100, Number(data.oneOfAKindPlayChancePercent) || 0));
+    else delete npc.oneOfAKindPlayChancePercent;
+  }
   // Manual tie-break order among NPCs sharing the same Skill level at the
   // same location (see campaignSortedNpcs) -- set via the Admin NPC
   // Editor's Move Up/Down buttons, not a form field the admin types into
@@ -7793,6 +7825,13 @@ function campaignRegionCardIdsForNpc(npc) {
 // campaignAdminApplyNpcFields' 'regionBiasPercent' in data check.
 function campaignEffectiveRegionBiasPercent(npc) {
   return (npc && npc.regionBiasPercent != null) ? npc.regionBiasPercent : campaignRegionCardBiasPercent;
+}
+// Same override-priority pattern as campaignEffectiveRegionBiasPercent
+// above, for the One-of-a-Kind Play Chance % (Admin NPC Editor override vs.
+// the global campaignOneOfAKindPlayChancePercent Settings slider). See
+// chooseCpuMove for what this actually gates at match time.
+function campaignEffectiveOneOfAKindPlayChancePercent(npc) {
+  return (npc && npc.oneOfAKindPlayChancePercent != null) ? npc.oneOfAKindPlayChancePercent : campaignOneOfAKindPlayChancePercent;
 }
 // Per-NPC memory of one-of-a-kind cards that have changed hands with that
 // specific NPC over the life of the Campaign save -- separate from
@@ -11748,6 +11787,33 @@ function parseCpuDifficulty() {
   const behavior = state.cpuBehavior || 'normal';
   return { behavior, level };
 }
+// One-of-a-Kind Play Chance -- when a Campaign NPC (state.campaignNpcId) is
+// holding a one-of-a-kind (level 8-10 / PuPu-style) card, it should only be
+// "on the table" as a candidate move some percent of the time each turn
+// (see campaignEffectiveOneOfAKindPlayChancePercent), rather than always
+// being as available as an ordinary card. Rolled once per one-of-a-kind
+// card per turn here (not once per candidate move), and only ever narrows
+// the hand down -- if every card left in hand is one-of-a-kind, or the
+// rolls all happen to fail, the NPC still needs *something* to play, so a
+// wipeout is always backed off to "allow them all this turn" rather than
+// leaving chooseCpuMove with zero legal moves. Order/Chaos's allowedIdx
+// (see allowedHandIndex) is a hard rule constraint on which card must be
+// played -- there's no real choice for this to narrow in that case, so it's
+// skipped entirely rather than risk rolling out the one card the rules
+// force to be played. Non-Campaign CPU opponents (no NPC to look up) are
+// unaffected.
+function cpuAllowedHandIndices(owner, hand, allowedIdx) {
+  if (allowedIdx != null) return null;
+  const npc = state.campaignNpcId ? campaignFindNpc(state.campaignNpcId) : null;
+  if (!npc) return null;
+  const oneOfAKindIdx = [];
+  hand.forEach((card, idx) => { if (card && isOneOfAKindCardId(card.id)) oneOfAKindIdx.push(idx); });
+  if (!oneOfAKindIdx.length || oneOfAKindIdx.length === hand.length) return null;
+  const chance = campaignEffectiveOneOfAKindPlayChancePercent(npc);
+  const blocked = new Set(oneOfAKindIdx.filter(() => Math.random() * 100 >= chance));
+  if (!blocked.size) return null;
+  return hand.map((c, idx) => idx).filter(idx => !blocked.has(idx));
+}
 function chooseCpuMove() {
   const owner = 'p2';
   const hand = state.hands[owner];
@@ -11755,13 +11821,20 @@ function chooseCpuMove() {
   if (!hand || hand.length === 0 || openCells.length === 0) return null;
   const allowedIdx = allowedHandIndex(owner);
   const { behavior, level } = parseCpuDifficulty();
+  const playableIndices = cpuAllowedHandIndices(owner, hand, allowedIdx);
   if (level === 1) {
-    const idx = allowedIdx != null ? allowedIdx : Math.floor(Math.random() * hand.length);
+    let idx;
+    if (allowedIdx != null) idx = allowedIdx;
+    else {
+      const pool = playableIndices || hand.map((c, i) => i);
+      idx = pool[Math.floor(Math.random() * pool.length)];
+    }
     const cellIndex = openCells[Math.floor(Math.random() * openCells.length)];
     return { idx, cellIndex };
   }
   const scorer = CPU_BEHAVIOR_SCORERS[behavior] || cpuScoreNormal;
   let moves = generateCandidateMoves(hand, openCells);
+  if (playableIndices) moves = moves.filter(m => playableIndices.includes(m.idx));
   if (allowedIdx != null) moves = moves.filter(m => m.idx === allowedIdx);
   const scored = moves.map(move => ({ ...move, score: scorer(move, owner, level) }));
   const picked = pickFromScored(scored, level);
@@ -15654,6 +15727,16 @@ document.getElementById('adminNpcOneOfAKindHoldCapInput').addEventListener('chan
   e.target.value = v;
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNpcOneOfAKindHoldCap`).set(v).catch(() => {});
 });
+document.getElementById('adminOneOfAKindPlayChanceSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminOneOfAKindPlayChanceValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminOneOfAKindPlayChanceSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/oneOfAKindPlayChancePercent`).set(v).catch(() => {});
+});
 document.getElementById('adminMatchTextIntensitySlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   document.body.style.setProperty('--match-color-intensity', `${100 - v}%`);
@@ -16126,6 +16209,9 @@ function clearAdminNpcEditorForm() {
   document.getElementById('adminNpcEditorRegionBiasOverride').checked = false;
   document.getElementById('adminNpcEditorRegionBiasPercent').value = String(campaignRegionCardBiasPercent || 0);
   document.getElementById('adminNpcEditorRegionBiasPercent').disabled = true;
+  document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked = false;
+  document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value = String(campaignOneOfAKindPlayChancePercent != null ? campaignOneOfAKindPlayChancePercent : 100);
+  document.getElementById('adminNpcEditorOneOfAKindPlayPercent').disabled = true;
   setAdminNpcEditorRulesFromNpc(null);
   setAdminNpcEditorPoolFromIds(campaignDefaultCardPoolIds({ cpuDifficulty: 3 }));
   adminNpcEditorCurrentNpc = null;
@@ -16162,6 +16248,10 @@ function loadAdminNpcEditorNpcIntoForm(npcId) {
   document.getElementById('adminNpcEditorRegionBiasOverride').checked = regionBiasOverrideSet;
   document.getElementById('adminNpcEditorRegionBiasPercent').value = String(regionBiasOverrideSet ? npc.regionBiasPercent : (campaignRegionCardBiasPercent || 0));
   document.getElementById('adminNpcEditorRegionBiasPercent').disabled = !regionBiasOverrideSet;
+  const oneOfAKindPlayOverrideSet = npc.oneOfAKindPlayChancePercent != null;
+  document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked = oneOfAKindPlayOverrideSet;
+  document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value = String(oneOfAKindPlayOverrideSet ? npc.oneOfAKindPlayChancePercent : (campaignOneOfAKindPlayChancePercent != null ? campaignOneOfAKindPlayChancePercent : 100));
+  document.getElementById('adminNpcEditorOneOfAKindPlayPercent').disabled = !oneOfAKindPlayOverrideSet;
   setAdminNpcEditorRulesFromNpc(npc.rules);
   // Prefill with the NPC's own saved cardPool if they have one, else exactly
   // what they'd draw from right now under the default level-based rule --
@@ -16227,13 +16317,15 @@ async function persistAdminNpcEditorEditedNpc(npc) {
   const doubleUpPercent = Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorDoubleUpPercent').value) || 0));
   const regionBiasOverrideOn = document.getElementById('adminNpcEditorRegionBiasOverride').checked;
   const regionBiasPercent = regionBiasOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorRegionBiasPercent').value) || 0)) : null;
+  const oneOfAKindPlayOverrideOn = document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked;
+  const oneOfAKindPlayChancePercent = oneOfAKindPlayOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value) || 0)) : null;
   const rules = collectAdminNpcEditorRules();
   const cardPool = collectAdminNpcEditorPool();
   if (!cardPool.length) throw new Error('Select at least one card for the Card Pool.');
   // sortOrder isn't a form field (see moveAdminNpcEditorNpc) -- carried
   // through here so a normal field edit's full-entry .set() below doesn't
   // wipe out whatever Move Up/Down order was previously saved for this NPC.
-  const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
+  const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
   if (npc._adminCustom) {
     const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
     entry.locationId = loc ? loc.id : document.getElementById('adminNpcEditorLocationSelect').value;
@@ -16379,7 +16471,7 @@ function initAdminNpcEditorUi() {
   // text fields debounce on every keystroke, dropdowns and the rule/pool
   // checkbox grids (event-delegated, since their checkboxes are built
   // dynamically) fire on change.
-  ['adminNpcEditorName', 'adminNpcEditorDesc', 'adminNpcEditorQuote', 'adminNpcEditorDoubleUpPercent', 'adminNpcEditorRegionBiasPercent'].forEach(id => {
+  ['adminNpcEditorName', 'adminNpcEditorDesc', 'adminNpcEditorQuote', 'adminNpcEditorDoubleUpPercent', 'adminNpcEditorRegionBiasPercent', 'adminNpcEditorOneOfAKindPlayPercent'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', scheduleAdminNpcEditorAutoSave);
   });
@@ -16391,6 +16483,13 @@ function initAdminNpcEditorUi() {
   if (regionBiasOverrideCb) {
     regionBiasOverrideCb.addEventListener('change', () => {
       document.getElementById('adminNpcEditorRegionBiasPercent').disabled = !regionBiasOverrideCb.checked;
+      scheduleAdminNpcEditorAutoSave();
+    });
+  }
+  const oneOfAKindPlayOverrideCb = document.getElementById('adminNpcEditorOneOfAKindPlayOverride');
+  if (oneOfAKindPlayOverrideCb) {
+    oneOfAKindPlayOverrideCb.addEventListener('change', () => {
+      document.getElementById('adminNpcEditorOneOfAKindPlayPercent').disabled = !oneOfAKindPlayOverrideCb.checked;
       scheduleAdminNpcEditorAutoSave();
     });
   }
@@ -16488,6 +16587,8 @@ function initAdminNpcEditorUi() {
       const doubleUpPercent = Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorDoubleUpPercent').value) || 0));
       const regionBiasOverrideOn = document.getElementById('adminNpcEditorRegionBiasOverride').checked;
       const regionBiasPercent = regionBiasOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorRegionBiasPercent').value) || 0)) : null;
+      const oneOfAKindPlayOverrideOn = document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked;
+      const oneOfAKindPlayChancePercent = oneOfAKindPlayOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value) || 0)) : null;
       const rules = collectAdminNpcEditorRules();
       const cardPool = collectAdminNpcEditorPool();
       if (!cardPool.length) { statusEl.textContent = 'Select at least one card for the Card Pool.'; return; }
@@ -16499,12 +16600,13 @@ function initAdminNpcEditorUi() {
           const loc = campaignFindLocation(locationId);
           if (!loc) throw new Error('Pick a location first.');
           const npcId = campaignAdminGenerateNpcId(name);
-          const entry = { locationId, name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, doubleUpPercent, regionBiasPercent };
+          const entry = { locationId, name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent };
           if (rewardCardId) entry.rewardCardId = rewardCardId;
           await rtdb.ref(`${CAMPAIGN_ADMIN_ROOT}/customNpcs/${npcId}`).set(entry);
           const npc = { id: npcId, name, desc, rules: campaignEmptyRules(rules), cpuDifficulty, cpuBehavior, cardPool: cardPool.slice(), doubleUpPercent, _adminCustom: true };
           if (rewardCardId) npc.rewardCardId = rewardCardId;
           if (regionBiasPercent != null) npc.regionBiasPercent = regionBiasPercent;
+          if (oneOfAKindPlayChancePercent != null) npc.oneOfAKindPlayChancePercent = oneOfAKindPlayChancePercent;
           loc.npcs.push(npc);
           if (quote) CAMPAIGN_NPC_QUOTES[npcId] = quote;
           refreshCampaignNpcScreenIfOpen();
@@ -16516,7 +16618,7 @@ function initAdminNpcEditorUi() {
         } else {
           const npc = adminNpcEditorCurrentNpc;
           if (!npc) throw new Error('Pick an NPC first.');
-          const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
+          const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
           if (npc._adminCustom) {
             const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
             entry.locationId = loc ? loc.id : document.getElementById('adminNpcEditorLocationSelect').value;
