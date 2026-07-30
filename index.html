@@ -7655,11 +7655,30 @@ const CPU_BEHAVIOR_NAMES = {
 };
 const CPU_BEHAVIORS_REQUIRING_ELEMENTAL = ['elemental'];
 let cpuSelectedBehavior = 'normal';
+// Vs CPU's own point-budget floor, scaled to the chosen Skill level -- 5 at
+// level 1, +5 per level after that (5/10/15/20/25). Deliberately separate
+// from the flat POINT_BUDGET_MIN (still used as-is by online Ranked's
+// random budget roll and by Campaign's own, unrelated budget system) --
+// this only ever applies to the Vs CPU setup screen's player-editable
+// Max Points input.
+function cpuPointBudgetMinForLevel(level) {
+  return Math.max(POINT_BUDGET_MIN, level * 5);
+}
 function refreshCpuDifficultyLabel() {
   const slider = document.getElementById('cpuDifficultySlider');
   const label = document.getElementById('cpuDifficultyLabel');
   const level = parseInt(slider.value, 10);
   label.textContent = `${level} — ${CPU_DIFFICULTY_LABELS[level]}`;
+  const pointInput = document.getElementById('cpuPointTotal');
+  if (pointInput) {
+    const levelMin = cpuPointBudgetMinForLevel(level);
+    pointInput.min = levelMin;
+    const current = parseInt(pointInput.value, 10);
+    if (Number.isFinite(current) && current < levelMin) {
+      pointInput.value = levelMin;
+      if (isCpuKeepPointsChecked()) saveCpuPointTotal(levelMin);
+    }
+  }
 }
 function refreshCpuBehaviorButtons() {
   document.querySelectorAll('.cpu-behavior-btn').forEach(btn => {
@@ -7745,15 +7764,19 @@ function isCpuKeepPointsChecked() {
 }
 document.getElementById('cpuPointTotal').addEventListener('change', () => {
   const input = document.getElementById('cpuPointTotal');
+  const level = parseInt(document.getElementById('cpuDifficultySlider').value, 10);
+  const levelMin = cpuPointBudgetMinForLevel(level);
   let value = parseInt(input.value, 10);
   if (!Number.isFinite(value)) value = POINT_BUDGET_MAX;
-  value = Math.max(POINT_BUDGET_MIN, Math.min(POINT_BUDGET_MAX, value));
+  value = Math.max(levelMin, Math.min(POINT_BUDGET_MAX, value));
   input.value = value;
   if (isCpuKeepPointsChecked()) saveCpuPointTotal(value);
 });
 document.getElementById('cpuPointTotalRandomize').addEventListener('click', () => {
   playSfx('cursorMove');
-  const value = rollPointBudget();
+  const level = parseInt(document.getElementById('cpuDifficultySlider').value, 10);
+  const levelMin = cpuPointBudgetMinForLevel(level);
+  const value = levelMin + Math.floor(Math.random() * (POINT_BUDGET_MAX - levelMin + 1));
   const input = document.getElementById('cpuPointTotal');
   input.value = value;
   if (isCpuKeepPointsChecked()) saveCpuPointTotal(value);
@@ -7773,13 +7796,13 @@ async function startCpuMatch() {
     document.getElementById('cpuSetupStatus').textContent = 'Sign in and start a Campaign to use your Campaign collection.';
     return;
   }
+  const difficultyLevel = Math.max(1, Math.min(5, parseInt(document.getElementById('cpuDifficultySlider').value, 10)));
   const pointInput = document.getElementById('cpuPointTotal');
   let pointBudget = parseInt(pointInput.value, 10);
   if (!Number.isFinite(pointBudget)) pointBudget = POINT_BUDGET_MAX;
-  pointBudget = Math.max(POINT_BUDGET_MIN, Math.min(POINT_BUDGET_MAX, pointBudget));
+  pointBudget = Math.max(cpuPointBudgetMinForLevel(difficultyLevel), Math.min(POINT_BUDGET_MAX, pointBudget));
   pointInput.value = pointBudget;
   if (isCpuKeepPointsChecked()) saveCpuPointTotal(pointBudget);
-  const difficultyLevel = Math.max(1, Math.min(5, parseInt(document.getElementById('cpuDifficultySlider').value, 10)));
   const timerToggle = document.getElementById('cpuTimerToggle');
   const timerEnabled = timerToggle ? timerToggle.checked : false;
   saveCpuTimerEnabled(timerEnabled);
@@ -8202,7 +8225,29 @@ function applyRoomSnapshot(room) {
   if (firstPlayerSpinPending) return;
   applyRoomSnapshotNow(room);
 }
-let lastAnimatedMoveId = null;
+// Every moveId this client has already animated (or preemptively claimed as
+// its own, see placeCard). A plain "last one wins" single value used to sit
+// here instead, but online rooms are read through TWO independent
+// channels -- the live roomRef.on('value') listener AND a redundant
+// setInterval poll (startRoomPoll) -- so a stale poll read that still shows
+// the PREVIOUS move (fetched before this client's own newer write had
+// landed) could arrive after placeCard() had already fast-forwarded the
+// single tracked id to the NEW move. That made the old, already-fully-
+// animated previous move look "new" again by comparison, and
+// applyRoomSnapshotNow would replay its whole capture/banner sequence a
+// second time moments after the real one -- the online-only banner
+// flicker. Tracking the full set of seen ids (bounded via
+// markMoveAnimated below) means a late/out-of-order snapshot for anything
+// already handled is always correctly recognized as such, regardless of
+// arrival order between the two channels.
+let animatedMoveIds = new Set();
+function markMoveAnimated(moveId) {
+  if (!moveId) return;
+  animatedMoveIds.add(moveId);
+  if (animatedMoveIds.size > 30) {
+    animatedMoveIds.delete(animatedMoveIds.values().next().value);
+  }
+}
 function applyRoomSnapshotNow(room) {
   state.roomRematch = room.rematch || null;
   state.roomTurnStartedAt = room.turnStartedAt || null;
@@ -8216,9 +8261,9 @@ function applyRoomSnapshotNow(room) {
   state.closedSingleCardId = room.closedSingleCardId || null;
   const closedSingleCardIdChanged = JSON.stringify(prevClosedSingleCardId) !== JSON.stringify(state.closedSingleCardId);
   const move = room.lastMove;
-  const isNewMove = move && move.moveId && move.moveId !== lastAnimatedMoveId;
+  const isNewMove = move && move.moveId && !animatedMoveIds.has(move.moveId);
   if (isNewMove) {
-    lastAnimatedMoveId = move.moveId;
+    markMoveAnimated(move.moveId);
     const flightEl = buildRemoteFlightClone(move.card, move.owner);
     applyingRemoteUpdate = true;
     state.board = fromRoomBoard(room.board);
@@ -8250,12 +8295,12 @@ function applyRoomSnapshotNow(room) {
   const noMoveYet = !move || !move.moveId;
   const turnUnchanged = (room.turn || 'p1') === state.turn;
   const nothingChanged = noMoveYet && !roomDisagreesOnGameState && turnUnchanged;
-  if ((move && move.moveId && move.moveId === lastAnimatedMoveId && !roomDisagreesOnGameState) || nothingChanged) {
+  if ((move && move.moveId && animatedMoveIds.has(move.moveId) && !roomDisagreesOnGameState) || nothingChanged) {
     updateOverlay();
     renderTurnTimerVisibility();
     return;
   }
-  if (move && move.moveId) lastAnimatedMoveId = move.moveId;
+  if (move && move.moveId) markMoveAnimated(move.moveId);
   applyingRemoteUpdate = true;
   state.board = fromRoomBoard(room.board);
   state.boardElements = fromRoomBoard(room.boardElements);
@@ -8453,7 +8498,7 @@ function startOnlineRoom(roomId, seat, root = ROOMS_ROOT) {
     if (snap) {
       const room = snap.val();
       if (room && room.lastMove && room.lastMove.moveId) {
-        lastAnimatedMoveId = room.lastMove.moveId;
+        animatedMoveIds = new Set([room.lastMove.moveId]);
       }
     }
     roomListenerRef = roomRef;
@@ -8889,7 +8934,7 @@ function startSpectating(roomId, root = ROOMS_ROOT) {
     if (snap) {
       const room = snap.val();
       if (room && room.lastMove && room.lastMove.moveId) {
-        lastAnimatedMoveId = room.lastMove.moveId;
+        animatedMoveIds = new Set([room.lastMove.moveId]);
       }
     }
     roomListenerRef = roomRef;
@@ -10463,7 +10508,7 @@ function placeCard(cellIndex) {
   }
   if (state.gameOver) state.suppressOverlay = true;
   const moveId = state.roomId + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-  if (state.mode === 'online') lastAnimatedMoveId = moveId;
+  if (state.mode === 'online') markMoveAnimated(moveId);
   const writeDone = writeLocalStateToRoom({ moveId, cellIndex, owner, card, captureResult });
   renderAll();
   playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDone });
