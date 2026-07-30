@@ -10009,9 +10009,24 @@ function closeCampaignLocations() {
   document.getElementById('campaignLocationsScreen').classList.add('hidden');
   openCampaignHome();
 }
-// Default background used wherever a specific piece of art is missing or
-// fails to load -- same file the Settings background picker defaults to.
+// Default background used only as a last-resort fallback (before #bgSelect
+// even exists yet, or if the player's own chosen background art itself
+// fails to load) -- same file the Settings background picker defaults to.
 const DEFAULT_BG_IMAGE = 'Backgrounds/Triple Triad.png';
+// Applies whatever Settings > Display > Background (#bgSelect) is currently
+// set to. Shared by #bgSelect's own 'change' listener (wired near the end
+// of the script) and every "not looking at a specific piece of Campaign-
+// location art anymore" reset point below (leaving a Campaign area, Campaign
+// Home, back to the main menu, etc.) -- previously those all hardcoded
+// DEFAULT_BG_IMAGE instead, silently overriding the player's own chosen
+// background with the Triple Triad art every time, regardless of what
+// they'd actually picked in Settings.
+function applySelectedBackground() {
+  const bgSelect = document.getElementById('bgSelect');
+  const value = bgSelect ? bgSelect.value : DEFAULT_BG_IMAGE;
+  const val = value === 'none' ? 'none' : `url("${value}")`;
+  document.body.style.setProperty('--bg-image', val);
+}
 function setBackgroundImageWithFallback(el, src, fallback) {
   el.style.backgroundImage = `url("${src}")`;
   const probe = new Image();
@@ -10059,13 +10074,13 @@ function campaignSetAreaBackground(location) {
   if (bgFile) {
     const probe = new Image();
     probe.onerror = () => {
-      document.body.style.setProperty('--bg-image', `url("${DEFAULT_BG_IMAGE}")`);
+      applySelectedBackground();
     };
     probe.src = src;
   }
 }
 function campaignResetBackgroundToDefault() {
-  document.body.style.setProperty('--bg-image', `url("${DEFAULT_BG_IMAGE}")`);
+  applySelectedBackground();
 }
 // The Locations grid isn't any one CAMPAIGN_LOCATIONS entry, so it can't use
 // CAMPAIGN_LOCATION_BG_FILE/campaignSetAreaBackground above -- it gets its
@@ -10076,7 +10091,7 @@ function campaignSetWorldMapBackground() {
   document.body.style.setProperty('--bg-image', `url("${src}")`);
   const probe = new Image();
   probe.onerror = () => {
-    document.body.style.setProperty('--bg-image', `url("${DEFAULT_BG_IMAGE}")`);
+    applySelectedBackground();
   };
   probe.src = src;
 }
@@ -17579,13 +17594,11 @@ shapeSelect.addEventListener('change', () => {
 });
 const bgSelect = document.getElementById('bgSelect');
 bgSelect.addEventListener('change', () => {
-  // Double quotes here, not single -- some filenames (Edea's House.png)
-  // contain an apostrophe that would otherwise prematurely close a
-  // single-quoted CSS url() string and silently drop the whole --bg-image
-  // declaration (invalid CSS values are just ignored, no error). Same fix
-  // as campaignSetAreaBackground's own url() construction elsewhere.
-  const val = bgSelect.value === 'none' ? 'none' : `url("${bgSelect.value}")`;
-  document.body.style.setProperty('--bg-image', val);
+  // See applySelectedBackground() near DEFAULT_BG_IMAGE earlier in the
+  // script -- same double-quoted url() construction (Edea's House.png's
+  // apostrophe would break a single-quoted one) shared with every
+  // Campaign-area background reset point.
+  applySelectedBackground();
 });
 // Background Opacity -- separate from the Theme/Player Colors/Background
 // pickers above in that it also has an admin-controlled default (see
