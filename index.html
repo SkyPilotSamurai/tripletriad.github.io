@@ -3797,6 +3797,9 @@
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuGilRewardsToggle"> CPU Gil Rewards</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignGilRewardsToggle" checked> Campaign Gil Rewards</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignSellingToggle"> Allow Selling in Campaign Shop</label></div>
+      <div class="settings-row checkbox-row" title="When the Random rule is active in Campaign, both sides draw fully at random from whatever they have access to, ignoring the match's point total entirely. Only affects Campaign -- Ranked/Free Play's Random rule already ignores points.">
+        <label><input type="checkbox" id="adminCampaignRandomIgnoresPointsToggle"> Random Rule Ignores Points (Campaign)</label>
+      </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
         <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="1" value="0">
@@ -4754,6 +4757,17 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignSellingEnabled`).on('value', snap => {
   if (toggle) toggle.checked = campaignSellingEnabled;
   if (typeof refreshShopBuySlot === 'function') refreshShopBuySlot();
 });
+// Random Rule Ignores Points (Campaign) -- off by default. See
+// startCampaignBattle's use of this and buildCampaignNpcRandomHand for what
+// it actually does at match time: when the Random rule is also active, both
+// sides draw fully at random from whatever they have access to instead of
+// respecting the match's point total.
+let campaignRandomIgnoresPointsEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).on('value', snap => {
+  campaignRandomIgnoresPointsEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminCampaignRandomIgnoresPointsToggle');
+  if (toggle) toggle.checked = campaignRandomIgnoresPointsEnabled;
+});
 // Region Card Bias -- 0-100%, off by default. See buildCampaignNpcHand's use
 // of CAMPAIGN_REGION_CARD_IDS for what this actually does at match time; this
 // is just the admin-editable knob for it, same live-sync pattern as the
@@ -4813,13 +4827,17 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNpcOneOfAKindHoldCap`).on('value', snap =>
   const input = document.getElementById('adminNpcOneOfAKindHoldCapInput');
   if (input && document.activeElement !== input) input.value = campaignNpcOneOfAKindHoldCap;
 });
-// One-of-a-Kind Play Chance -- 0-100%, defaults to 100 (always allowed,
-// i.e. unchanged from the old behavior) so existing games aren't silently
-// affected until an admin actively dials it down. See chooseCpuMove's use
-// of campaignEffectiveOneOfAKindPlayChancePercent for what this actually
-// does at match time: a Campaign NPC holding a one-of-a-kind (level 8-10 /
-// PuPu-style) card in hand only gets to consider playing it this often each
-// turn, same live-sync pattern as Region Card Bias above.
+// One-of-a-Kind Play Chance -- 0-100%, defaults to 100 (always allowed, i.e.
+// unchanged from the old behavior) so existing games aren't silently
+// affected until an admin actively dials it down. See
+// campaignRollForcedRareCards' use of campaignEffectiveOneOfAKindPlayChancePercent
+// for what this actually does at match time: rolled once per battle (not
+// per-turn -- a dealt hand always gets played out in full by match's end,
+// so a per-turn roll could only delay when the card got placed, never
+// actually keep it out of a battle), deciding whether a Campaign NPC's
+// guarded/won one-of-a-kind card gets forced into their hand for that match
+// at all. Campaign only -- non-Campaign CPU opponents are unaffected. Same
+// live-sync pattern as Region Card Bias above.
 let campaignOneOfAKindPlayChancePercent = 100;
 rtdb.ref(`${GAME_CONFIG_ROOT}/oneOfAKindPlayChancePercent`).on('value', snap => {
   const v = Number(snap.val());
@@ -5784,17 +5802,17 @@ const BOOSTER_PACK_BG_FILE = {
 const BOOSTER_PACKS = [
   { id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.png', cardIds: [12, 5, 36, 10, 59, 15, 8, 48, 3, 83] },
   { id: 'fire-cavern', name: 'Fire Cavern', image: 'fire-cavern.png', cardIds: [13, 37, 4, 85] },
-  { id: 'dollet', name: 'Dollet', image: 'dollet.png', cardIds: [55, 57, 58, 18, 1] },
+  { id: 'dollet', name: 'Dollet', image: 'dollet.png', cardIds: [55, 57, 58, 18, 1, 86] },
   { id: 'timber', name: 'Timber', image: 'timber.png', cardIds: [39, 17, 28, 18, 11, 60] },
-  { id: 'tomb-of-the-unknown-king', name: 'Tomb of the Unknown King', image: 'tomb-of-the-unknown-king.png', cardIds: [87, 88, 24, 23] },
+  { id: 'tomb-of-the-unknown-king', name: 'Tomb of the Unknown King', image: 'tomb-of-the-unknown-king.png', cardIds: [87, 88, 24, 23, 5, 13] },
   { id: 'galbadia-garden', name: 'Galbadia Garden', image: 'galbadia-garden.png', cardIds: [30, 21, 29, 25, 19, 38] },
-  { id: 'deling-city', name: 'Deling City', image: 'deling-city.png', cardIds: [61, 19, 22] },
-  { id: 'trabia-canyon', name: 'Trabia Canyon', image: 'trabia-canyon.png', cardIds: [52, 14, 27] },
-  { id: 'winter-island', name: 'Winter Island', image: 'winter-island.png', cardIds: [15, 27, 84, 14] },
-  { id: 'centra-ruins', name: 'Centra Ruins', image: 'centra-ruins.png', cardIds: [32, 54, 26, 30] },
-  { id: 'kashkabald-desert', name: 'Kashkabald Desert', image: 'kashkabald-desert.png', cardIds: [33, 47, 31, 68] },
-  { id: 'esthar', name: 'Esthar', image: 'esthar.png', cardIds: [46, 53, 41, 45, 40, 34, 29, 6, 44, 51, 62] },
-  { id: 'deep-sea-research-center', name: 'Deep Sea Research Center', image: 'deep-sea-research-center.png', cardIds: [97, 77, 20, 64, 42] },
+  { id: 'deling-city', name: 'Deling City', image: 'deling-city.png', cardIds: [61, 19, 22, 4] },
+  { id: 'trabia-canyon', name: 'Vienne Mountains', image: 'trabia-canyon.png', cardIds: [3, 14, 11, 52] },
+  { id: 'winter-island', name: 'Winter Island', image: 'winter-island.png', cardIds: [15, 27, 84, 14, 6, 28] },
+  { id: 'centra-ruins', name: 'Centra Ruins', image: 'centra-ruins.png', cardIds: [32, 54, 30, 24, 23, 92] },
+  { id: 'kashkabald-desert', name: 'Kashkabald Desert', image: 'kashkabald-desert.png', cardIds: [33, 47, 31, 68, 26, 38] },
+  { id: 'esthar', name: 'Esthar', image: 'esthar.png', cardIds: [46, 53, 41, 45, 40, 34, 6, 44, 51, 62] },
+  { id: 'deep-sea-research-center', name: 'Deep Sea Research Center', image: 'deep-sea-research-center.png', cardIds: [97, 77, 20, 64, 42, 46, 45, 52, 40, 99] },
   { id: 'ultimecia-castle', name: "Ultimecia's Castle", image: 'ultimecia-castle.png', cardIds: [73, 76, 72, 69, 66, 63, 70, 75] },
 ];
 // --- Campaign Mode --------------------------------------------------------
@@ -6224,7 +6242,7 @@ const CAMPAIGN_LOCATIONS = [
         rules: campaignEmptyRules({ same: true, sameWall: true, elemental: true }), cpuDifficulty: 3, cpuBehavior: 'elemental' },
       { id: 'presidential-aide', name: 'Presidential Aide', desc: 'Seen wandering the palace halls.',
         rules: campaignEmptyRules({ same: true, sameWall: true, elemental: true }), cpuDifficulty: 4, cpuBehavior: 'elemental', rewardCardId: 96 },
-      { id: 'laguna', name: 'Laguna', desc: 'An unlikely face to find wandering the Presidential Palace halls - and an unlikely one to be holding a rare card at all.',
+      { id: 'laguna', name: 'Laguna', desc: 'An unlikely face to find in the Presidential Palace.',
         rules: campaignEmptyRules({ same: true, sameWall: true, elemental: true }), cpuDifficulty: 4, cpuBehavior: 'elemental', rewardCardId: 110 },
       // The 2nd of the 2 later-location Skilled/Expert players who favor Fallen Ace.
       { id: 'odine', name: 'Odine', desc: "Esthar's eccentric doctor - and the hardest match in the city.",
@@ -6486,7 +6504,7 @@ function isOneOfAKindCardId(cardId) {
 // and the one-of-a-kind monsters are averaged SEPARATELY (never diluting
 // each other), since mixing them into one big average — the old approach —
 // meant a pool with a high proportion of rares (like Sacred/Minotaur
-// making up half of Tomb of the Unknown King's 4-card pool) dragged the
+// making up a third of Tomb of the Unknown King's 6-card pool) dragged the
 // price down below packs with no rares at all, even though those rares
 // are worth thousands of gil each. One-of-a-kind monsters only count for
 // boosterOneOfAKindPriceWeight() of a card "slot" (half their real pull
@@ -6608,8 +6626,9 @@ function cardStock(cardId) {
   }
   return 9;
 }
-function buildRandomHandIds(pointBudget, counts, handOrder) {
+function buildRandomHandIds(pointBudget, counts, handOrder, minLevel) {
   const hasBudget = pointBudget != null;
+  const hasFloor = minLevel != null && minLevel > 1;
   const added = [];
   while (handOrder.length + added.length < PICKER_HAND_SIZE) {
     const slotsFilledSoFar = handOrder.length + added.length;
@@ -6622,13 +6641,21 @@ function buildRandomHandIds(pointBudget, counts, handOrder) {
       : 0;
     const reserveForOtherSlots = hasBudget ? Math.max(0, slotsRemaining - 1) : 0;
     const perSlotCap = hasBudget ? Math.max(0, pointBudget - spent - reserveForOtherSlots) : Infinity;
-    const candidates = CARD_DB.filter(c => {
+    const baseFilter = c => {
       const remainingStock = cardStock(c.id) - (counts.get(c.id) || 0);
       if (remainingStock <= 0) return false;
       if ((counts.get(c.id) || 0) >= PICKER_MAX_COPIES) return false;
       if (hasBudget && c.level > perSlotCap) return false;
       return true;
-    });
+    };
+    // minLevel (campaignRandomCardsLevelFloor, Random Rule Ignores Points'
+    // Skill-based floor) only ever narrows the pool -- if the floor alone
+    // leaves nothing available this slot (e.g. the player's own collection
+    // is thin on higher-level stock right now), fall back to the
+    // unrestricted candidates for just this slot rather than dealing a
+    // short hand.
+    let candidates = hasFloor ? CARD_DB.filter(c => baseFilter(c) && c.level >= minLevel) : CARD_DB.filter(baseFilter);
+    if (hasFloor && candidates.length === 0) candidates = CARD_DB.filter(baseFilter);
     if (candidates.length === 0) break;
     const isUnused = c => (counts.get(c.id) || 0) === 0;
     let card;
@@ -6669,8 +6696,8 @@ function buildRandomHandIds(pointBudget, counts, handOrder) {
   }
   return added;
 }
-function buildRandomHand(pointBudget) {
-  const ids = buildRandomHandIds(pointBudget != null ? pointBudget : null, new Map(), []);
+function buildRandomHand(pointBudget, minLevel) {
+  const ids = buildRandomHandIds(pointBudget != null ? pointBudget : null, new Map(), [], minLevel);
   return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
 }
 function prefillHandFromPreviousPicks(previousPickIds, pointBudget) {
@@ -7800,12 +7827,12 @@ const CAMPAIGN_REGION_CARD_IDS = {
   'dollet': [55, 57, 58, 18, 1],
   'timber': [39, 17, 28, 18, 11, 60],
   'galbadia-garden': [30, 21, 29, 25, 19, 38],
-  'deling-city': [61, 19, 22],
+  'deling-city': [61, 19, 22, 4],
   'd-district-prison': [1, 17, 39, 50, 55],
   'winhill': [3, 10],
   'trabia-garden': [6, 14, 27, 52],
   'fishermans-horizon': [74, 55],
-  'centra-ruins': [32, 54, 26, 30],
+  'centra-ruins': [32, 54, 30, 24, 23, 92],
   'esthar': [46, 53, 41, 45, 40, 34, 29, 6, 44, 51, 62],
   'lunar-base': [52, 46, 45, 53, 42],
   'chocobo-forest': [],
@@ -7938,6 +7965,18 @@ function campaignPointBudgetForNpc(npc) {
 function campaignRollForcedRareCards(npc, baseBudget) {
   const candidates = campaignNpcRareCardCandidates(npc);
   if (!candidates.length) return { pointBudget: baseBudget, forcedRareCardIds: [] };
+  // One-of-a-Kind Play Chance -- see campaignEffectiveOneOfAKindPlayChancePercent.
+  // Rolled once per battle, right here, rather than per-turn inside
+  // chooseCpuMove: Triple Triad always plays a dealt hand out in full by the
+  // time a match ends (nothing ever sits unplayed), so gating turn-by-turn
+  // could only ever change *when* the card got placed, never actually keep
+  // it out of a battle -- which defeats the point of a play *chance*.
+  // Rolling here instead decides whether the NPC's rare candidate is even
+  // dealt into their hand for this match at all; a miss falls back to an
+  // ordinary hand, same as an NPC with no candidates at all gets above.
+  if (Math.random() * 100 >= campaignEffectiveOneOfAKindPlayChancePercent(npc)) {
+    return { pointBudget: baseBudget, forcedRareCardIds: [] };
+  }
   const picked = candidates[Math.floor(Math.random() * candidates.length)];
   return { pointBudget: baseBudget, forcedRareCardIds: [picked.id] };
 }
@@ -8089,6 +8128,60 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
   });
   return hand;
 }
+// Random Cards level floor, only relevant when Random Rule Ignores Points
+// is active (campaignRandomIgnoresPointsEnabled) -- with the point budget
+// gone entirely, a higher-Skill NPC would otherwise draw from the exact
+// same unrestricted pool as an Easy one, so this keeps Skill meaning
+// something: 1-3 (Easy/Casual/Average) still draws from the NPC's whole
+// active pool, 4 (Skilled) is floored to level 3+, 5 (Expert) is floored to
+// level 5+. Used by both buildCampaignNpcRandomHand (to actually build the
+// hand) and openCampaignBattleIntro (to label it on the confirm screen), so
+// the two always agree.
+function campaignRandomCardsLevelFloor(npc) {
+  const difficulty = npc && npc.cpuDifficulty;
+  if (difficulty === 5) return 5;
+  if (difficulty === 4) return 3;
+  return 1;
+}
+function campaignRandomCardsLabel(npc) {
+  const floor = campaignRandomCardsLevelFloor(npc);
+  return floor > 1 ? `Random Cards: Level ${floor}+` : 'Random Cards: All';
+}
+// Campaign counterpart to buildRandomHand(null) (the point-budget-ignoring
+// path already used for the player elsewhere) -- used instead of
+// buildCampaignNpcHand above whenever both the Random rule and the "Random
+// Rule Ignores Points" admin setting (campaignRandomIgnoresPointsEnabled)
+// are active. Skips the point budget, Region Card Bias, Double-Up %, and
+// elemental-guarantee machinery entirely and just draws each ordinary slot
+// uniformly at random from whatever this NPC actually has access to
+// (campaignActiveCardPool), narrowed by campaignRandomCardsLevelFloor above
+// -- "whatever either player has access to at random", same idea as the
+// player's own side (see startCampaignBattle), adjusted for Skill. Any
+// forced rare card(s) already decided by campaignRollForcedRareCards
+// (One-of-a-Kind Play Chance) are still guaranteed a slot, same as the
+// normal builder, since that roll already happened before this runs and
+// shouldn't be second-guessed here.
+function buildCampaignNpcRandomHand(npc, forcedRareCardIds) {
+  const fullPool = campaignActiveCardPool(npc);
+  const levelFloor = campaignRandomCardsLevelFloor(npc);
+  const flooredPool = levelFloor > 1 ? fullPool.filter(c => c.level >= levelFloor) : fullPool;
+  // Defensive fallback only -- an admin-edited card pool could in theory
+  // have nothing at/above the floor (e.g. a Skill 5 NPC whose Card Pool
+  // checklist was hand-trimmed to all-low-level cards); rather than crash
+  // on an empty pool, just fall back to the full pool that match.
+  const pool = flooredPool.length ? flooredPool : fullPool;
+  const rareCards = (forcedRareCardIds || []).map(id => CARD_DB.find(c => c.id === id)).filter(Boolean);
+  const otherSlots = Math.max(0, PICKER_HAND_SIZE - rareCards.length);
+  const others = [];
+  for (let i = 0; i < otherSlots; i++) {
+    others.push({ ...pool[Math.floor(Math.random() * pool.length)] });
+  }
+  const hand = others.slice();
+  rareCards.forEach(rareCard => {
+    hand.splice(Math.floor(Math.random() * (hand.length + 1)), 0, { ...rareCard });
+  });
+  return hand;
+}
 // Starts a Campaign battle against one NPC: sets up the CPU engine exactly
 // like a Practice/CPU match (same initGame()/resolveCaptures() path as
 // everywhere else), but with the NPC's own fixed rules/difficulty/behavior,
@@ -8130,13 +8223,25 @@ async function startCampaignBattle(locationId, npcId, rules, pointBudget, forced
   // right as the card picker opened. Leaving it out means the picker never
   // changes the music itself -- applyCampaignMatchMusic() below remains the
   // sole authority on what should be playing once the actual match starts.
+  // Random Rule Ignores Points -- admin-wide setting (see
+  // campaignRandomIgnoresPointsEnabled and its GAME_CONFIG_ROOT listener
+  // above). Only changes anything when the Random rule itself is also
+  // active this match; see buildCampaignNpcRandomHand for what it does to
+  // the NPC's side. The same Skill-based level floor (campaignRandomCardsLevelFloor)
+  // applies to the player's own random hand too, not just the NPC's -- see
+  // campaignRandomCardsLabel, which is what's actually shown on the intro
+  // screen, so both sides need to honor it for that label to stay accurate.
+  const randomIgnoresPoints = state.rules.random && campaignRandomIgnoresPointsEnabled;
+  const randomCardsMinLevel = randomIgnoresPoints ? campaignRandomCardsLevelFloor(npc) : null;
   const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(lastCampaignP1HandIds, pointBudget);
   const prefillP1ClosedSingle = state.closedSingleCardId ? state.closedSingleCardId.p1 : null;
   const p1Hand = state.rules.random
-    ? buildRandomHand(pointBudget)
+    ? buildRandomHand(randomIgnoresPoints ? null : pointBudget, randomCardsMinLevel)
     : await runCardPicker('p1', `Challenge: ${npc.name}`, pointBudget, prefillP1Ids, prefillP1ClosedSingle);
   lastCampaignP1HandIds = p1Hand.map(c => c.id);
-  const p2Hand = buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds);
+  const p2Hand = randomIgnoresPoints
+    ? buildCampaignNpcRandomHand(npc, forcedRareCardIds)
+    : buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds);
   state.closedSingleCardId = {
     p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
     p2: state.rules.closedSingle ? assignRandomClosedSingleCardId(p2Hand) : null,
@@ -8185,7 +8290,14 @@ function openCampaignBattleIntro(locationId, npcId) {
   document.getElementById('campaignIntroDifficulty').textContent = CPU_DIFFICULTY_LABELS[npc.cpuDifficulty] || '';
   document.getElementById('campaignIntroQuote').textContent = `"${campaignNpcQuote(npc)}"`;
   document.getElementById('campaignIntroRules').textContent = formatActiveRules(rules) || '[No rules]';
-  document.getElementById('campaignIntroPoints').textContent = `Point Max: ${pointBudget}`;
+  // Random Rule Ignores Points (campaignRandomIgnoresPointsEnabled) skips
+  // pointBudget entirely for both sides' hands (see startCampaignBattle) --
+  // showing the ordinary numeric cap here would be misleading since it's
+  // never actually enforced in that case, so this shows the Skill-based
+  // Random Cards label instead (see campaignRandomCardsLabel).
+  document.getElementById('campaignIntroPoints').textContent = (rules.random && campaignRandomIgnoresPointsEnabled)
+    ? campaignRandomCardsLabel(npc)
+    : `Point Max: ${pointBudget}`;
   const noteEl = document.getElementById('campaignIntroNote');
   if (noteEl) {
     // Reminds the player this NPC is still holding one-of-a-kind cards
@@ -11787,33 +11899,6 @@ function parseCpuDifficulty() {
   const behavior = state.cpuBehavior || 'normal';
   return { behavior, level };
 }
-// One-of-a-Kind Play Chance -- when a Campaign NPC (state.campaignNpcId) is
-// holding a one-of-a-kind (level 8-10 / PuPu-style) card, it should only be
-// "on the table" as a candidate move some percent of the time each turn
-// (see campaignEffectiveOneOfAKindPlayChancePercent), rather than always
-// being as available as an ordinary card. Rolled once per one-of-a-kind
-// card per turn here (not once per candidate move), and only ever narrows
-// the hand down -- if every card left in hand is one-of-a-kind, or the
-// rolls all happen to fail, the NPC still needs *something* to play, so a
-// wipeout is always backed off to "allow them all this turn" rather than
-// leaving chooseCpuMove with zero legal moves. Order/Chaos's allowedIdx
-// (see allowedHandIndex) is a hard rule constraint on which card must be
-// played -- there's no real choice for this to narrow in that case, so it's
-// skipped entirely rather than risk rolling out the one card the rules
-// force to be played. Non-Campaign CPU opponents (no NPC to look up) are
-// unaffected.
-function cpuAllowedHandIndices(owner, hand, allowedIdx) {
-  if (allowedIdx != null) return null;
-  const npc = state.campaignNpcId ? campaignFindNpc(state.campaignNpcId) : null;
-  if (!npc) return null;
-  const oneOfAKindIdx = [];
-  hand.forEach((card, idx) => { if (card && isOneOfAKindCardId(card.id)) oneOfAKindIdx.push(idx); });
-  if (!oneOfAKindIdx.length || oneOfAKindIdx.length === hand.length) return null;
-  const chance = campaignEffectiveOneOfAKindPlayChancePercent(npc);
-  const blocked = new Set(oneOfAKindIdx.filter(() => Math.random() * 100 >= chance));
-  if (!blocked.size) return null;
-  return hand.map((c, idx) => idx).filter(idx => !blocked.has(idx));
-}
 function chooseCpuMove() {
   const owner = 'p2';
   const hand = state.hands[owner];
@@ -11821,20 +11906,13 @@ function chooseCpuMove() {
   if (!hand || hand.length === 0 || openCells.length === 0) return null;
   const allowedIdx = allowedHandIndex(owner);
   const { behavior, level } = parseCpuDifficulty();
-  const playableIndices = cpuAllowedHandIndices(owner, hand, allowedIdx);
   if (level === 1) {
-    let idx;
-    if (allowedIdx != null) idx = allowedIdx;
-    else {
-      const pool = playableIndices || hand.map((c, i) => i);
-      idx = pool[Math.floor(Math.random() * pool.length)];
-    }
+    const idx = allowedIdx != null ? allowedIdx : Math.floor(Math.random() * hand.length);
     const cellIndex = openCells[Math.floor(Math.random() * openCells.length)];
     return { idx, cellIndex };
   }
   const scorer = CPU_BEHAVIOR_SCORERS[behavior] || cpuScoreNormal;
   let moves = generateCandidateMoves(hand, openCells);
-  if (playableIndices) moves = moves.filter(m => playableIndices.includes(m.idx));
   if (allowedIdx != null) moves = moves.filter(m => m.idx === allowedIdx);
   const scored = moves.map(move => ({ ...move, score: scorer(move, owner, level) }));
   const picked = pickFromScored(scored, level);
@@ -15690,6 +15768,10 @@ document.getElementById('adminCampaignGilRewardsToggle').addEventListener('chang
 document.getElementById('adminCampaignSellingToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignSellingEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCampaignRandomIgnoresPointsToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
