@@ -908,6 +908,114 @@
   .admin-cpu-level-input-group input.overridden { border-color: #ffa64f; color: #ffa64f; }
   #adminCpuWeightsLevelButtons { display: flex; gap: 8px; width: 100%; }
   #adminCpuWeightsLevelButtons .menu-btn { flex: 1; padding: 10px 14px; font-size: 15px; }
+  #adminRewardGilModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 310;
+  }
+  #adminRewardGilModal.show { display: flex; }
+  #adminRewardGilPanel {
+    position: relative;
+    background: var(--panel-bg, #1a2130);
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 12px;
+    padding: 12px 24px 14px;
+    width: 1120px;
+    max-width: 96vw;
+    max-height: 97vh;
+    overflow-y: auto;
+    margin-top: 2px;
+    color: #e6e6e6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #adminRewardGilPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
+  #adminRewardGilClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #adminRewardGilClose:hover { color: #eee; }
+  #adminRewardGilBody {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    column-gap: 28px;
+    row-gap: 2px;
+  }
+  #adminRewardGilBody .settings-row.checkbox-row { margin: 5px 0; }
+  #adminGilAmountsSection {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--panel-border, #4a5568);
+    columns: 2 260px;
+    column-gap: 32px;
+  }
+  #adminGilAmountsSection .admin-gil-group-header { break-inside: avoid; break-after: avoid-column; }
+  #adminGilAmountsSection .admin-gil-amount-row { break-inside: avoid; }
+  @media (max-width: 760px) {
+    #adminRewardGilBody { grid-template-columns: 1fr; }
+    #adminGilAmountsSection { columns: 1; }
+  }
+  #adminMiscModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 310;
+  }
+  #adminMiscModal.show { display: flex; }
+  #adminMiscPanel {
+    position: relative;
+    background: var(--panel-bg, #1a2130);
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 12px;
+    padding: 12px 20px 14px;
+    width: 560px;
+    max-width: 96vw;
+    max-height: 97vh;
+    overflow-y: auto;
+    margin-top: 2px;
+    color: #e6e6e6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #adminMiscPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
+  #adminMiscClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #adminMiscClose:hover { color: #eee; }
+  #adminMiscBody { width: 100%; display: flex; flex-direction: column; gap: 2px; }
   .settings-section { margin-bottom: 20px; }
   .settings-section h3 {
     color: #fff;
@@ -943,7 +1051,7 @@
   .admin-region-bias-row { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
   .admin-region-bias-row label { display: flex; justify-content: space-between; font-size: 14px; color: #eee; }
   .admin-region-bias-row #adminRegionCardBiasSlider { width: 100%; }
-  #adminSettingsSection input[type="number"] {
+  #adminRewardGilModal input[type="number"], #adminMiscModal input[type="number"] {
     color-scheme: dark;
     background: #1c2333;
     border: 1px solid var(--panel-border, #4a5568);
@@ -953,8 +1061,8 @@
     font-size: 14px;
     font-family: inherit;
   }
-  #adminSettingsSection input[type="number"]:focus { outline: none; border-color: #ffffff; }
-  #adminSettingsSection input[type="range"] {
+  #adminRewardGilModal input[type="number"]:focus, #adminMiscModal input[type="number"]:focus { outline: none; border-color: #ffffff; }
+  #adminRewardGilModal input[type="range"], #adminMiscModal input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     color-scheme: dark;
@@ -965,12 +1073,12 @@
     outline: none;
     cursor: pointer;
   }
-  #adminSettingsSection input[type="range"]::-webkit-slider-runnable-track {
+  #adminRewardGilModal input[type="range"]::-webkit-slider-runnable-track, #adminMiscModal input[type="range"]::-webkit-slider-runnable-track {
     height: 6px;
     border-radius: 4px;
     background: #2d3748;
   }
-  #adminSettingsSection input[type="range"]::-webkit-slider-thumb {
+  #adminRewardGilModal input[type="range"]::-webkit-slider-thumb, #adminMiscModal input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 16px;
@@ -981,17 +1089,17 @@
     border: 2px solid #1a2130;
     cursor: pointer;
   }
-  #adminSettingsSection input[type="range"]::-moz-range-track {
+  #adminRewardGilModal input[type="range"]::-moz-range-track, #adminMiscModal input[type="range"]::-moz-range-track {
     height: 6px;
     border-radius: 4px;
     background: #2d3748;
   }
-  #adminSettingsSection input[type="range"]::-moz-range-progress {
+  #adminRewardGilModal input[type="range"]::-moz-range-progress, #adminMiscModal input[type="range"]::-moz-range-progress {
     height: 6px;
     border-radius: 4px;
     background: #4f8ef7;
   }
-  #adminSettingsSection input[type="range"]::-moz-range-thumb {
+  #adminRewardGilModal input[type="range"]::-moz-range-thumb, #adminMiscModal input[type="range"]::-moz-range-thumb {
     width: 16px;
     height: 16px;
     border-radius: 50%;
@@ -999,7 +1107,7 @@
     border: 2px solid #1a2130;
     cursor: pointer;
   }
-  #adminSettingsSection input[type="range"]:focus { outline: none; }
+  #adminRewardGilModal input[type="range"]:focus, #adminMiscModal input[type="range"]:focus { outline: none; }
   .admin-region-bias-hint { font-size: 11px; color: #8a92a6; line-height: 1.4; }
   .checkbox-grid .settings-row { margin: 4px 0; }
   .checkbox-grid-header {
@@ -3458,6 +3566,8 @@
           <button class="menu-btn" id="menuAdminEditLeaderboard">Edit Leaderboard</button>
           <button class="menu-btn" id="menuAdminNpcEditor">Edit Campaign NPCs</button>
           <button class="menu-btn" id="menuAdminCpuWeights">CPU AI Weights</button>
+          <button class="menu-btn" id="menuAdminRewardGil">Reward &amp; Gil Settings</button>
+          <button class="menu-btn" id="menuAdminMisc">Misc</button>
         </div>
       </div>
     </div>
@@ -3789,56 +3899,6 @@
         </div>
       </div>
       <audio id="bgAudio" loop></audio>
-    </div>
-    <div class="settings-section hidden" id="adminSettingsSection">
-      <h3>Admin</h3>
-      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminGilRewardsToggle" checked> Free Play Gil Rewards</label></div>
-      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuGilRewardsToggle"> CPU Gil Rewards</label></div>
-      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignGilRewardsToggle" checked> Campaign Gil Rewards</label></div>
-      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignSellingToggle"> Allow Selling in Campaign Shop</label></div>
-      <div class="settings-row checkbox-row" title="When the Random rule is active in Campaign, both sides draw fully at random from whatever they have access to, ignoring the match's point total entirely. Only affects Campaign -- Ranked/Free Play's Random rule already ignores points.">
-        <label><input type="checkbox" id="adminCampaignRandomIgnoresPointsToggle"> Random Rule Ignores Points (Campaign)</label>
-      </div>
-      <div class="settings-row checkbox-row" title="Widens the Main Menu, Tutorial, Campaign Locations, and NPC Select/Challenge panels, and increases text size across menus and buttons site-wide. Applies live to every player -- no per-player override.">
-        <label><input type="checkbox" id="adminMobileModeToggle"> Mobile Mode</label>
-      </div>
-      <div class="settings-row admin-region-bias-row" title="Scales menu button size and title text while Mobile Mode is on.">
-        <label for="adminMobileBtnScaleSlider">Mobile Menu Button Size: <span id="adminMobileBtnScaleValue">150%</span></label>
-        <input type="range" id="adminMobileBtnScaleSlider" min="100" max="250" step="5" value="150">
-      </div>
-      <div class="settings-row admin-region-bias-row" title="Scales general text (panel headers, labels, campaign titles/descriptions, NPC list text) while Mobile Mode is on.">
-        <label for="adminMobileTextScaleSlider">Mobile General Text Size: <span id="adminMobileTextScaleValue">125%</span></label>
-        <input type="range" id="adminMobileTextScaleSlider" min="100" max="200" step="5" value="125">
-      </div>
-      <div class="settings-row admin-region-bias-row">
-        <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
-        <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="1" value="0">
-      </div>
-      <div class="settings-row admin-region-bias-row">
-        <label for="adminBoosterDuplicateWeightSlider">Booster Duplicate Avoidance: <span id="adminBoosterDuplicateWeightValue">0%</span></label>
-        <input type="range" id="adminBoosterDuplicateWeightSlider" min="0" max="100" step="1" value="0">
-      </div>
-      <div class="settings-row admin-region-bias-row">
-        <label for="adminBoosterRareChanceSlider">Booster One-of-a-Kind Odds: <span id="adminBoosterRareChanceValue">12.5%</span></label>
-        <input type="range" id="adminBoosterRareChanceSlider" min="0" max="100" step="0.5" value="12.5">
-      </div>
-      <div class="settings-row admin-region-bias-row" title="Only caps how many of the player's own one-of-a-kind cards a Campaign NPC can hold at once from having won them off the player -- never applies to an NPC's own reward card or anything already in their normal pool.">
-        <label for="adminNpcOneOfAKindHoldCapInput">Campaign NPC One-of-a-Kind Hold Cap</label>
-        <input type="number" id="adminNpcOneOfAKindHoldCapInput" min="0" max="5" step="1" value="1">
-      </div>
-      <div class="settings-row admin-region-bias-row">
-        <label for="adminOneOfAKindPlayChanceSlider">One-of-a-Kind Play Chance: <span id="adminOneOfAKindPlayChanceValue">100%</span></label>
-        <input type="range" id="adminOneOfAKindPlayChanceSlider" min="0" max="100" step="1" value="100">
-      </div>
-      <div class="settings-row admin-region-bias-row">
-        <label for="adminMatchTextIntensitySlider">Match Text Color Intensity: <span id="adminMatchTextIntensityValue">0%</span> lower</label>
-        <input type="range" id="adminMatchTextIntensitySlider" min="0" max="100" step="1" value="0">
-      </div>
-      <div class="settings-row admin-region-bias-row">
-        <label for="adminBgOpacitySlider">Default Background Opacity: <span id="adminBgOpacityValue">25%</span></label>
-        <input type="range" id="adminBgOpacitySlider" min="0" max="100" step="1" value="25">
-      </div>
-      <div id="adminGilAmountsSection"></div>
     </div>
   </div>
 </div>
@@ -4257,6 +4317,69 @@
       </div>
     </div>
     <div id="adminCpuWeightsStatus"></div>
+  </div>
+</div>
+<div id="adminRewardGilModal">
+  <div id="adminRewardGilPanel">
+    <button id="adminRewardGilClose" aria-label="Close">✕</button>
+    <h2>Reward &amp; Gil Settings</h2>
+    <div id="adminRewardGilBody">
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminGilRewardsToggle" checked> Free Play Gil Rewards</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuGilRewardsToggle"> CPU Gil Rewards</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignGilRewardsToggle" checked> Campaign Gil Rewards</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCampaignSellingToggle"> Allow Selling in Campaign Shop</label></div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminBoosterDuplicateWeightSlider">Booster Duplicate Avoidance: <span id="adminBoosterDuplicateWeightValue">0%</span></label>
+        <input type="range" id="adminBoosterDuplicateWeightSlider" min="0" max="100" step="1" value="0">
+      </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminBoosterRareChanceSlider">Booster One-of-a-Kind Odds: <span id="adminBoosterRareChanceValue">12.5%</span></label>
+        <input type="range" id="adminBoosterRareChanceSlider" min="0" max="100" step="0.5" value="12.5">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Only caps how many of the player's own one-of-a-kind cards a Campaign NPC can hold at once from having won them off the player -- never applies to an NPC's own reward card or anything already in their normal pool.">
+        <label for="adminNpcOneOfAKindHoldCapInput">Campaign NPC One-of-a-Kind Hold Cap</label>
+        <input type="number" id="adminNpcOneOfAKindHoldCapInput" min="0" max="5" step="1" value="1">
+      </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminOneOfAKindPlayChanceSlider">One-of-a-Kind Play Chance: <span id="adminOneOfAKindPlayChanceValue">100%</span></label>
+        <input type="range" id="adminOneOfAKindPlayChanceSlider" min="0" max="100" step="1" value="100">
+      </div>
+      <div id="adminGilAmountsSection"></div>
+    </div>
+  </div>
+</div>
+<div id="adminMiscModal">
+  <div id="adminMiscPanel">
+    <button id="adminMiscClose" aria-label="Close">✕</button>
+    <h2>Misc Settings</h2>
+    <div id="adminMiscBody">
+      <div class="settings-row checkbox-row" title="When the Random rule is active in Campaign, both sides draw fully at random from whatever they have access to, ignoring the match's point total entirely. Only affects Campaign -- Ranked/Free Play's Random rule already ignores points.">
+        <label><input type="checkbox" id="adminCampaignRandomIgnoresPointsToggle"> Random Rule Ignores Points (Campaign)</label>
+      </div>
+      <div class="settings-row checkbox-row" title="Widens the Main Menu, Tutorial, Campaign Locations, and NPC Select/Challenge panels, and increases text size across menus and buttons site-wide. Applies live to every player -- no per-player override.">
+        <label><input type="checkbox" id="adminMobileModeToggle"> Mobile Mode</label>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Scales menu button size and title text while Mobile Mode is on.">
+        <label for="adminMobileBtnScaleSlider">Mobile Menu Button Size: <span id="adminMobileBtnScaleValue">150%</span></label>
+        <input type="range" id="adminMobileBtnScaleSlider" min="100" max="250" step="5" value="150">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Scales general text (panel headers, labels, campaign titles/descriptions, NPC list text) while Mobile Mode is on.">
+        <label for="adminMobileTextScaleSlider">Mobile General Text Size: <span id="adminMobileTextScaleValue">125%</span></label>
+        <input type="range" id="adminMobileTextScaleSlider" min="100" max="200" step="5" value="125">
+      </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
+        <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="1" value="0">
+      </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminMatchTextIntensitySlider">Match Text Color Intensity: <span id="adminMatchTextIntensityValue">0%</span> lower</label>
+        <input type="range" id="adminMatchTextIntensitySlider" min="0" max="100" step="1" value="0">
+      </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminBgOpacitySlider">Default Background Opacity: <span id="adminBgOpacityValue">25%</span></label>
+        <input type="range" id="adminBgOpacitySlider" min="0" max="100" step="1" value="25">
+      </div>
+    </div>
   </div>
 </div>
 <div id="leaderboardModal">
@@ -4788,35 +4911,12 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomIgnoresPoints`).on('value', snap => 
   const toggle = document.getElementById('adminCampaignRandomIgnoresPointsToggle');
   if (toggle) toggle.checked = campaignRandomIgnoresPointsEnabled;
 });
-function applyMobileModeViewport(enabled) {
-  // Mobile Mode's menu/campaign/tutorial CSS lives inside @media (max-width:
-  // 700px). Without a viewport meta tag, phones report their default ~980px
-  // layout viewport for media-query purposes (not the real screen width),
-  // so that query doesn't reliably reflect the actual device. Injecting the
-  // tag only while Mobile Mode is on makes those menu screens reactive to
-  // the real width; removing it when off restores the original no-tag
-  // behavior everywhere (including the match/picker/shop screens, which
-  // still rely on that auto-shrink-to-fit behavior and don't yet have
-  // dedicated mobile layouts).
-  let meta = document.querySelector('meta[name="viewport"]');
-  if (enabled) {
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.setAttribute('name', 'viewport');
-      document.head.insertBefore(meta, document.head.firstChild);
-    }
-    meta.setAttribute('content', 'width=device-width, initial-scale=1');
-  } else if (meta) {
-    meta.remove();
-  }
-}
 let mobileModeEnabled = false;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).on('value', snap => {
   mobileModeEnabled = snap.val() === true;
   const toggle = document.getElementById('adminMobileModeToggle');
   if (toggle) toggle.checked = mobileModeEnabled;
   document.body.classList.toggle('mobile-mode', mobileModeEnabled);
-  applyMobileModeViewport(mobileModeEnabled);
 });
 let mobileMenuButtonScalePercent = 150;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).on('value', snap => {
@@ -13895,8 +13995,6 @@ function updateAuthUi() {
   const isAdmin = !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
   const adminSection = document.getElementById('menuSectionAdmin');
   if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
-  const adminSettingsSection = document.getElementById('adminSettingsSection');
-  if (adminSettingsSection) adminSettingsSection.classList.toggle('hidden', !isAdmin);
   const elementalAdvancedSettings = document.getElementById('elementalAdvancedSettings');
   if (elementalAdvancedSettings) elementalAdvancedSettings.classList.toggle('hidden', !isAdmin);
 }
@@ -14064,6 +14162,8 @@ function initMainMenu() {
   initAdminEditLbUi();
   initAdminNpcEditorUi();
   initAdminCpuWeightsUi();
+  initAdminRewardGilUi();
+  initAdminMiscUi();
 }
 function initAccountUi() {
   updateAuthUi();
@@ -15531,6 +15631,44 @@ function initAdminCpuWeightsUi() {
       } finally {
         levelSaveDefaultsBtn.disabled = false;
       }
+    });
+  }
+}
+function openAdminRewardGilModal() {
+  playSfx('cursorMove');
+  document.getElementById('adminRewardGilModal').classList.add('show');
+}
+function closeAdminRewardGilModal() {
+  document.getElementById('adminRewardGilModal').classList.remove('show');
+}
+function initAdminRewardGilUi() {
+  const adminBtn = document.getElementById('menuAdminRewardGil');
+  if (adminBtn) adminBtn.addEventListener('click', openAdminRewardGilModal);
+  const closeBtn = document.getElementById('adminRewardGilClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeAdminRewardGilModal(); });
+  const modal = document.getElementById('adminRewardGilModal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      if (e.target.id === 'adminRewardGilModal') { playSfx('cursorCancel'); closeAdminRewardGilModal(); }
+    });
+  }
+}
+function openAdminMiscModal() {
+  playSfx('cursorMove');
+  document.getElementById('adminMiscModal').classList.add('show');
+}
+function closeAdminMiscModal() {
+  document.getElementById('adminMiscModal').classList.remove('show');
+}
+function initAdminMiscUi() {
+  const adminBtn = document.getElementById('menuAdminMisc');
+  if (adminBtn) adminBtn.addEventListener('click', openAdminMiscModal);
+  const closeBtn = document.getElementById('adminMiscClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeAdminMiscModal(); });
+  const modal = document.getElementById('adminMiscModal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      if (e.target.id === 'adminMiscModal') { playSfx('cursorCancel'); closeAdminMiscModal(); }
     });
   }
 }
