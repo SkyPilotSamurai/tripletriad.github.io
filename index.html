@@ -3179,6 +3179,36 @@
     border: 2px solid #1a2130;
     cursor: pointer;
   }
+
+  /* --- Mobile layout fixes (main menu, card picker, shop, in-match board+hands) ---
+     Strategy: reuse the file's existing `zoom` scaling convention (already used by
+     .board-col/.hand at zoom:1.25 to enlarge for desktop) but point it the other way
+     to shrink whole fixed-px layouts uniformly for small screens. Zoom scales every
+     descendant pixel value together -- card sizes, the .hand.stack negative-margin
+     card-overlap fan, hit-zones, #topbar's width (locked to #board's grid math),
+     font-sizes, background-size -- so nothing needs separate per-property overrides
+     and none of the existing desktop math has to be duplicated or risked breaking.
+     Tiered by width since one flat zoom can't fit both a 700px tablet and a 320px
+     phone well. */
+  @media (max-width: 700px) {
+    body { padding: 0 8px 8px; overflow-x: hidden; overflow-y: auto; }
+    #pickerScreen, #shopScreen { padding: 0 8px 16px; }
+
+    #menuTitle { font-size: clamp(24px, 8vw, 40px); }
+    .menu-btn { padding: 12px 10px; font-size: clamp(14px, 4.2vw, 20px); }
+    .menu-section-grid { gap: 8px; }
+
+    .board-col, .hand, .hand:not(.stack) { zoom: 0.55; }
+    #pickerGrid, #pickerHandWrap, #shopGrid, #shopBuyWrap { zoom: 0.55; }
+  }
+  @media (max-width: 480px) {
+    .board-col, .hand, .hand:not(.stack) { zoom: 0.42; }
+    #pickerGrid, #pickerHandWrap, #shopGrid, #shopBuyWrap { zoom: 0.42; }
+  }
+  @media (max-width: 380px) {
+    .board-col, .hand, .hand:not(.stack) { zoom: 0.32; }
+    #pickerGrid, #pickerHandWrap, #shopGrid, #shopBuyWrap { zoom: 0.32; }
+  }
 </style>
 </head>
 <body class="layout-og shape-natural theme-default">
