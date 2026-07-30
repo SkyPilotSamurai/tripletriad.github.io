@@ -3403,6 +3403,11 @@
         <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="5" value="0">
         <div class="admin-region-bias-hint">Chance each card slot in a Campaign opponent's hand prefers a card native to their own area (same area lists the Card Shop's booster packs use) over the ordinary pool.</div>
       </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminBoosterDuplicateWeightSlider">Booster Duplicate Weight: <span id="adminBoosterDuplicateWeightValue">0%</span></label>
+        <input type="range" id="adminBoosterDuplicateWeightSlider" min="0" max="100" step="5" value="0">
+        <div class="admin-region-bias-hint">Chance each ordinary booster slot prefers a card not already pulled earlier in that same pack, lowering the odds of a pack giving the same card twice. Ignores the player's actual inventory entirely. Never affects one-of-a-kind cards (PuPu, level 8-10) -- those already get auto-refunded as gil instead of duplicated.</div>
+      </div>
       <div id="adminGilAmountsSection"></div>
     </div>
   </div>
@@ -4330,6 +4335,22 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
   const label = document.getElementById('adminRegionCardBiasValue');
   if (slider && document.activeElement !== slider) slider.value = campaignRegionCardBiasPercent;
   if (label) label.textContent = `${campaignRegionCardBiasPercent}%`;
+});
+// Booster Duplicate Weight -- 0-100%, off by default. See
+// drawBoosterPackCards' use of this for what it actually does; this is just
+// the admin-editable knob, same live-sync pattern as Region Card Bias
+// above. Only ever weights ordinary (non-one-of-a-kind) booster slots away
+// from cards the player already owns -- PuPu/level 8-10 cards keep their
+// own separate, unrelated duplicate handling (auto-refund) regardless of
+// this setting.
+let boosterDuplicateWeightPercent = 0;
+rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).on('value', snap => {
+  const v = Number(snap.val());
+  boosterDuplicateWeightPercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 0;
+  const slider = document.getElementById('adminBoosterDuplicateWeightSlider');
+  const label = document.getElementById('adminBoosterDuplicateWeightValue');
+  if (slider && document.activeElement !== slider) slider.value = boosterDuplicateWeightPercent;
+  if (label) label.textContent = `${boosterDuplicateWeightPercent}%`;
 });
 let currentUser = null;
 let currentUserProfile = null;
@@ -5956,18 +5977,36 @@ function boosterPackPrice(pack) {
 // roll for the whole pack, and if it hits, exactly one random slot in the
 // pack becomes a one-of-a-kind pull — the rest (or all of it, on the other
 // 90% of pack opens) is drawn from the pack's regular cards.
+// Ignores the player's actual inventory entirely -- this is purely about
+// THIS pack's own 3 slots. Per the admin-editable boosterDuplicateWeightPercent
+// setting below, each ordinary (non-one-of-a-kind) slot after the first has
+// a chance to prefer a card not already pulled earlier in this same pack,
+// lowering (not eliminating, at less than 100%) the odds of the pack handing
+// out two copies of the same card in one opening. At 0% (default), every
+// slot draws exactly like before -- plain uniform random, duplicates just
+// as likely as anything else. Never touches the rare slot -- one-of-a-kind
+// cards keep their own separate, unrelated duplicate handling (auto-refund
+// against the player's real inventory) in openBoosterPack.
 function drawBoosterPackCards(pack, count) {
   const rareIds = pack.cardIds.filter(isOneOfAKindCardId);
   const commonIds = pack.cardIds.filter(id => !isOneOfAKindCardId(id));
   const drawFrom = pool => pool[Math.floor(Math.random() * pool.length)];
   const packHasRareSlot = rareIds.length && commonIds.length && Math.random() < BOOSTER_ONE_OF_A_KIND_PULL_CHANCE;
   const rareSlot = packHasRareSlot ? Math.floor(Math.random() * count) : -1;
+  // Grows as this pack's own ordinary draws land.
+  const alreadyPulledThisPack = new Set();
   const results = [];
   for (let i = 0; i < count; i++) {
     if (i === rareSlot) {
       results.push(drawFrom(rareIds));
     } else {
-      results.push(drawFrom(commonIds.length ? commonIds : pack.cardIds));
+      const notYetPulled = commonIds.filter(id => !alreadyPulledThisPack.has(id));
+      const preferNotYetPulled = notYetPulled.length
+        && Math.random() * 100 < boosterDuplicateWeightPercent;
+      const pool = preferNotYetPulled ? notYetPulled : (commonIds.length ? commonIds : pack.cardIds);
+      const picked = drawFrom(pool);
+      alreadyPulledThisPack.add(picked);
+      results.push(picked);
     }
   }
   return results;
@@ -14850,6 +14889,16 @@ document.getElementById('adminRegionCardBiasSlider').addEventListener('change', 
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).set(v).catch(() => {});
 });
+document.getElementById('adminBoosterDuplicateWeightSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminBoosterDuplicateWeightValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminBoosterDuplicateWeightSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).set(v).catch(() => {});
+});
 // -- Admin: editable gil reward amounts -----------------------------------
 // Each entry is one number the admin can tune at runtime: which live
 // variable/table it controls (get/set), a label for the UI, and the key it's
@@ -16211,17 +16260,21 @@ async function openBoosterPack() {
     await userRef.child('gil').set(newGil);
     if (currentUserProfile) currentUserProfile.gil = newGil;
     // Draw cards from the pack's pool (with replacement — duplicates are
-    // normal for a booster) and credit them to the collection right away.
-    // The stock/owned counts update in the background here, before the
-    // opening animation below reveals each card to the player. One-of-a-kind
-    // cards (PuPu, and any level 8-10 card) can't be stocked twice — if the
-    // player already owns one, the pull is auto-sold back for half price
-    // instead of granting a duplicate, and the reveal step says as much.
+    // still possible for a booster, just weighted against WITHIN this same
+    // pack's own 3 slots per boosterDuplicateWeightPercent -- see
+    // drawBoosterPackCards; the player's real inventory plays no part in
+    // that) and credit them to the collection right away. The stock/owned
+    // counts update in the background here, before the opening animation
+    // below reveals each card to the player. One-of-a-kind cards (PuPu, and
+    // any level 8-10 card) can't be stocked twice — if the player already
+    // owns one, the pull is auto-sold back for half price instead of
+    // granting a duplicate, and the reveal step says as much; that's a
+    // separate, unrelated check against the player's actual inventory.
+    const collectionForOwnedCheck = shopCampaignMode ? currentCampaignSave : profile;
     const pulledIds = drawBoosterPackCards(pack, BOOSTER_CARDS_PER_PACK);
     const ownedCount = {};
     const pulledResults = [];
     let refundGil = 0;
-    const collectionForOwnedCheck = shopCampaignMode ? currentCampaignSave : profile;
     for (const id of pulledIds) {
       const card = CARD_DB.find(c => c.id === id);
       if (!(id in ownedCount)) ownedCount[id] = collectionStockOf(collectionForOwnedCheck, id);
