@@ -9644,6 +9644,11 @@ function backToTutorialList() {
   hideTutorialOverlayUi();
   document.getElementById('tutorialListScreen').classList.remove('hidden');
   renderTutorialLists();
+  // Doesn't route through showMenuScreen()/showGameScreen() (it goes
+  // straight to the tutorial list, not the main menu or another match), so
+  // it needs its own call to cancel any banner still mid-animation from the
+  // demo just left -- same reasoning as those two functions.
+  resetRuleBanner();
 }
 function stageTutorialScenario(rule, skipRender) {
   stopTurnTimer();
@@ -13446,15 +13451,34 @@ const RESULT_GRAPHICS = {
 // in the order they were requested, regardless of how many moves race to
 // request one.
 let ruleBannerQueue = Promise.resolve();
+// Bumped by resetRuleBanner() below whenever the screen a banner belongs to
+// gets abandoned mid-animation (leaving a match/tutorial demo back to a
+// menu, opening a different tutorial rule, etc.). showRuleBanner captures
+// the current token at call time and checks it again right before it would
+// actually mutate the shared element -- if it's changed, that call is
+// stale (its match/screen is gone) and it skips itself instead of popping
+// up moments later over whatever's now on screen. Nothing else in
+// playCardPlacementSequence's setTimeout chain was ever cancellable, which
+// is what let a banner from an abandoned tutorial demo (or, in principle,
+// any abruptly-left match) surface briefly on top of an unrelated screen.
+let ruleBannerToken = 0;
+function resetRuleBanner() {
+  ruleBannerToken++;
+  const el = document.getElementById('ruleBanner');
+  if (el) el.classList.remove('show');
+  ruleBannerQueue = Promise.resolve();
+}
 function showRuleBanner(name) {
+  const myToken = ruleBannerToken;
   const run = () => new Promise(resolve => {
+    if (myToken !== ruleBannerToken) { resolve(); return; }
     const el = document.getElementById('ruleBanner');
     el.src = RULE_BANNERS[name];
     el.classList.toggle('rule-up', name === 'up');
     el.classList.add('show');
     playSfx('cardEvent');
     setTimeout(() => {
-      el.classList.remove('show');
+      if (myToken === ruleBannerToken) el.classList.remove('show');
       setTimeout(resolve, 200);
     }, 650);
   });
@@ -14117,11 +14141,20 @@ function showMenuScreen() {
   setMenuStatus('');
   campaignClearRuntimeState();
   tryStartMusicIfEnabled();
+  // Cancels any Same/Plus/Up/Combo banner still mid-animation (or queued
+  // behind one) from whatever match/tutorial demo is being left -- see
+  // resetRuleBanner. Without this, that banner could still pop up moments
+  // later over the main menu itself.
+  resetRuleBanner();
 }
 function showGameScreen() {
   document.getElementById('mainMenu').classList.add('hidden');
   document.getElementById('gameScreen').classList.remove('hidden');
   tryStartMusicIfEnabled();
+  // Same reasoning as showMenuScreen() -- a fresh match/tutorial rule is
+  // about to start, so any banner left over from whatever was on screen
+  // before shouldn't be able to surface on top of it.
+  resetRuleBanner();
 }
 function setMenuStatus(msg) {
   document.getElementById('menuStatus').textContent = msg || '';
