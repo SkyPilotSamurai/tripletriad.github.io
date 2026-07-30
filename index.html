@@ -39,7 +39,13 @@
        at this default pair's own saturation/lightness "intensity" so none
        reads as washed-out or overpowering next to another. Picking the same
        color the other seat already has swaps the two instead of allowing
-       an overlap, so P1 and P2 can never match. */
+       an overlap, so P1 and P2 can never match. The "-a" (bright) stop
+       doubles as the color for every in-match player-colored text label --
+       #scoreP1/#scoreP2, #turnIndicator's turn-p1/turn-p2, #matchupP1Name/
+       #matchupP2Name, #firstPlayerLabel, and .picker-hand-points-spent all
+       read color: var(--p1-color-a)/var(--p2-color-a) instead of their own
+       hardcoded hex, so that text always matches whatever colors the player
+       currently has chosen. */
     --p1-color-a: #3a7bd5;
     --p1-color-b: #163a70;
     --p2-color-a: #ff5fae;
@@ -104,8 +110,8 @@
     border-radius: 12px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
   }
-  #scoreP1 { color: #3a8fe6; font-size: 60px; transform: translate(30px, -4px); }
-  #scoreP2 { color: #ff4fa3; font-size: 60px; transform: translate(-30px, -4px); }
+  #scoreP1 { color: var(--p1-color-a, #3a8fe6); font-size: 60px; transform: translate(30px, -4px); }
+  #scoreP2 { color: var(--p2-color-a, #ff4fa3); font-size: 60px; transform: translate(-30px, -4px); }
   #scoreP1, #scoreP2, #turnIndicator {
     text-shadow:
       -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000,
@@ -121,8 +127,8 @@
   #rulesIndicator { font-size: 12px; color: #8a92a6; letter-spacing: 0.2px; max-width: 270px; text-align: center; }
   #rulesIndicator.rules-wrapped { font-size: 9px; }
   #turnIndicator { font-size: 17px; color: #ccc; font-weight: bold; }
-  #turnIndicator.turn-p1 { color: #3a8fe6; }
-  #turnIndicator.turn-p2 { color: #ff4fa3; }
+  #turnIndicator.turn-p1 { color: var(--p1-color-a, #3a8fe6); }
+  #turnIndicator.turn-p2 { color: var(--p2-color-a, #ff4fa3); }
   #turnTimer { font-size: 13px; color: #888; font-variant-numeric: tabular-nums; }
   #turnTimer.low { color: #ff4444; }
   #matchupBox {
@@ -159,8 +165,8 @@
   }
   #spectateNewGamePrompt.hidden { display: none; }
   #spectateNewGamePromptBtn { padding: 8px 16px; font-size: 13px; }
-  #matchupP1Name { color: #3a8fe6; }
-  #matchupP2Name { color: #ff4fa3; }
+  #matchupP1Name { color: var(--p1-color-a, #3a8fe6); }
+  #matchupP2Name { color: var(--p2-color-a, #ff4fa3); }
   #matchupP1Name, #matchupP2Name {
     max-width: 170px;
     overflow: hidden;
@@ -1570,8 +1576,8 @@
        Color Intensity dial as #scoreP1/#scoreP2/#turnIndicator etc. */
     filter: saturate(var(--match-color-intensity, 100%));
   }
-  #firstPlayerLabel.first-player-p1 { color: #3a8fe6; }
-  #firstPlayerLabel.first-player-p2 { color: #ff4fa3; }
+  #firstPlayerLabel.first-player-p1 { color: var(--p1-color-a, #3a8fe6); }
+  #firstPlayerLabel.first-player-p2 { color: var(--p2-color-a, #ff4fa3); }
   #activeHandCursor {
     position: fixed;
     width: 51px;
@@ -2456,12 +2462,12 @@
     transform: translateY(-12px);
   }
   .picker-hand-points-spent {
-    color: #3a8fe6;
+    color: var(--p1-color-a, #3a8fe6);
     /* See --match-color-intensity on body up top -- same Admin > Match Text
        Color Intensity dial as #scoreP1/#scoreP2/#turnIndicator etc. */
     filter: saturate(var(--match-color-intensity, 100%));
   }
-  .picker-hand-points-spent.picker-points-p2 { color: #ff4fa3; }
+  .picker-hand-points-spent.picker-points-p2 { color: var(--p2-color-a, #ff4fa3); }
   .picker-hand-points-total { color: #ffffff; }
   .picker-hand-points-spent.picker-budget-over { color: #ffa64f; }
   #pickerFooter {
@@ -2470,9 +2476,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin-top: 22px;
-    padding-top: 14px;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 2px;
     width: 100%;
     max-width: 1100px;
   }
@@ -2721,9 +2727,9 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin-top: 22px;
-    padding-top: 14px;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 2px;
     width: 100%;
     max-width: 1100px;
   }
@@ -2840,7 +2846,18 @@
     transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
   }
   .tutorial-rule-btn:hover { background: var(--btn-bg-hover, #2d3748); border-color: #5a6a85; transform: translateY(-1px); }
-  #tutorialListFooter { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 22px; width: 100%; max-width: 900px; }
+  #tutorialListFooter {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
+    padding-top: 14px;
+    width: 100%;
+    max-width: 900px;
+  }
   #campaignHomeScreen.hidden, #campaignLocationsScreen.hidden, #campaignNpcScreen.hidden, #campaignBattleIntroScreen.hidden { display: none; }
   #campaignHomeScreen, #campaignLocationsScreen, #campaignNpcScreen, #campaignBattleIntroScreen {
     position: fixed;
@@ -3407,9 +3424,9 @@
           <button class="menu-btn" id="menuRanked">Ranked</button>
           <button class="menu-btn" id="menuPlay">Free Play</button>
           <button class="menu-btn" id="menuJoinRoom">Join Room</button>
-          <button class="menu-btn" id="menuWatch">Watch a Game</button>
-          <button class="menu-btn" id="menuWatchAny">Watch Any Active Game</button>
           <button class="menu-btn" id="menuLeaderboard">Leaderboards</button>
+          <button class="menu-btn" id="menuWatch">Watch a Game</button>
+          <button class="menu-btn" id="menuWatchAny">Spectate Mode</button>
         </div>
       </div>
       <div class="menu-section" id="menuSectionOffline">
@@ -3417,8 +3434,8 @@
         <div class="menu-section-grid">
           <button class="menu-btn" id="menuCampaign">Campaign</button>
           <button class="menu-btn" id="menuVsCpu">Vs CPU</button>
-          <button class="menu-btn" id="menuPractice">Practice</button>
           <button class="menu-btn" id="menuTutorial">Tutorial</button>
+          <button class="menu-btn" id="menuPractice">Practice</button>
           <button class="menu-btn" id="menuCardShop">Card Shop</button>
           <button class="menu-btn" id="menuCardIndex">Card Index</button>
         </div>
@@ -3848,23 +3865,29 @@
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleFallenAce"> Fallen Ace</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="ruleRoulette"> Roulette</label></div>
     </div>
-    <div class="settings-row">
-      <label>Elemental Mode
-        <select id="elementalModeSelect">
-          <option value="buffnerf" selected>Buff &amp; Nerf</option>
-          <option value="buff">Buff Only</option>
-        </select>
-      </label>
-    </div>
-    <div class="settings-row">
-      <label>Elemental Hand Alignment
-        <select id="alignmentSelect"></select>
-      </label>
-    </div>
-    <div class="settings-row">
-      <label>Elemental Position Bias
-        <select id="elementalBiasSelect"></select>
-      </label>
+    <!-- Admin-only fine-tuning of the Elemental rule (see updateAuthUi's
+         isAdmin toggle in the script, which shows/hides this same as
+         #menuSectionAdmin/#adminSettingsSection) -- regular players just get
+         the plain "Elemental" checkbox above with its built-in behavior. -->
+    <div id="elementalAdvancedSettings" class="hidden">
+      <div class="settings-row">
+        <label>Elemental Mode
+          <select id="elementalModeSelect">
+            <option value="buffnerf" selected>Buff &amp; Nerf</option>
+            <option value="buff">Buff Only</option>
+          </select>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label>Elemental Hand Alignment
+          <select id="alignmentSelect"></select>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label>Elemental Position Bias
+          <select id="elementalBiasSelect"></select>
+        </label>
+      </div>
     </div>
   </div>
 </div>
@@ -10716,9 +10739,16 @@ async function findWatchableRoomRoot(roomId) {
   return results.find(r => r) || null;
 }
 const AUTO_WATCH_IDLE_MS = 2 * 60 * 1000;
+// Shorter grace period than AUTO_WATCH_IDLE_MS above -- that one's for a
+// game that actually finished (worth letting the spectator sit with the
+// final board a bit), this one's for a mid-match disconnect (nothing new to
+// see, so move on quicker, but still long enough to ride out a brief
+// reconnect blip instead of hopping away from a one-second network hiccup).
+const AUTO_WATCH_DISCONNECT_MS = 15 * 1000;
 const AUTO_WATCH_CHECK_MS = 5000;
 let autoWatchActive = false;
 let autoWatchGameOverSince = null;
+let autoWatchIdleWaitMs = AUTO_WATCH_IDLE_MS;
 let autoWatchCheckInterval = null;
 // A room's seat objects stick around after a player leaves (presence is a
 // separate flag), so "seats.p1 exists" alone doesn't mean anyone's actually
@@ -10745,6 +10775,15 @@ function isRoomGenuinelyLive(room) {
   }
   return !!((seats.p1 && presence.p1 === true) || (seats.p2 && presence.p2 === true));
 }
+// Spectate Mode (menuWatchAny) should only ever land on a room that's
+// actually in the match itself -- cards dealt, board in play -- not one
+// still sitting in the rules/hand-pick phase (isRoomGenuinelyLive alone
+// counts those too, which is right for the manual Watch a Game list where
+// browsing in on a pick-phase room to see who's playing is fine, but wrong
+// for a spectator who just wants to drop into live matches).
+function isRoomInMatchPhase(room) {
+  return !!(room && room._dealt && isRoomGenuinelyLive(room));
+}
 async function pickRandomActiveRoom(excludeId) {
   const roots = [ROOMS_ROOT, RANKED_ROOMS_ROOT];
   const perRoot = await Promise.allSettled(roots.map(async root => {
@@ -10761,10 +10800,12 @@ async function pickRandomActiveRoom(excludeId) {
           return { id, root, room: null };
         }
       }));
-      // "Watch Any Active Game" should only land on rooms that are actually
-      // being played right now, not abandoned mid-game rooms nobody's in,
-      // and not already-finished ones (nothing left to watch happen there).
-      return rooms.filter(r => isRoomGenuinelyLive(r.room));
+      // Spectate Mode should only land on rooms that are actually being
+      // played right now (see isRoomInMatchPhase above) -- not abandoned
+      // mid-game rooms nobody's in, not already-finished ones (nothing left
+      // to watch happen there), and not rooms still stuck picking rules/
+      // hands (nothing to actually watch yet either).
+      return rooms.filter(r => isRoomInMatchPhase(r.room));
     } catch (err) {
       return [];
     }
@@ -10777,6 +10818,7 @@ async function pickRandomActiveRoom(excludeId) {
 async function startAutoWatch() {
   autoWatchActive = true;
   autoWatchGameOverSince = null;
+  autoWatchIdleWaitMs = AUTO_WATCH_IDLE_MS;
   setWatchUrlParam('any');
   let picked = null;
   let lookupFailed = false;
@@ -10813,7 +10855,7 @@ function autoWatchTick() {
     }).catch(() => {});
     return;
   }
-  if (autoWatchGameOverSince && Date.now() - autoWatchGameOverSince >= AUTO_WATCH_IDLE_MS) {
+  if (autoWatchGameOverSince && Date.now() - autoWatchGameOverSince >= autoWatchIdleWaitMs) {
     const currentRoomId = state.roomId;
     pickRandomActiveRoom(currentRoomId).then(picked => {
       if (!autoWatchActive || state.roomId !== currentRoomId || !autoWatchGameOverSince) return;
@@ -10821,10 +10863,29 @@ function autoWatchTick() {
     }).catch(() => {});
   }
 }
+// Two reasons Spectate Mode moves on from the room it's currently watching:
+// the match actually finished (room.gameOver -- wait the full
+// AUTO_WATCH_IDLE_MS so there's time to see the final board), or either
+// seated player has disconnected mid-match (nothing left to watch happen
+// until/unless they reconnect -- wait only the much shorter
+// AUTO_WATCH_DISCONNECT_MS instead). Either reason shares the same
+// autoWatchGameOverSince timestamp/autoWatchTick check above, just with a
+// different wait length recorded in autoWatchIdleWaitMs.
 function autoWatchObserveRoom(room) {
   if (!autoWatchActive) return;
+  const presence = room.presence || {};
+  const seats = room.seats || {};
+  const eitherDisconnected = !!((seats.p1 && presence.p1 !== true) || (seats.p2 && presence.p2 !== true));
   if (room.gameOver) {
-    if (autoWatchGameOverSince === null) autoWatchGameOverSince = Date.now();
+    if (autoWatchGameOverSince === null) {
+      autoWatchGameOverSince = Date.now();
+      autoWatchIdleWaitMs = AUTO_WATCH_IDLE_MS;
+    }
+  } else if (eitherDisconnected) {
+    if (autoWatchGameOverSince === null) {
+      autoWatchGameOverSince = Date.now();
+      autoWatchIdleWaitMs = AUTO_WATCH_DISCONNECT_MS;
+    }
   } else {
     autoWatchGameOverSince = null;
   }
@@ -10832,6 +10893,7 @@ function autoWatchObserveRoom(room) {
 function stopAutoWatch() {
   autoWatchActive = false;
   autoWatchGameOverSince = null;
+  autoWatchIdleWaitMs = AUTO_WATCH_IDLE_MS;
   if (autoWatchCheckInterval) {
     clearInterval(autoWatchCheckInterval);
     autoWatchCheckInterval = null;
@@ -15090,6 +15152,8 @@ function updateAuthUi() {
   if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
   const adminSettingsSection = document.getElementById('adminSettingsSection');
   if (adminSettingsSection) adminSettingsSection.classList.toggle('hidden', !isAdmin);
+  const elementalAdvancedSettings = document.getElementById('elementalAdvancedSettings');
+  if (elementalAdvancedSettings) elementalAdvancedSettings.classList.toggle('hidden', !isAdmin);
 }
 function setAccountError(msg) {
   const el = document.getElementById('accountError');
