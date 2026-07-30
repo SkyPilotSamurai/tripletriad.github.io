@@ -4003,6 +4003,7 @@
       <div id="campaignLocationsSubtitle">Beat 3 card players at a location (or all of them, if fewer) to unlock the next.</div>
     </div>
     <div id="campaignLocationsShortcuts">
+      <button class="menu-btn menu-btn-secondary" id="campaignOpenTutorialBtn">Tutorial</button>
       <button class="menu-btn menu-btn-secondary" id="campaignOpenCardIndexBtn">Card Index</button>
       <button class="menu-btn menu-btn-secondary" id="campaignOpenCardShopBtn">Campaign - Card Shop</button>
       <button class="menu-btn menu-btn-secondary" id="campaignOpenCardShopRankedBtn">Ranked - Card Shop</button>
@@ -9648,6 +9649,18 @@ function openTutorialList() {
   renderTutorialLists();
   tryStartMusicIfEnabled();
 }
+// Separate from the main-menu Tutorial button's own plain openTutorialList()
+// call -- remembers that the tutorial list was opened FROM the Campaign
+// Locations screen (via its own dedicated Tutorial button there) so
+// closeTutorialList() returns there instead of the main menu, same pattern
+// as the shop's shopReturnToCampaignLocations.
+let tutorialReturnToCampaignLocations = false;
+function openCampaignTutorial() {
+  playSfx('cursorMove');
+  document.getElementById('campaignLocationsScreen').classList.add('hidden');
+  tutorialReturnToCampaignLocations = true;
+  openTutorialList();
+}
 function setTutorialInfoHidden(hidden) {
   const info = document.getElementById('tutorialInfo');
   const unhideBtn = document.getElementById('tutorialUnhideBtn');
@@ -9677,7 +9690,12 @@ function closeTutorialList() {
   hideTutorialOverlayUi();
   document.getElementById('tutorialListScreen').classList.add('hidden');
   leaveOnlineRoomOrSpectate();
-  showMenuScreen();
+  if (tutorialReturnToCampaignLocations) {
+    tutorialReturnToCampaignLocations = false;
+    openCampaignLocations();
+  } else {
+    showMenuScreen();
+  }
 }
 function backToTutorialList() {
   currentTutorialRule = null;
@@ -10097,6 +10115,9 @@ document.getElementById('campaignContinueBtn').addEventListener('click', campaig
 document.getElementById('campaignLocationsClose').addEventListener('click', () => {
   playSfx('cursorCancel');
   closeCampaignLocations();
+});
+document.getElementById('campaignOpenTutorialBtn').addEventListener('click', () => {
+  openCampaignTutorial();
 });
 document.getElementById('campaignOpenCardIndexBtn').addEventListener('click', () => {
   playSfx('cursorMove');
@@ -16066,7 +16087,9 @@ function refreshShopBuySlot() {
     priceEl.classList.toggle('shop-price-unaffordable', !canAfford);
     buyBtn.disabled = !canAfford;
     buyBtn.textContent = 'Buy Pack';
-    sellBtn.classList.toggle('hidden', shopCampaignMode && !campaignSellingEnabled);
+    // Booster packs are never sellable, full stop -- unlike cards, this
+    // isn't conditional on shopCampaignMode/campaignSellingEnabled at all.
+    sellBtn.classList.add('hidden');
     sellBtn.disabled = true;
     sellBtn.textContent = 'Sell';
     return;
@@ -16078,7 +16101,8 @@ function refreshShopBuySlot() {
     priceEl.textContent = '';
     buyBtn.disabled = true;
     buyBtn.textContent = 'Buy';
-    sellBtn.classList.toggle('hidden', shopCampaignMode && !campaignSellingEnabled);
+    // Nothing is selected at all, so there's nothing to sell either.
+    sellBtn.classList.add('hidden');
     sellBtn.disabled = true;
     sellBtn.textContent = 'Sell';
     return;
