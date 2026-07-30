@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Triple Triad</title>
 <style>
   * { box-sizing: border-box; }
@@ -74,6 +75,18 @@
        hasn't touched this slider also follows that admin default live (see
        bgOpacityUserOverridden in the script). */
     --bg-opacity: 0.25;
+    /* Admin > Menu Width (Mobile) (adminMenuWidthSlider, wired near the
+       other admin sliders in the script) -- the shared max-width cap every
+       menu/modal panel's own CSS reads (#menuPanel, #settingsPanel,
+       #rulesPanel, #leaderboardModalPanel/#watchModalPanel, and the various
+       admin panels) instead of each one hardcoding its own 90-96vw. Desktop
+       is unaffected -- every one of those panels also has its own fixed px
+       width that wins on wide screens, this vw value only ever matters once
+       the viewport is narrower than that (i.e. mobile), where it controls
+       how close to the full screen width the panel is allowed to stretch.
+       Admin-only, applies live to every player -- no per-player override.
+    */
+    --mobile-menu-width: 96vw;
     -webkit-user-select: none;
     user-select: none;
   }
@@ -307,7 +320,7 @@
     border-radius: 12px;
     padding: 12px 34px 20px;
     width: 460px;
-    max-width: 90vw;
+    max-width: var(--mobile-menu-width, 96vw);
     max-height: 92vh;
     margin-top: 6px;
     overflow-y: auto;
@@ -350,7 +363,7 @@
     border-radius: 12px;
     padding: 12px 34px 20px;
     width: 460px;
-    max-width: 90vw;
+    max-width: var(--mobile-menu-width, 96vw);
     max-height: 92vh;
     margin-top: 6px;
     overflow-y: auto;
@@ -393,7 +406,7 @@
     border-radius: 12px;
     padding: 14px 40px 22px;
     width: 640px;
-    max-width: 92vw;
+    max-width: var(--mobile-menu-width, 96vw);
     max-height: 92vh;
     margin-top: 6px;
     overflow-y: auto;
@@ -403,7 +416,7 @@
      Username squeezed down to just a few characters. */
   #leaderboardModalPanel {
     width: 820px;
-    max-width: 94vw;
+    max-width: var(--mobile-menu-width, 96vw);
     color: #e6e6e6;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
     display: flex;
@@ -446,7 +459,7 @@
     border-radius: 12px;
     padding: 20px 34px 24px;
     width: 420px;
-    max-width: 90vw;
+    max-width: var(--mobile-menu-width, 96vw);
     margin-top: 6px;
     color: #e6e6e6;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
@@ -546,7 +559,7 @@
     border-radius: 12px;
     padding: 20px 34px 24px;
     width: 420px;
-    max-width: 90vw;
+    max-width: var(--mobile-menu-width, 96vw);
     margin-top: 6px;
     color: #e6e6e6;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
@@ -649,7 +662,7 @@
     border-radius: 12px;
     padding: 12px 20px 14px;
     width: 1220px;
-    max-width: 96vw;
+    max-width: var(--mobile-menu-width, 96vw);
     max-height: 97vh;
     overflow-y: auto;
     margin-top: 2px;
@@ -1385,7 +1398,7 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 18px;
-    max-width: 90vw;
+    max-width: var(--mobile-menu-width, 96vw);
   }
   #tradePool .card {
     /* Scaling this up via zoom (like .hand/.board-col elsewhere) instead of
@@ -1619,7 +1632,7 @@
     border-radius: 14px;
     padding: 40px 44px 34px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    width: min(92vw, 720px);
+    width: min(var(--mobile-menu-width, 96vw), 720px);
     max-height: calc(100vh - 100px);
     overflow-y: auto;
   }
@@ -1859,7 +1872,7 @@
   #accountPanel {
     position: relative;
     width: 380px;
-    max-width: 90vw;
+    max-width: var(--mobile-menu-width, 96vw);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -3828,6 +3841,10 @@
         <label for="adminBgOpacitySlider">Default Background Opacity: <span id="adminBgOpacityValue">25%</span></label>
         <input type="range" id="adminBgOpacitySlider" min="0" max="100" step="1" value="25">
       </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminMenuWidthSlider">Menu Width (Mobile): <span id="adminMenuWidthValue">96%</span></label>
+        <input type="range" id="adminMenuWidthSlider" min="70" max="98" step="1" value="96">
+      </div>
       <div id="adminGilAmountsSection"></div>
     </div>
   </div>
@@ -4885,6 +4902,20 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/defaultBackgroundOpacityPercent`).on('value', snap
   if (typeof bgOpacityUserOverridden !== 'undefined' && !bgOpacityUserOverridden && typeof applyBackgroundOpacity === 'function') {
     applyBackgroundOpacity(bgOpacityDefaultPercent);
   }
+});
+// Menu Width (Mobile) -- admin-only, no player-facing control at all (see
+// --mobile-menu-width's declaration on body for which panels this affects).
+// Applies live to every player the moment an admin changes it, same as
+// Match Text Color Intensity above.
+let menuWidthPercent = 96;
+rtdb.ref(`${GAME_CONFIG_ROOT}/menuWidthPercent`).on('value', snap => {
+  const v = Number(snap.val());
+  menuWidthPercent = Number.isFinite(v) ? Math.max(70, Math.min(98, v)) : 96;
+  document.body.style.setProperty('--mobile-menu-width', `${menuWidthPercent}vw`);
+  const slider = document.getElementById('adminMenuWidthSlider');
+  const label = document.getElementById('adminMenuWidthValue');
+  if (slider && document.activeElement !== slider) slider.value = menuWidthPercent;
+  if (label) label.textContent = `${menuWidthPercent}%`;
 });
 let currentUser = null;
 let currentUserProfile = null;
@@ -15839,6 +15870,16 @@ document.getElementById('adminBgOpacitySlider').addEventListener('change', e => 
   playSfx('cursorMove');
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/defaultBackgroundOpacityPercent`).set(v).catch(() => {});
+});
+document.getElementById('adminMenuWidthSlider').addEventListener('input', e => {
+  const v = Math.max(70, Math.min(98, Number(e.target.value) || 96));
+  const label = document.getElementById('adminMenuWidthValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminMenuWidthSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(70, Math.min(98, Number(e.target.value) || 96));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/menuWidthPercent`).set(v).catch(() => {});
 });
 // -- Admin: editable gil reward amounts -----------------------------------
 // Each entry is one number the admin can tune at runtime: which live
