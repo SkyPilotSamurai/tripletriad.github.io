@@ -1007,8 +1007,10 @@
   .hand.stack .card.selected { z-index: 60; }
   .hand.stack .card:hover { z-index: 50; }
   .hand .card:hover { z-index: 50; }
-  #handP1 .card:not(.selected):hover .card-inner { transform: translateX(24px); }
-  #handP2 .card:not(.selected):hover .card-inner { transform: translateX(-24px); }
+  @media (hover: hover) and (pointer: fine) {
+    #handP1 .card:not(.selected):hover .card-inner { transform: translateX(24px); }
+    #handP2 .card:not(.selected):hover .card-inner { transform: translateX(-24px); }
+  }
   #handP1 .card.selected .card-inner { transform: translateX(24px) translateY(-15px); }
   #handP2 .card.selected .card-inner { transform: translateX(-24px) translateY(-15px); }
   body.shape-natural .hand.stack .card { margin-top: -58.824px; }
@@ -3220,18 +3222,22 @@
   body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); }
   body.mobile-mode .campaign-location-btn { height: 150px; font-size: 16px; }
 
+  /* Card selection in hand: skip the slide-into-place animation entirely on
+     mobile -- selecting a card should just snap straight to its selected
+     position instead of transitioning. This only removes the transition on
+     the hand cards' own .card-inner; every other animation (card
+     flip/capture, flying-card, etc.) is untouched. */
+  body.mobile-mode #handP1 .card .card-inner,
+  body.mobile-mode #handP2 .card .card-inner { transition: none; }
+
   /* Touch devices don't have real hover -- a tap can leave a phantom/sticky
-     hover state that fights with tap-driven class changes, which is why the
-     selected hand card was snapping instead of smoothly transitioning into
-     place (its hover-fan rule and its .selected rule were both trying to
-     drive the same transform at once). Neutralizing hover-triggered
-     transforms/shadows/filters removes that conflict and cuts wasted
-     paint/composite work on mobile. This only touches :hover rules --
-     .card.selected's own transform+transition (and every other non-hover
-     animation: card flip/capture, flying-card, etc.) is untouched, so the
-     selection now animates cleanly via that existing 0.15s transition. */
-  body.mobile-mode #handP1 .card:not(.selected):hover .card-inner,
-  body.mobile-mode #handP2 .card:not(.selected):hover .card-inner { transform: none; }
+     hover state that fights with tap-driven class changes. The hand card's
+     hover-fan rule is gated by @media (hover: hover) and (pointer: fine) at
+     its source (see #handP1/#handP2 .card:not(.selected):hover), so it
+     never exists for touch at all. The rest of these neutralize other
+     hover-triggered transforms/shadows/filters to cut wasted paint work;
+     every non-hover animation (card flip/capture, flying-card, etc.) is
+     untouched. */
   body.mobile-mode #overlay button:hover:not(:disabled) { transform: none; box-shadow: none; }
   body.mobile-mode #tradePool .card:hover { transform: none; }
   body.mobile-mode .menu-btn:hover { transform: none; box-shadow: none; }
