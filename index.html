@@ -430,6 +430,26 @@
     font-family: inherit;
   }
   .admin-give-row input:focus, .admin-give-row select:focus { outline: none; border-color: #ffffff; }
+  .admin-npc-editor-reorder-row { display: flex; flex: 0 0 auto; gap: 4px; }
+  .admin-npc-editor-reorder-row.hidden { display: none; }
+  .admin-npc-editor-reorder-btn {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2d3748;
+    color: #c3cadb;
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+  }
+  .admin-npc-editor-reorder-btn:hover { color: #fff; border-color: #ffffff; }
+  .admin-npc-editor-reorder-btn:disabled { opacity: 0.35; cursor: default; }
   #adminGiveQty { flex: 0 0 70px; }
   #adminGiveUserSelect {
     width: 100%;
@@ -567,7 +587,7 @@
     background: #1a2130;
     border: 1px solid #4a5568;
     border-radius: 12px;
-    padding: 20px 34px 24px;
+    padding: 12px 20px 14px;
     width: 1220px;
     max-width: 96vw;
     max-height: 97vh;
@@ -578,17 +598,19 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
-  #adminNpcEditorPanel h2 { margin: 0 0 4px; color: #fff; font-size: 24px; text-align: center; }
+  #adminNpcEditorPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
   #adminNpcEditorPanel #adminNpcEditorModeToggle {
     width: auto;
     min-width: 100px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: bold;
-    padding: 7px 18px;
+    padding: 5px 14px;
     color: #ffffff;
   }
+  #adminNpcEditorPanel .admin-give-row { gap: 6px; }
+  #adminNpcEditorPanel .admin-give-row input, #adminNpcEditorPanel .admin-give-row select { padding: 7px 10px; }
   #adminNpcEditorClose {
     position: absolute;
     top: 14px;
@@ -606,14 +628,14 @@
     display: grid;
     grid-template-columns: minmax(300px, 440px) 1fr;
     align-items: stretch;
-    gap: 12px 28px;
+    gap: 8px 20px;
     width: 100%;
   }
   #adminNpcEditorForm.hidden { display: none; }
   .admin-npc-editor-col {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
     height: 100%;
   }
@@ -623,7 +645,7 @@
   .admin-npc-editor-field {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
     font-size: 12px;
     color: #8a92a6;
     text-transform: uppercase;
@@ -635,7 +657,7 @@
     border: 1px solid #4a5568;
     border-radius: 6px;
     color: #eee;
-    padding: 9px 11px;
+    padding: 6px 9px;
     font-size: 14px;
     font-family: inherit;
     text-transform: none;
@@ -645,7 +667,7 @@
   .admin-npc-editor-field input:focus, .admin-npc-editor-field textarea:focus, .admin-npc-editor-field select:focus {
     outline: none; border-color: #ffffff;
   }
-  .admin-npc-editor-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+  .admin-npc-editor-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
   .admin-npc-editor-checkbox-label {
     display: flex;
     align-items: center;
@@ -672,18 +694,18 @@
     font-size: 11px;
     text-transform: none;
     letter-spacing: normal;
-    padding: 4px 8px;
+    padding: 3px 7px;
     cursor: pointer;
   }
   .admin-npc-editor-pool-reset:hover { color: #fff; border-color: #ffffff; }
-  .admin-npc-editor-pool-area-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .admin-npc-editor-pool-area-row { display: flex; gap: 6px; margin-bottom: 6px; }
   .admin-npc-editor-pool-area-row select {
     flex: 1;
     background: #1c2333;
     border: 1px solid #4a5568;
     border-radius: 6px;
     color: #eee;
-    padding: 7px 9px;
+    padding: 5px 8px;
     font-size: 13px;
     font-family: inherit;
     text-transform: none;
@@ -694,14 +716,14 @@
   #adminNpcEditorPoolGrid {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-height: 420px;
     max-height: 74vh;
     overflow-y: auto;
     border: 1px solid #4a5568;
     border-radius: 6px;
-    padding: 10px 14px;
+    padding: 8px 10px;
     background: #1c2333;
   }
   .admin-npc-editor-pool-level { display: flex; flex-direction: column; gap: 4px; }
@@ -718,8 +740,8 @@
   .admin-npc-editor-pool-cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
-    padding-left: 18px;
+    gap: 3px 10px;
+    padding-left: 14px;
   }
   .admin-npc-editor-pool-cards label {
     display: flex;
@@ -734,7 +756,7 @@
   #adminNpcEditorRulesGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-    gap: 6px 10px;
+    gap: 4px 10px;
     margin-top: 2px;
   }
   #adminNpcEditorRulesGrid label {
@@ -746,10 +768,10 @@
     letter-spacing: normal;
     color: #eee;
   }
-  #adminNpcEditorButtons { display: flex; gap: 10px; width: 100%; }
+  #adminNpcEditorButtons { display: flex; gap: 8px; width: 100%; }
   #adminNpcEditorButtons.hidden { display: none; }
-  #adminNpcEditorButtons .menu-btn { flex: 1; }
-  #adminNpcEditorStatus { min-height: 18px; font-size: 13px; color: #ffa64f; text-align: center; }
+  #adminNpcEditorButtons .menu-btn { flex: 1; padding: 10px 14px; font-size: 15px; }
+  #adminNpcEditorStatus { min-height: 16px; font-size: 13px; color: #ffa64f; text-align: center; }
   .settings-section { margin-bottom: 20px; }
   .settings-section h3 {
     color: #fff;
@@ -3731,6 +3753,10 @@
     <div class="admin-give-row">
       <select id="adminNpcEditorLocationSelect"></select>
       <select id="adminNpcEditorNpcSelect"></select>
+      <span id="adminNpcEditorReorderRow" class="admin-npc-editor-reorder-row">
+        <button type="button" class="admin-npc-editor-reorder-btn" id="adminNpcEditorMoveUp" title="Move up among NPCs of the same skill level" aria-label="Move up">&#9650;</button>
+        <button type="button" class="admin-npc-editor-reorder-btn" id="adminNpcEditorMoveDown" title="Move down among NPCs of the same skill level" aria-label="Move down">&#9660;</button>
+      </span>
     </div>
     <div id="adminNpcEditorForm" class="hidden">
       <div class="admin-npc-editor-col admin-npc-editor-col-left">
@@ -5877,6 +5903,16 @@ function campaignAdminApplyNpcFields(npc, data) {
   if ('regionBiasPercent' in data) {
     if (data.regionBiasPercent != null) npc.regionBiasPercent = Math.max(0, Math.min(100, Number(data.regionBiasPercent) || 0));
     else delete npc.regionBiasPercent;
+  }
+  // Manual tie-break order among NPCs sharing the same Skill level at the
+  // same location (see campaignSortedNpcs) -- set via the Admin NPC
+  // Editor's Move Up/Down buttons, not a form field the admin types into
+  // directly. 'in' check so an explicit reset back to null (never actually
+  // sent today, but kept consistent with regionBiasPercent above) still
+  // works if ever needed.
+  if ('sortOrder' in data) {
+    if (data.sortOrder != null) npc.sortOrder = Number(data.sortOrder) || 0;
+    else delete npc.sortOrder;
   }
   if (typeof data.quote === 'string' && data.quote.trim()) CAMPAIGN_NPC_QUOTES[npc.id] = data.quote.trim();
   refreshCampaignNpcScreenIfOpen();
@@ -9681,21 +9717,37 @@ function closeCampaignNpcs() {
   renderCampaignLocationsGrid();
   startCampaignWorldMapMusic();
 }
+// Always displays weakest-to-strongest by cpuDifficulty, regardless of
+// location.npcs' actual array order -- that order only reflects
+// authoring/insertion history (a custom NPC added via the Admin NPC Editor
+// always gets pushed to the END of the array in loadCampaignAdminOverrides,
+// and editing an existing NPC's Skill there doesn't move it either). Within
+// a shared Skill level, ties break on the NPC's explicit sortOrder (set via
+// the Admin NPC Editor's Move Up/Down buttons, see moveAdminNpcEditorNpc)
+// if it has one, falling back to its plain array position otherwise -- so
+// an NPC nobody's ever manually reordered still sorts exactly like before.
+// Shared by the in-game NPC list (renderCampaignNpcList) and the Admin NPC
+// Editor's own NPC dropdown (populateAdminNpcEditorNpcSelect), so both
+// always agree on "what order are these NPCs actually in".
+function campaignSortedNpcs(npcs) {
+  return npcs
+    .map((npc, i) => ({ npc, i }))
+    .sort((a, b) => {
+      const diff = (a.npc.cpuDifficulty || 0) - (b.npc.cpuDifficulty || 0);
+      if (diff !== 0) return diff;
+      const av = a.npc.sortOrder != null ? a.npc.sortOrder : a.i;
+      const bv = b.npc.sortOrder != null ? b.npc.sortOrder : b.i;
+      if (av !== bv) return av - bv;
+      return a.i - b.i;
+    })
+    .map(x => x.npc);
+}
 function renderCampaignNpcList(location) {
   const list = document.getElementById('campaignNpcList');
   if (!list || !currentCampaignSave) return;
   list.innerHTML = '';
   const unlockedCount = campaignUnlockedLocationCount(currentCampaignSave);
-  // Always display weakest-to-strongest by cpuDifficulty, regardless of
-  // location.npcs' actual array order -- that order only reflects
-  // authoring/insertion history (a custom NPC added via the Admin NPC
-  // Editor always gets pushed to the END of the array in
-  // loadCampaignAdminOverrides, and editing an existing NPC's Skill there
-  // doesn't move it either), so sorting a copy here is what actually keeps
-  // the list in skill order no matter how/when an NPC was added or
-  // re-leveled, instead of just matching whatever order happened to be
-  // hand-written in CAMPAIGN_LOCATIONS originally.
-  const sortedNpcs = location.npcs.slice().sort((a, b) => (a.cpuDifficulty || 0) - (b.cpuDifficulty || 0));
+  const sortedNpcs = campaignSortedNpcs(location.npcs);
   sortedNpcs.forEach(npc => {
     const defeated = !!(currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[npc.id]);
     const locked = campaignIsNpcLocked(npc, currentCampaignSave);
@@ -15404,7 +15456,7 @@ function populateAdminNpcEditorNpcSelect() {
   npcSelect.innerHTML = '';
   const loc = campaignFindLocation(locSelect.value);
   if (!loc) return;
-  loc.npcs.forEach(npc => {
+  campaignSortedNpcs(loc.npcs).forEach(npc => {
     const opt = document.createElement('option');
     opt.value = npc.id;
     opt.textContent = npc.name + (npc._adminCustom ? ' (custom)' : '');
@@ -15559,12 +15611,27 @@ function clearAdminNpcEditorForm() {
   setAdminNpcEditorRulesFromNpc(null);
   setAdminNpcEditorPoolFromIds(campaignDefaultCardPoolIds({ cpuDifficulty: 3 }));
   adminNpcEditorCurrentNpc = null;
+  refreshAdminNpcEditorMoveButtons();
+}
+// campaignFindNpc()/campaignAllNpcs() return a fresh shallow clone of every
+// NPC (they tack a locationId onto each one), not the live object sitting
+// inside CAMPAIGN_LOCATIONS[].npcs -- fine for read-only callers elsewhere,
+// but the Admin NPC Editor needs to mutate (and reference-match, see
+// moveAdminNpcEditorNpc's loc lookup) the actual live object so edits/
+// reorders show up immediately without a reload. This walks
+// CAMPAIGN_LOCATIONS directly instead.
+function campaignFindLiveNpc(npcId) {
+  for (const loc of CAMPAIGN_LOCATIONS) {
+    const npc = loc.npcs.find(n => n.id === npcId);
+    if (npc) return npc;
+  }
+  return null;
 }
 function loadAdminNpcEditorNpcIntoForm(npcId) {
-  const npc = campaignFindNpc(npcId);
+  const npc = campaignFindLiveNpc(npcId);
   const form = document.getElementById('adminNpcEditorForm');
   const buttons = document.getElementById('adminNpcEditorButtons');
-  if (!npc) { form.classList.add('hidden'); buttons.classList.add('hidden'); adminNpcEditorCurrentNpc = null; return; }
+  if (!npc) { form.classList.add('hidden'); buttons.classList.add('hidden'); adminNpcEditorCurrentNpc = null; refreshAdminNpcEditorMoveButtons(); return; }
   adminNpcEditorCurrentNpc = npc;
   document.getElementById('adminNpcEditorName').value = npc.name || '';
   document.getElementById('adminNpcEditorDesc').value = npc.desc || '';
@@ -15586,6 +15653,7 @@ function loadAdminNpcEditorNpcIntoForm(npcId) {
   form.classList.remove('hidden');
   buttons.classList.remove('hidden');
   document.getElementById('adminNpcEditorStatus').textContent = '';
+  refreshAdminNpcEditorMoveButtons();
 }
 function updateAdminNpcEditorModeToggle() {
   const btn = document.getElementById('adminNpcEditorModeToggle');
@@ -15644,7 +15712,10 @@ async function persistAdminNpcEditorEditedNpc(npc) {
   const rules = collectAdminNpcEditorRules();
   const cardPool = collectAdminNpcEditorPool();
   if (!cardPool.length) throw new Error('Select at least one card for the Card Pool.');
-  const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent };
+  // sortOrder isn't a form field (see moveAdminNpcEditorNpc) -- carried
+  // through here so a normal field edit's full-entry .set() below doesn't
+  // wipe out whatever Move Up/Down order was previously saved for this NPC.
+  const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
   if (npc._adminCustom) {
     const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
     entry.locationId = loc ? loc.id : document.getElementById('adminNpcEditorLocationSelect').value;
@@ -15653,6 +15724,72 @@ async function persistAdminNpcEditorEditedNpc(npc) {
     await rtdb.ref(`${CAMPAIGN_ADMIN_ROOT}/npcOverrides/${npc.id}`).set(entry);
   }
   campaignAdminApplyNpcFields(npc, entry);
+}
+// Writes just this NPC's sortOrder, via update() (a merge) rather than the
+// full-entry set() persistAdminNpcEditorEditedNpc uses -- moving one NPC
+// touches two NPCs at once (see moveAdminNpcEditorNpc below), and neither
+// one is necessarily the NPC currently loaded into the form, so there's no
+// full set of form values to build a whole entry from here. update() also
+// works fine against a built-in NPC that's never had an override entry
+// before -- it just creates one with only this key, and
+// campaignAdminApplyNpcFields already applies partial entries field-by-
+// field, so that's a non-issue.
+async function persistAdminNpcSortOrder(npc) {
+  const path = npc._adminCustom
+    ? `${CAMPAIGN_ADMIN_ROOT}/customNpcs/${npc.id}`
+    : `${CAMPAIGN_ADMIN_ROOT}/npcOverrides/${npc.id}`;
+  await rtdb.ref(path).update({ sortOrder: npc.sortOrder }).catch(() => {});
+}
+// Swaps the currently-loaded NPC with its neighbor among NPCs sharing the
+// same Skill level at the same location (direction -1 = up/weaker-ordered,
+// +1 = down/stronger-ordered) -- see campaignSortedNpcs for how sortOrder
+// feeds into display order everywhere. Materializes an explicit sortOrder
+// for the whole same-Skill sibling group first (matching each one's current
+// effective position) so the swap is well-defined even when some/all of
+// them have never been manually reordered before; only the two swapped
+// NPCs actually need to persist, since everyone else's materialized value
+// just reproduces the fallback (array position) they'd already resolve to
+// on their own.
+async function moveAdminNpcEditorNpc(direction) {
+  const npc = adminNpcEditorCurrentNpc;
+  if (!npc || adminNpcEditorMode !== 'edit') return;
+  const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
+  if (!loc) return;
+  const siblings = campaignSortedNpcs(loc.npcs).filter(n => (n.cpuDifficulty || 0) === (npc.cpuDifficulty || 0));
+  const idx = siblings.indexOf(npc);
+  const swapIdx = idx + direction;
+  if (idx === -1 || swapIdx < 0 || swapIdx >= siblings.length) return;
+  siblings.forEach((n, i) => { if (n.sortOrder == null) n.sortOrder = i; });
+  const other = siblings[swapIdx];
+  const tmp = npc.sortOrder;
+  npc.sortOrder = other.sortOrder;
+  other.sortOrder = tmp;
+  await Promise.all([persistAdminNpcSortOrder(npc), persistAdminNpcSortOrder(other)]);
+  populateAdminNpcEditorNpcSelect();
+  document.getElementById('adminNpcEditorNpcSelect').value = npc.id;
+  refreshAdminNpcEditorMoveButtons();
+  refreshCampaignNpcScreenIfOpen();
+}
+// Disables Move Up/Down at the edges of the current NPC's same-Skill
+// sibling group (or entirely outside Edit mode / with nothing loaded), and
+// hides the whole row for a brand new NPC that isn't part of any location's
+// array yet.
+function refreshAdminNpcEditorMoveButtons() {
+  const row = document.getElementById('adminNpcEditorReorderRow');
+  const upBtn = document.getElementById('adminNpcEditorMoveUp');
+  const downBtn = document.getElementById('adminNpcEditorMoveDown');
+  if (!row || !upBtn || !downBtn) return;
+  const npc = adminNpcEditorCurrentNpc;
+  if (adminNpcEditorMode !== 'edit' || !npc) {
+    row.classList.add('hidden');
+    return;
+  }
+  row.classList.remove('hidden');
+  const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
+  const siblings = loc ? campaignSortedNpcs(loc.npcs).filter(n => (n.cpuDifficulty || 0) === (npc.cpuDifficulty || 0)) : [npc];
+  const idx = siblings.indexOf(npc);
+  upBtn.disabled = idx <= 0;
+  downBtn.disabled = idx === -1 || idx >= siblings.length - 1;
 }
 // "Auto save any change" -- once an existing NPC is loaded for editing,
 // every field change (typing, a rule/pool checkbox, a dropdown) persists on
@@ -15674,6 +15811,7 @@ function scheduleAdminNpcEditorAutoSave() {
       statusEl.textContent = `Saved changes to "${npc.name}".`;
       populateAdminNpcEditorNpcSelect();
       document.getElementById('adminNpcEditorNpcSelect').value = npc.id;
+      refreshAdminNpcEditorMoveButtons();
     } catch (err) {
       statusEl.textContent = (err && err.message) ? err.message : 'Failed to save.';
     }
@@ -15705,7 +15843,12 @@ function initAdminNpcEditorUi() {
       populateAdminNpcEditorNpcSelect();
       const npcSel = document.getElementById('adminNpcEditorNpcSelect');
       if (npcSel.value) loadAdminNpcEditorNpcIntoForm(npcSel.value);
-      else { document.getElementById('adminNpcEditorForm').classList.add('hidden'); document.getElementById('adminNpcEditorButtons').classList.add('hidden'); }
+      else {
+        document.getElementById('adminNpcEditorForm').classList.add('hidden');
+        document.getElementById('adminNpcEditorButtons').classList.add('hidden');
+        adminNpcEditorCurrentNpc = null;
+        refreshAdminNpcEditorMoveButtons();
+      }
     });
   }
   const npcSelect = document.getElementById('adminNpcEditorNpcSelect');
@@ -15752,6 +15895,10 @@ function initAdminNpcEditorUi() {
       scheduleAdminNpcEditorAutoSave();
     });
   }
+  const moveUpBtn = document.getElementById('adminNpcEditorMoveUp');
+  if (moveUpBtn) moveUpBtn.addEventListener('click', () => { playSfx('cursorMove'); moveAdminNpcEditorNpc(-1); });
+  const moveDownBtn = document.getElementById('adminNpcEditorMoveDown');
+  if (moveDownBtn) moveDownBtn.addEventListener('click', () => { playSfx('cursorMove'); moveAdminNpcEditorNpc(1); });
   const poolResetBtn = document.getElementById('adminNpcEditorPoolReset');
   if (poolResetBtn) {
     poolResetBtn.addEventListener('click', () => {
@@ -15851,7 +15998,7 @@ function initAdminNpcEditorUi() {
         } else {
           const npc = adminNpcEditorCurrentNpc;
           if (!npc) throw new Error('Pick an NPC first.');
-          const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent };
+          const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
           if (npc._adminCustom) {
             const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
             entry.locationId = loc ? loc.id : document.getElementById('adminNpcEditorLocationSelect').value;
@@ -15862,6 +16009,7 @@ function initAdminNpcEditorUi() {
           campaignAdminApplyNpcFields(npc, entry);
           populateAdminNpcEditorNpcSelect();
           document.getElementById('adminNpcEditorNpcSelect').value = npc.id;
+          refreshAdminNpcEditorMoveButtons();
           statusEl.textContent = `Saved changes to "${npc.name}".`;
         }
       } catch (err) {
