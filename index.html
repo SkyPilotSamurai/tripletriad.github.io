@@ -3401,12 +3401,14 @@
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
         <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="5" value="0">
-        <div class="admin-region-bias-hint">Chance each card slot in a Campaign opponent's hand prefers a card native to their own area (same area lists the Card Shop's booster packs use) over the ordinary pool.</div>
       </div>
       <div class="settings-row admin-region-bias-row">
-        <label for="adminBoosterDuplicateWeightSlider">Booster Duplicate Weight: <span id="adminBoosterDuplicateWeightValue">0%</span></label>
+        <label for="adminBoosterDuplicateWeightSlider">Booster Duplicate Avoidance: <span id="adminBoosterDuplicateWeightValue">0%</span></label>
         <input type="range" id="adminBoosterDuplicateWeightSlider" min="0" max="100" step="5" value="0">
-        <div class="admin-region-bias-hint">Chance each ordinary booster slot prefers a card not already pulled earlier in that same pack, lowering the odds of a pack giving the same card twice. Ignores the player's actual inventory entirely. Never affects one-of-a-kind cards (PuPu, level 8-10) -- those already get auto-refunded as gil instead of duplicated.</div>
+      </div>
+      <div class="settings-row admin-region-bias-row">
+        <label for="adminBoosterRareChanceSlider">Booster One-of-a-Kind Odds: <span id="adminBoosterRareChanceValue">12.5%</span></label>
+        <input type="range" id="adminBoosterRareChanceSlider" min="0" max="100" step="0.5" value="12.5">
       </div>
       <div id="adminGilAmountsSection"></div>
     </div>
@@ -4336,13 +4338,13 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
   if (slider && document.activeElement !== slider) slider.value = campaignRegionCardBiasPercent;
   if (label) label.textContent = `${campaignRegionCardBiasPercent}%`;
 });
-// Booster Duplicate Weight -- 0-100%, off by default. See
+// Booster Duplicate Avoidance -- 0-100%, off by default. See
 // drawBoosterPackCards' use of this for what it actually does; this is just
 // the admin-editable knob, same live-sync pattern as Region Card Bias
-// above. Only ever weights ordinary (non-one-of-a-kind) booster slots away
-// from cards the player already owns -- PuPu/level 8-10 cards keep their
-// own separate, unrelated duplicate handling (auto-refund) regardless of
-// this setting.
+// above. Purely about a single pack's own slots not repeating a card
+// (ignores the player's real inventory entirely) -- PuPu/level 8-10 cards
+// keep their own separate, unrelated duplicate handling (auto-refund
+// against the player's actual inventory) regardless of this setting.
 let boosterDuplicateWeightPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).on('value', snap => {
   const v = Number(snap.val());
@@ -4351,6 +4353,22 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).on('value', snap =
   const label = document.getElementById('adminBoosterDuplicateWeightValue');
   if (slider && document.activeElement !== slider) slider.value = boosterDuplicateWeightPercent;
   if (label) label.textContent = `${boosterDuplicateWeightPercent}%`;
+});
+// Booster One-of-a-Kind Odds -- the chance a pack's single "rare slot" ever
+// gets rolled at all (see drawBoosterPackCards' packHasRareSlot), as a
+// percent (0-100) rather than the old hardcoded 1/8 fraction. Defaults to
+// 12.5 to match that original odds exactly. boosterPackPrice() also derives
+// its rare-card price weighting straight from this live value (half of it,
+// same "rares priced at half their real draw odds" reasoning as before),
+// so admin changes here immediately affect both draw odds and pack pricing.
+let boosterOneOfAKindPullChancePercent = 12.5;
+rtdb.ref(`${GAME_CONFIG_ROOT}/boosterOneOfAKindPullChancePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  boosterOneOfAKindPullChancePercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 12.5;
+  const slider = document.getElementById('adminBoosterRareChanceSlider');
+  const label = document.getElementById('adminBoosterRareChanceValue');
+  if (slider && document.activeElement !== slider) slider.value = boosterOneOfAKindPullChancePercent;
+  if (label) label.textContent = `${boosterOneOfAKindPullChancePercent}%`;
 });
 let currentUser = null;
 let currentUserProfile = null;
@@ -5926,16 +5944,23 @@ function campaignFinalBossRewardId(save) {
 const BOOSTER_CARDS_PER_PACK = 3;
 // One-of-a-kind cards (PuPu, level 8-10 cards) are rare pulls from a
 // booster — each pack only has this chance of one of its slots coming from
-// the pack's one-of-a-kind cards instead of its regular ones. Easy to
-// retune later. PuPu is also guarded by CC Magician Joker in Campaign (see
-// CAMPAIGN_LOCATIONS) -- that's a separate, unrelated source; the shop's
-// own booster pool here is untouched by that.
-const BOOSTER_ONE_OF_A_KIND_PULL_CHANCE = 1 / 8;
+// the pack's one-of-a-kind cards instead of its regular ones. Admin-editable
+// at runtime now (see boosterOneOfAKindPullChancePercent, declared near the
+// other GAME_CONFIG_ROOT-synced admin settings) -- this function just reads
+// that live value converted from a 0-100 percent to a 0-1 fraction. PuPu is
+// also guarded by CC Magician Joker in Campaign (see CAMPAIGN_LOCATIONS) --
+// that's a separate, unrelated source; the shop's own booster pool here is
+// untouched by that.
+function boosterOneOfAKindPullChance() {
+  return boosterOneOfAKindPullChancePercent / 100;
+}
 // Pack pricing weights one-of-a-kind cards at half their pull chance (not
 // the full pull chance) — they're rare enough that pricing them at the
 // same weight as the draw odds overstates how much they're really worth
 // to the average buyer.
-const BOOSTER_ONE_OF_A_KIND_PRICE_WEIGHT = BOOSTER_ONE_OF_A_KIND_PULL_CHANCE / 2;
+function boosterOneOfAKindPriceWeight() {
+  return boosterOneOfAKindPullChance() / 2;
+}
 function isOneOfAKindCardId(cardId) {
   const card = CARD_DB.find(c => c.id === cardId);
   return !!card && isShopPurchaseLimited(card);
@@ -5948,9 +5973,9 @@ function isOneOfAKindCardId(cardId) {
 // making up half of Tomb of the Unknown King's 4-card pool) dragged the
 // price down below packs with no rares at all, even though those rares
 // are worth thousands of gil each. One-of-a-kind monsters only count for
-// BOOSTER_ONE_OF_A_KIND_PRICE_WEIGHT of a card "slot" (half their real
-// 10% pull odds, so pricing doesn't overstate how often they show up);
-// the rest of BOOSTER_CARDS_PER_PACK's slots go to the regular average.
+// boosterOneOfAKindPriceWeight() of a card "slot" (half their real pull
+// odds, so pricing doesn't overstate how often they show up); the rest of
+// BOOSTER_CARDS_PER_PACK's slots go to the regular average.
 // Discounted a further 20% and rounded to the nearest 10 gil to match
 // normal card pricing. Reads cardPrice() live every call, so it always
 // tracks the current card pricing table — nothing here is precomputed.
@@ -5962,7 +5987,7 @@ function boosterPackPrice(pack) {
   const commonIds = pack.cardIds.filter(id => !isOneOfAKindCardId(id));
   let expectedPullValue;
   if (rareIds.length && commonIds.length) {
-    const rareSlots = BOOSTER_ONE_OF_A_KIND_PRICE_WEIGHT;
+    const rareSlots = boosterOneOfAKindPriceWeight();
     expectedPullValue = boosterPackAverage(rareIds) * rareSlots
       + boosterPackAverage(commonIds) * (BOOSTER_CARDS_PER_PACK - rareSlots);
   } else {
@@ -5973,8 +5998,8 @@ function boosterPackPrice(pack) {
   return Math.round(expectedPullValue * 0.8 / 10) * 10;
 }
 // Draws all of a pack's cards at once. The rare chance applies once per
-// PACK, not per card: there's a single BOOSTER_ONE_OF_A_KIND_PULL_CHANCE
-// roll for the whole pack, and if it hits, exactly one random slot in the
+// PACK, not per card: there's a single boosterOneOfAKindPullChance() roll
+// for the whole pack, and if it hits, exactly one random slot in the
 // pack becomes a one-of-a-kind pull — the rest (or all of it, on the other
 // 90% of pack opens) is drawn from the pack's regular cards.
 // Ignores the player's actual inventory entirely -- this is purely about
@@ -5991,7 +6016,7 @@ function drawBoosterPackCards(pack, count) {
   const rareIds = pack.cardIds.filter(isOneOfAKindCardId);
   const commonIds = pack.cardIds.filter(id => !isOneOfAKindCardId(id));
   const drawFrom = pool => pool[Math.floor(Math.random() * pool.length)];
-  const packHasRareSlot = rareIds.length && commonIds.length && Math.random() < BOOSTER_ONE_OF_A_KIND_PULL_CHANCE;
+  const packHasRareSlot = rareIds.length && commonIds.length && Math.random() < boosterOneOfAKindPullChance();
   const rareSlot = packHasRareSlot ? Math.floor(Math.random() * count) : -1;
   // Grows as this pack's own ordinary draws land.
   const alreadyPulledThisPack = new Set();
@@ -14898,6 +14923,16 @@ document.getElementById('adminBoosterDuplicateWeightSlider').addEventListener('c
   playSfx('cursorMove');
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).set(v).catch(() => {});
+});
+document.getElementById('adminBoosterRareChanceSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminBoosterRareChanceValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminBoosterRareChanceSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/boosterOneOfAKindPullChancePercent`).set(v).catch(() => {});
 });
 // -- Admin: editable gil reward amounts -----------------------------------
 // Each entry is one number the admin can tune at runtime: which live
