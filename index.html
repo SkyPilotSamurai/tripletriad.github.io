@@ -4593,6 +4593,26 @@
         <label for="adminMobileCardScaleSlider">Mobile Card Size (Shop/Picker): <span id="adminMobileCardScaleValue">1x</span></label>
         <input type="range" id="adminMobileCardScaleSlider" min="1" max="3" step="0.5" value="1">
       </div>
+      <div class="settings-row admin-region-bias-row" title="Ranked matches roll a random point budget from 5 up to this cap. Which cap applies is decided by whichever of the two players owns the lower-level cards (weakest player), based on the highest-level card they own. Level 1-2.">
+        <label for="adminRankedCapTier0Slider">Ranked Max Points - Weakest Player Lv.1-2: <span id="adminRankedCapTier0Value">12</span></label>
+        <input type="range" id="adminRankedCapTier0Slider" min="5" max="40" step="1" value="12">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Same as above, for weakest player owning up to level 3-4 cards.">
+        <label for="adminRankedCapTier1Slider">Ranked Max Points - Weakest Player Lv.3-4: <span id="adminRankedCapTier1Value">19</span></label>
+        <input type="range" id="adminRankedCapTier1Slider" min="5" max="40" step="1" value="19">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Same as above, for weakest player owning up to level 5-6 cards.">
+        <label for="adminRankedCapTier2Slider">Ranked Max Points - Weakest Player Lv.5-6: <span id="adminRankedCapTier2Value">26</span></label>
+        <input type="range" id="adminRankedCapTier2Slider" min="5" max="40" step="1" value="26">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Same as above, for weakest player owning up to level 7-8 cards.">
+        <label for="adminRankedCapTier3Slider">Ranked Max Points - Weakest Player Lv.7-8: <span id="adminRankedCapTier3Value">33</span></label>
+        <input type="range" id="adminRankedCapTier3Slider" min="5" max="40" step="1" value="33">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Same as above, for weakest player owning level 9-10 cards. Ranked max points can never exceed 40, so this tier is also the hard ceiling.">
+        <label for="adminRankedCapTier4Slider">Ranked Max Points - Weakest Player Lv.9-10: <span id="adminRankedCapTier4Value">40</span></label>
+        <input type="range" id="adminRankedCapTier4Slider" min="5" max="40" step="1" value="40">
+      </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
         <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="1" value="0">
@@ -5407,7 +5427,16 @@ const POINT_BUDGET_MAX = 50;
 function rollPointBudget() {
   return POINT_BUDGET_MIN + Math.floor(Math.random() * (POINT_BUDGET_MAX - POINT_BUDGET_MIN + 1));
 }
-const RANKED_POINT_CAP_BY_LEVEL = [null, 7, 12, 17, 22, 27, 32, 37, 42, 47, 50];
+// Admin-editable ranked point cap tiers, grouped by the weakest player's
+// highest owned card level: index 0 = level 1-2, 1 = level 3-4, 2 = level
+// 5-6, 3 = level 7-8, 4 = level 9-10. Values are tuned live via the Misc
+// admin panel's 5 "Ranked Max Points" sliders (each hard-capped at 40 there
+// -- ranked max points should never exceed 40) and synced below.
+let RANKED_POINT_CAP_TIERS = [12, 19, 26, 33, 40];
+function rankedPointCapTierIndexForLevel(level) {
+  const clamped = Math.max(1, Math.min(10, level));
+  return Math.min(RANKED_POINT_CAP_TIERS.length - 1, Math.floor((clamped - 1) / 2));
+}
 function highestOwnedCardLevel(profile) {
   if (!profile || !profile.collection) return 1;
   let highest = 1;
@@ -5418,13 +5447,30 @@ function highestOwnedCardLevel(profile) {
   });
   return highest;
 }
+function rankedPointCapForProfile(profile) {
+  return RANKED_POINT_CAP_TIERS[rankedPointCapTierIndexForLevel(highestOwnedCardLevel(profile))];
+}
 function rollRankedPointBudget(p1Profile, p2Profile) {
   const rolled = rollPointBudget();
-  const p1Cap = RANKED_POINT_CAP_BY_LEVEL[highestOwnedCardLevel(p1Profile)];
-  const p2Cap = RANKED_POINT_CAP_BY_LEVEL[highestOwnedCardLevel(p2Profile)];
-  const worstCap = Math.min(p1Cap != null ? p1Cap : POINT_BUDGET_MAX, p2Cap != null ? p2Cap : POINT_BUDGET_MAX);
+  // Whichever player's tier cap is lower sets the ceiling for the match --
+  // the roll (already 5-50 from rollPointBudget) gets clamped down to it.
+  const worstCap = Math.min(rankedPointCapForProfile(p1Profile), rankedPointCapForProfile(p2Profile));
   return Math.min(rolled, Math.max(POINT_BUDGET_MIN, worstCap));
 }
+const RANKED_POINT_CAP_TIER_RTDB_KEYS = [
+  'rankedPointCapTier0', 'rankedPointCapTier1', 'rankedPointCapTier2', 'rankedPointCapTier3', 'rankedPointCapTier4',
+];
+RANKED_POINT_CAP_TIER_RTDB_KEYS.forEach((key, i) => {
+  rtdb.ref(`${GAME_CONFIG_ROOT}/${key}`).on('value', snap => {
+    const v = Number(snap.val());
+    const fallback = RANKED_POINT_CAP_TIERS[i];
+    RANKED_POINT_CAP_TIERS[i] = Number.isFinite(v) ? Math.max(POINT_BUDGET_MIN, Math.min(40, v)) : fallback;
+    const slider = document.getElementById(`adminRankedCapTier${i}Slider`);
+    const label = document.getElementById(`adminRankedCapTier${i}Value`);
+    if (slider && document.activeElement !== slider) slider.value = RANKED_POINT_CAP_TIERS[i];
+    if (label) label.textContent = String(RANKED_POINT_CAP_TIERS[i]);
+  });
+});
 let GIL_PER_RATING_POINT = 50;
 const CARD_PRICE_RANGE_BY_LEVEL = [
   null,
@@ -14963,6 +15009,20 @@ document.getElementById('adminMobileCardScaleSlider').addEventListener('change',
   const v = Math.max(1, Math.min(3, Number(e.target.value) || 1));
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).set(v).catch(() => {});
 });
+RANKED_POINT_CAP_TIER_RTDB_KEYS.forEach((key, i) => {
+  const slider = document.getElementById(`adminRankedCapTier${i}Slider`);
+  if (!slider) return;
+  slider.addEventListener('input', e => {
+    const v = Math.max(POINT_BUDGET_MIN, Math.min(40, Number(e.target.value) || POINT_BUDGET_MIN));
+    const label = document.getElementById(`adminRankedCapTier${i}Value`);
+    if (label) label.textContent = String(v);
+  });
+  slider.addEventListener('change', e => {
+    playSfx('cursorMove');
+    const v = Math.max(POINT_BUDGET_MIN, Math.min(40, Number(e.target.value) || POINT_BUDGET_MIN));
+    rtdb.ref(`${GAME_CONFIG_ROOT}/${key}`).set(v).catch(() => {});
+  });
+});
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   const label = document.getElementById('adminRegionCardBiasValue');
@@ -15097,12 +15157,12 @@ function initAdminGilAmountsUi() {
     const input = document.createElement('input');
     input.type = 'number';
     input.id = `adminGil_${field.key}`;
-    input.min = '0';
+    input.min = String(field.min != null ? field.min : 0);
     if (field.max != null) input.max = String(field.max);
     input.step = '1';
     input.value = field.get();
     input.addEventListener('change', () => {
-      let v = Math.max(0, Math.round(Number(input.value) || 0));
+      let v = Math.max(field.min != null ? field.min : 0, Math.round(Number(input.value) || 0));
       if (field.max != null) v = Math.min(field.max, v);
       input.value = v;
       field.set(v);
