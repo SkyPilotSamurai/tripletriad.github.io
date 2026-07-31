@@ -3629,10 +3629,13 @@
   /* --- Horizontal Hand Layout (opt-in player setting, Settings > Mobile) ---
      body.mobile-horizontal-hands. Puts P2's hand above the board and P1's
      hand below it, both laid out as a horizontal overlapping stack instead
-     of the default vertical one on either side of the board. game-row's DOM
-     order is P1, board, P2, so column-reverse flips the visual stacking
-     order to P2 (top), board (middle), P1 (bottom) without touching markup.
-     Card width (129px) is constant across both Shape settings -- only
+     of the default vertical one on either side of the board. Explicit
+     order (rather than flex-direction: column-reverse) puts P2 first,
+     board second, P1 last visually, without touching markup or relying on
+     axis-reversal, which interacts unpredictably with this page's zoom-based
+     scaling. Widths are left to size from content (no fixed px guesses)
+     since .board-col/.hand are both already zoomed 1.25x elsewhere on the
+     page. Card width (129px) is constant across both Shape settings -- only
      height changes for Natural shape -- so the horizontal overlap amount
      below doesn't need a shape-natural override the way the vertical one
      does. The toward-board hover/select nudge (originally translateX,
@@ -3640,19 +3643,21 @@
      P1's hand since the board is above it, down for P2's hand since the
      board is below it. */
   body.mobile-mode.mobile-horizontal-hands .game-row {
-    flex-direction: column-reverse;
+    flex-direction: column;
     align-items: center;
   }
+  body.mobile-mode.mobile-horizontal-hands #handP2 { order: 1; }
+  body.mobile-mode.mobile-horizontal-hands .board-col { order: 2; }
+  body.mobile-mode.mobile-horizontal-hands #handP1 { order: 3; }
   body.mobile-mode.mobile-horizontal-hands .hand {
     flex-direction: row;
     justify-content: center;
     min-width: 0;
-    min-height: 129px;
-    width: 705px;
+    width: auto;
     height: auto;
   }
   body.mobile-mode.mobile-horizontal-hands .hand.stack {
-    width: 465px;
+    width: auto;
     height: auto;
   }
   body.mobile-mode.mobile-horizontal-hands .hand.stack .card {
@@ -7399,6 +7404,7 @@ function initGame(hands) {
   state.hands = hands || dealHands();
   tagHandOwnership(state.hands);
   if (state.rules.swap) applySwapRule(state.hands);
+  tagClosedSingleHandCards();
   state.forcedCardId = { p1: null, p2: null };
   state.forcedCardTurnKey = { p1: null, p2: null };
   state.boardElements = state.rules.elemental
@@ -7514,7 +7520,29 @@ async function rematchPracticeMatchSame() {
 }
 function assignRandomClosedSingleCardId(hand) {
   if (!Array.isArray(hand) || hand.length === 0) return null;
-  return hand[Math.floor(Math.random() * hand.length)].id;
+  const card = hand[Math.floor(Math.random() * hand.length)];
+  card._closedSingle = true;
+  return card.id;
+}
+// Closed Single hides exactly one specific hand card. state.closedSingleCardId
+// stores it as a card id, but a hand can hold multiple copies of the same
+// card (up to PICKER_MAX_COPIES) -- matching by id alone would mark every
+// copy hidden instead of just the one the player picked. Tagging the actual
+// object instance with _closedSingle sidesteps that: only the exact card the
+// player/NPC chose carries the flag, even if identical copies sit beside it
+// in the hand. Called once per match setup (initGame, tutorial demos) right
+// after state.hands/state.closedSingleCardId are both finalized; .find()
+// only ever tags the first match, so at most one instance per side is ever
+// flagged.
+function tagClosedSingleHandCards() {
+  ['p1', 'p2'].forEach(owner => {
+    const hand = state.hands && state.hands[owner];
+    if (!Array.isArray(hand)) return;
+    const hiddenId = state.closedSingleCardId && state.closedSingleCardId[owner];
+    if (hiddenId == null) return;
+    const card = hand.find(c => c && c.id === hiddenId);
+    if (card) card._closedSingle = true;
+  });
 }
 function buildMaxPointsHandIds(pointBudget) {
   const counts = new Map();
@@ -9877,6 +9905,7 @@ function stageTutorialScenario(rule, skipRender) {
   state.forcedCardId = { p1: null, p2: null };
   state.forcedCardTurnKey = { p1: null, p2: null };
   state.closedSingleCardId = rule.closedSingleCardId ? { ...rule.closedSingleCardId } : { p1: null, p2: null };
+  tagClosedSingleHandCards();
   state.boardElements = Array(9).fill(null);
   if (rule.boardElements) {
     Object.keys(rule.boardElements).forEach(i => { state.boardElements[Number(i)] = rule.boardElements[i]; });
@@ -12172,10 +12201,10 @@ function isHandCardHiddenFromViewer(owner, card) {
   if (state.cpuOpponent) {
     if (owner !== 'p2') return false;
     if (state.rules.closed) return true;
-    if (state.rules.closedSingle) {
-      const hiddenId = state.closedSingleCardId && state.closedSingleCardId[owner];
-      return hiddenId != null && card.id === hiddenId;
-    }
+    // Instance-tagged (see tagClosedSingleHandCards) rather than matched by
+    // id -- a hand can hold more than one copy of the same card, and id
+    // matching would mark every copy hidden instead of just the one picked.
+    if (state.rules.closedSingle) return !!(card && card._closedSingle);
     return false;
   }
   if (state.mode !== 'online' || !state.seat) return false;
@@ -12190,18 +12219,14 @@ function isHandCardHiddenFromViewer(owner, card) {
 function isHandCardHiddenFromCpu(owner, card) {
   if (owner !== 'p1') return false;
   if (state.rules.closed) return true;
-  if (state.rules.closedSingle) {
-    const hiddenId = state.closedSingleCardId && state.closedSingleCardId[owner];
-    return hiddenId != null && card.id === hiddenId;
-  }
+  if (state.rules.closedSingle) return !!(card && card._closedSingle);
   return false;
 }
 function isOwnCardMarkedHidden(owner, card) {
   if (state.cpuOpponent) {
     if (owner !== 'p1') return false;
     if (!state.rules.closedSingle) return false;
-    const hiddenId = state.closedSingleCardId && state.closedSingleCardId[owner];
-    return hiddenId != null && card.id === hiddenId;
+    return !!(card && card._closedSingle);
   }
   if (state.mode !== 'online' || !state.seat || owner !== state.seat) return false;
   if (!state.rules.closedSingle) return false;
