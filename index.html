@@ -3520,6 +3520,12 @@
   body.mobile-mode #adminNpcEditorPanel h2 { font-size: calc(22px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode .settings-section h3 { font-size: calc(16px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode .settings-row label { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #settingsPanel select,
+  body.mobile-mode #rulesPanel select,
+  body.mobile-mode #cpuSetupBoard select {
+    font-size: calc(15px * var(--mobile-btn-scale, 1.5));
+    padding: calc(5px * var(--mobile-btn-scale, 1.5)) calc(10px * var(--mobile-btn-scale, 1.5));
+  }
   body.mobile-mode #campaignHomeTitle,
   body.mobile-mode #campaignLocationsTitle,
   body.mobile-mode #campaignNpcLocationName,
@@ -3568,6 +3574,19 @@
   body.mobile-mode #campaignLocationsShortcuts button {
     font-size: calc(13px * var(--mobile-btn-scale, 1.5));
     padding: calc(8px * var(--mobile-btn-scale, 1.5)) calc(16px * var(--mobile-btn-scale, 1.5));
+  }
+
+  /* Card Picker + Shop card tiles: both screens share the .picker-tile .card
+     rule, so a single override here covers card size in both places. Driven
+     by its own admin slider (0.5x steps) rather than the general button/text
+     scales, since it needs coarser control. Defaults to 1 (no change). */
+  body.mobile-mode .picker-tile .card {
+    width: calc(124px * var(--mobile-card-scale, 1));
+    height: calc(148px * var(--mobile-card-scale, 1));
+    margin-bottom: calc(24px * var(--mobile-card-scale, 1));
+  }
+  body.mobile-mode.shape-natural .picker-tile .card {
+    height: calc(148px * var(--mobile-card-scale, 1));
   }
 
   /* Card Picker: level tabs (Recent/Lv.1-10/Custom) and footer buttons --
@@ -4570,6 +4589,10 @@
         <label for="adminMobileTextScaleSlider">Mobile General Text Size: <span id="adminMobileTextScaleValue">125%</span></label>
         <input type="range" id="adminMobileTextScaleSlider" min="100" max="200" step="5" value="125">
       </div>
+      <div class="settings-row admin-region-bias-row" title="Increases card size in the Shop and Card Picker screens while Mobile Mode is on. Only affects those two screens.">
+        <label for="adminMobileCardScaleSlider">Mobile Card Size (Shop/Picker): <span id="adminMobileCardScaleValue">1x</span></label>
+        <input type="range" id="adminMobileCardScaleSlider" min="1" max="3" step="0.5" value="1">
+      </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
         <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="1" value="0">
@@ -5157,6 +5180,20 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).on('value', snap =
   const label = document.getElementById('adminMobileTextScaleValue');
   if (slider && document.activeElement !== slider) slider.value = mobileGeneralTextScalePercent;
   if (label) label.textContent = `${mobileGeneralTextScalePercent}%`;
+});
+// Extra card-size multiplier, only applied to the Shop and Card Picker
+// screens' card tiles, only while Mobile Mode is on -- separate from the
+// general button/text scales above since cards need much coarser (0.5x)
+// steps rather than a fine percentage.
+let mobileCardSizeMultiplier = 1;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).on('value', snap => {
+  const v = Number(snap.val());
+  mobileCardSizeMultiplier = Number.isFinite(v) ? Math.max(1, Math.min(3, v)) : 1;
+  document.body.style.setProperty('--mobile-card-scale', mobileCardSizeMultiplier);
+  const slider = document.getElementById('adminMobileCardScaleSlider');
+  const label = document.getElementById('adminMobileCardScaleValue');
+  if (slider && document.activeElement !== slider) slider.value = mobileCardSizeMultiplier;
+  if (label) label.textContent = `${mobileCardSizeMultiplier}x`;
 });
 rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights`).on('value', snap => {
   cpuWeightOverrides = snap.val() || {};
@@ -12542,6 +12579,21 @@ function updateOverlay() {
     graphic.classList.remove('show');
   } else {
     graphic.src = RESULT_GRAPHICS[result];
+    // Reserve the banner's real box up front (matching the existing
+    // max-width:420px scaling) instead of leaving it un-sized until the
+    // image decode finishes -- otherwise the result screen visibly
+    // grows/shifts into place a beat after it first appears, since
+    // win/lose/draw are three different aspect ratios and the overlay is
+    // vertically centered around its content.
+    const naturalSize = RESULT_GRAPHIC_SIZE[result];
+    if (naturalSize) {
+      const displayWidth = Math.min(420, naturalSize.width);
+      graphic.style.width = `${displayWidth}px`;
+      graphic.style.height = `${displayWidth * (naturalSize.height / naturalSize.width)}px`;
+    } else {
+      graphic.style.width = '';
+      graphic.style.height = '';
+    }
     graphic.classList.add('show');
   }
   let leftScore = p1, rightScore = p2;
@@ -13564,8 +13616,25 @@ const SFX = {
   cardObtained: "Sound/Card Obtained.wav",
   shopPurchase: "Sound/Shop Purchase.wav",
 };
+// Captures each result banner's real pixel size as soon as it's loaded, so
+// updateOverlay() can reserve the exact same box for #overlayGraphic up
+// front (via explicit width/height) instead of leaving it un-sized. Without
+// this, the browser doesn't know how big the banner is until the (possibly
+// already-cached, but still async) image decode finishes, so the result
+// screen visibly grows/shifts into place a moment after it first appears --
+// win/lose/draw are three different aspect ratios, and the overlay is
+// vertically centered around its content.
+const RESULT_GRAPHIC_SIZE = {};
+Object.entries(RESULT_GRAPHICS).forEach(([key, src]) => {
+  const img = new Image();
+  img.onload = () => {
+    if (img.naturalWidth && img.naturalHeight) {
+      RESULT_GRAPHIC_SIZE[key] = { width: img.naturalWidth, height: img.naturalHeight };
+    }
+  };
+  img.src = src;
+});
 [
-  ...Object.values(RESULT_GRAPHICS),
   ...ELEMENTS.map(e => `Cards/FF8/icons/elements/${e.toLowerCase()}_strip.png`),
   `${CARD_IMG_PATH}${LOGO_CARD_IMAGE}`,
 ].forEach(src => { const img = new Image(); img.src = src; });
@@ -14883,6 +14952,16 @@ document.getElementById('adminMobileTextScaleSlider').addEventListener('change',
   playSfx('cursorMove');
   const v = Math.max(100, Math.min(200, Number(e.target.value) || 125));
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).set(v).catch(() => {});
+});
+document.getElementById('adminMobileCardScaleSlider').addEventListener('input', e => {
+  const v = Math.max(1, Math.min(3, Number(e.target.value) || 1));
+  const label = document.getElementById('adminMobileCardScaleValue');
+  if (label) label.textContent = `${v}x`;
+});
+document.getElementById('adminMobileCardScaleSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(1, Math.min(3, Number(e.target.value) || 1));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).set(v).catch(() => {});
 });
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
