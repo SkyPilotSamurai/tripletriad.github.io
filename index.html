@@ -5953,19 +5953,20 @@ const CAMPAIGN_LOCATIONS = [
       { id: 'cc-jack', name: 'CC Jack', desc: 'First rung of the Card Club ladder - shows up in the main lobby once word gets around you\'ve been winning.',
         rules: campaignEmptyRules({ same: true, up: true }), cpuDifficulty: 3, cpuBehavior: 'normal', minUnlockedLocations: 3 },
       { id: 'cc-knight-club', name: 'CC Knight Club', desc: 'Wanders the dorm walkway, saying little beyond "Draw..." Second rung of the ladder.',
-        rules: campaignEmptyRules({ same: true, chaos: true }), cpuDifficulty: 3, cpuBehavior: 'risky', minUnlockedLocations: 3 },
+        rules: campaignEmptyRules({ same: true, chaos: true }), cpuDifficulty: 3, cpuBehavior: 'risky', minUnlockedLocations: 3, requiresDefeatedNpcIds: ['cc-jack'] },
       { id: 'cc-princess-diamond', name: 'CC Princess Diamond', desc: 'A pair of students at the info board, playing as one - carries Trabia\'s rules. Third rung of the ladder.',
-        rules: campaignEmptyRules({ plus: true, closedSingle: true, random: true }), cpuDifficulty: 4, cpuBehavior: 'reflipper', minUnlockedLocations: 6 },
+        rules: campaignEmptyRules({ plus: true, closedSingle: true, random: true }), cpuDifficulty: 4, cpuBehavior: 'reflipper', minUnlockedLocations: 6, requiresDefeatedNpcIds: ['cc-knight-club'] },
       { id: 'prince-spade', name: 'CC Prince Spade', desc: 'The same masked man who once handed you a starter deck - turns out he\'s the Card Club\'s fourth rung.',
-        rules: campaignEmptyRules({ same: true, plus: true, up: true }), cpuDifficulty: 4, cpuBehavior: 'normal', minUnlockedLocations: 6 },
+        rules: campaignEmptyRules({ same: true, plus: true, up: true }), cpuDifficulty: 4, cpuBehavior: 'normal', minUnlockedLocations: 6, requiresDefeatedNpcIds: ['cc-princess-diamond'] },
       { id: 'cc-queen-heart', name: 'CC Queen Heart', desc: 'Secretly Xu. Card Club royalty - plays for keeps.',
-        rules: campaignEmptyRules({ same: true, plus: true, combo: true }), cpuDifficulty: 4, cpuBehavior: 'combo', rewardCardId: 89, minUnlockedLocations: 6 },
-      { id: 'cc-magician-joker', name: 'CC Magician Joker', desc: 'Runs the Training Center platform - an optional Card Club member.',
-        rules: campaignEmptyRules({ same: true, plus: true, random: true }), cpuDifficulty: 4, cpuBehavior: 'reflipper', rewardCardId: 91, minUnlockedLocations: 6 },
+        rules: campaignEmptyRules({ same: true, plus: true, combo: true }), cpuDifficulty: 4, cpuBehavior: 'combo', rewardCardId: 89, minUnlockedLocations: 6, requiresDefeatedNpcIds: ['prince-spade'] },
+      { id: 'cc-magician-joker', name: 'CC Magician Joker', desc: 'Runs the Training Center platform - a side rung of the ladder, ready for a challenge as soon as Jack falls.',
+        rules: campaignEmptyRules({ same: true, plus: true, random: true }), cpuDifficulty: 4, cpuBehavior: 'reflipper', rewardCardId: 91, minUnlockedLocations: 6, requiresDefeatedNpcIds: ['cc-jack'] },
       { id: 'cc-master-king', name: 'CC Master King', desc: "Secretly Quistis. The Card Club's top-ranked member - every rule in the book, all the time.",
-        rules: campaignEmptyRules({ same: true, plus: true, up: true, combo: true, elemental: true }), cpuDifficulty: 5, cpuBehavior: 'elemental', rewardCardId: 80, minUnlockedLocations: 9 },
-      { id: 'headmaster-cid', name: 'Headmaster Cid', desc: 'Leader of Balamb Garden for many years. A serious final test.',
-        rules: campaignEmptyRules({ same: true, sameWall: true, plus: true, up: true, combo: true, suddenDeath: true }), cpuDifficulty: 5, cpuBehavior: 'combo', rewardCardId: 109, minUnlockedLocations: 9 },
+        rules: campaignEmptyRules({ same: true, plus: true, up: true, combo: true, elemental: true }), cpuDifficulty: 5, cpuBehavior: 'elemental', rewardCardId: 80, minUnlockedLocations: 9, requiresDefeatedNpcIds: ['cc-queen-heart'] },
+      { id: 'headmaster-cid', name: 'Headmaster Cid', desc: 'Leader of Balamb Garden for many years. A serious final test - and he won\'t entertain a challenge until the whole Card Club ladder has fallen.',
+        rules: campaignEmptyRules({ same: true, sameWall: true, plus: true, up: true, combo: true, suddenDeath: true }), cpuDifficulty: 5, cpuBehavior: 'combo', rewardCardId: 109, minUnlockedLocations: 9,
+        requiresDefeatedNpcIds: ['cc-jack', 'cc-knight-club', 'cc-princess-diamond', 'prince-spade', 'cc-queen-heart', 'cc-magician-joker', 'cc-master-king'] },
     ],
   },
   {
@@ -6241,8 +6242,14 @@ function loadCampaignAdminOverrides() {
 function campaignUnlockedLocationCount(save) {
   return save && save.unlockedLocations ? Object.keys(save.unlockedLocations).length : 0;
 }
+function campaignNpcMissingPrereqs(npc, save) {
+  if (!Array.isArray(npc.requiresDefeatedNpcIds) || !npc.requiresDefeatedNpcIds.length) return [];
+  const defeated = (save && save.defeatedNpcs) || {};
+  return npc.requiresDefeatedNpcIds.filter(id => !defeated[id]);
+}
 function campaignIsNpcLocked(npc, save) {
-  return !!(npc.minUnlockedLocations && campaignUnlockedLocationCount(save) < npc.minUnlockedLocations);
+  if (npc.minUnlockedLocations && campaignUnlockedLocationCount(save) < npc.minUnlockedLocations) return true;
+  return campaignNpcMissingPrereqs(npc, save).length > 0;
 }
 function campaignFinalBossRewardId(save) {
   const highTierIds = CARD_DB.filter(c => !c.custom && c.level >= 9).map(c => c.id);
@@ -7479,7 +7486,10 @@ function campaignBestPossibleHandPoints(npc) {
   const levels = pool.length ? pool.map(c => c.level) : campaignLevelPoolForNpc(npc);
   return Math.max(...levels) * PICKER_HAND_SIZE;
 }
-function campaignPointBudgetForNpc(npc) {
+function campaignPointBudgetBaseForNpc(npc) {
+  // The normal difficulty-cap-based budget, before any Point Budget Variance
+  // is rolled. Used both as the fallback when no variance is configured for
+  // this NPC's level, and as the source for the displayed "Point Max" ceiling.
   const activePool = campaignActiveCardPool(npc);
   const levels = activePool.length ? activePool.map(c => c.level) : campaignLevelPoolForNpc(npc);
   const maxPoints = campaignBestPossibleHandPoints(npc);
@@ -7497,6 +7507,41 @@ function campaignPointBudgetForNpc(npc) {
     budget = Math.min(POINT_BUDGET_MAX, Math.ceil(floor / 10) * 10);
   }
   return budget;
+}
+function campaignPointBudgetForNpc(npc) {
+  // The actual point total used to build this NPC's hand -- may be randomized
+  // within the admin-configured Point Budget Variance range for their level.
+  return applyCampaignPointVariance(npc, campaignPointBudgetBaseForNpc(npc));
+}
+function campaignPointBudgetCeilingForNpc(npc) {
+  // What to show the player before the match: the highest this NPC's hand
+  // could possibly come in at for their level, not the specific (possibly
+  // randomized) number that actually gets rolled for hand-building -- so the
+  // variance stays a surprise instead of being spoiled by the intro screen.
+  const level = npc && npc.cpuDifficulty;
+  const min = cpuLevelWeight('pointVarianceMin', level);
+  const max = cpuLevelWeight('pointVarianceMax', level);
+  if (min <= 0 && max <= 0) return campaignPointBudgetBaseForNpc(npc);
+  return Math.max(min, max);
+}
+function applyCampaignPointVariance(npc, budget) {
+  // Admin-tunable per-level range (CPU AI Weights > By Skill Level > Campaign
+  // Point Budget Variance) that directly defines the point total a Campaign
+  // NPC's hand can land on, instead of always maxing out at their difficulty
+  // cap. Min/Max = 0/0 (the default) leaves the normal cap-based budget
+  // computed above untouched. When a range IS set, it's the only thing that
+  // decides the total -- no other function (the NPC's affordability floor,
+  // its forced rare card cost, etc.) overrides it. buildCampaignNpcHand
+  // already falls back to the cheapest available cards when the budget is
+  // too tight to "properly" afford everything, so this is safe even at the
+  // low end of a level's normal range.
+  const level = npc && npc.cpuDifficulty;
+  const min = cpuLevelWeight('pointVarianceMin', level);
+  const max = cpuLevelWeight('pointVarianceMax', level);
+  if (min <= 0 && max <= 0) return budget;
+  const lo = Math.max(POINT_BUDGET_MIN, Math.min(min, max));
+  const hi = Math.max(lo, Math.min(POINT_BUDGET_MAX, Math.max(min, max)));
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 function campaignRollForcedRareCards(npc, baseBudget) {
   const candidates = campaignNpcRareCardCandidates(npc);
@@ -7613,7 +7658,7 @@ function buildCampaignNpcRandomHand(npc, forcedRareCardIds) {
   return hand;
 }
 let lastCampaignP1HandIds = null;
-async function startCampaignBattle(locationId, npcId, rules, pointBudget, forcedRareCardIds) {
+async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds) {
   if (!currentUser || !currentCampaignSave) return;
   const location = campaignFindLocation(locationId);
   const npc = location && location.npcs.find(n => n.id === npcId);
@@ -7623,7 +7668,10 @@ async function startCampaignBattle(locationId, npcId, rules, pointBudget, forced
   state.cpuOpponent = true;
   state.cpuDifficulty = npc.cpuDifficulty;
   state.cpuBehavior = npc.cpuBehavior;
-  state.cpuPointBudget = pointBudget;
+  // Point Budget Variance (CPU AI Weights > By Skill Level) only varies the
+  // NPC's own hand-building budget -- the player always drafts against the
+  // level's normal ceiling (playerBudget), never the NPC's rolled total.
+  state.cpuPointBudget = npcBudget;
   state.cpuTimerEnabled = false;
   state.rules = { ...rules };
   syncRuleCheckboxesFromState();
@@ -7631,15 +7679,15 @@ async function startCampaignBattle(locationId, npcId, rules, pointBudget, forced
   showGameScreen();
   const randomIgnoresPoints = state.rules.random && campaignRandomIgnoresPointsEnabled;
   const randomCardsMinLevel = randomIgnoresPoints ? campaignRandomCardsLevelFloor(npc) : null;
-  const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(lastCampaignP1HandIds, pointBudget);
+  const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(lastCampaignP1HandIds, playerBudget);
   const prefillP1ClosedSingle = state.closedSingleCardId ? state.closedSingleCardId.p1 : null;
   const p1Hand = state.rules.random
-    ? buildRandomHand(randomIgnoresPoints ? null : pointBudget, randomCardsMinLevel)
-    : await runCardPicker('p1', `Challenge: ${npc.name}`, pointBudget, prefillP1Ids, prefillP1ClosedSingle);
+    ? buildRandomHand(randomIgnoresPoints ? null : playerBudget, randomCardsMinLevel)
+    : await runCardPicker('p1', `Challenge: ${npc.name}`, playerBudget, prefillP1Ids, prefillP1ClosedSingle);
   lastCampaignP1HandIds = p1Hand.map(c => c.id);
   const p2Hand = randomIgnoresPoints
     ? buildCampaignNpcRandomHand(npc, forcedRareCardIds)
-    : buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds);
+    : buildCampaignNpcHand(npc, npcBudget, forcedRareCardIds);
   state.closedSingleCardId = {
     p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
     p2: state.rules.closedSingle ? assignRandomClosedSingleCardId(p2Hand) : null,
@@ -7659,9 +7707,12 @@ function openCampaignBattleIntro(locationId, npcId) {
   if (!location || !npc) return;
   let rules = { ...npc.rules };
   if (rules.roulette) rules = rollRouletteRules(rules);
+  // Point Budget Variance only affects the NPC's own hand -- the player always
+  // drafts against the level's normal ceiling, never the NPC's rolled total.
+  const playerBudget = campaignPointBudgetCeilingForNpc(npc);
   const baseBudget = campaignPointBudgetForNpc(npc);
-  const { pointBudget, forcedRareCardIds } = campaignRollForcedRareCards(npc, baseBudget);
-  campaignIntroContext = { locationId, npcId, rules, pointBudget, forcedRareCardIds };
+  const { pointBudget: npcBudget, forcedRareCardIds } = campaignRollForcedRareCards(npc, baseBudget);
+  campaignIntroContext = { locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds };
   document.getElementById('campaignNpcScreen').classList.add('hidden');
   document.getElementById('campaignBattleIntroScreen').classList.remove('hidden');
   document.getElementById('campaignIntroNpcName').textContent = npc.name;
@@ -7670,7 +7721,7 @@ function openCampaignBattleIntro(locationId, npcId) {
   document.getElementById('campaignIntroRules').textContent = formatActiveRules(rules) || '[No rules]';
   document.getElementById('campaignIntroPoints').textContent = (rules.random && campaignRandomIgnoresPointsEnabled)
     ? campaignRandomCardsLabel(npc)
-    : `Point Max: ${pointBudget}`;
+    : `Point Max: ${campaignPointBudgetCeilingForNpc(npc)}`;
   const noteEl = document.getElementById('campaignIntroNote');
   if (noteEl) {
     const wonCards = campaignNpcState(npc.id).wonCardIds
@@ -7695,10 +7746,10 @@ function closeCampaignBattleIntro() {
 }
 async function confirmCampaignBattleIntro() {
   if (!campaignIntroContext) return;
-  const { locationId, npcId, rules, pointBudget, forcedRareCardIds } = campaignIntroContext;
+  const { locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds } = campaignIntroContext;
   campaignIntroContext = null;
   document.getElementById('campaignBattleIntroScreen').classList.add('hidden');
-  await startCampaignBattle(locationId, npcId, rules, pointBudget, forcedRareCardIds);
+  await startCampaignBattle(locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds);
 }
 async function rematchCampaignBattleSame() {
   const locationId = state.campaignLocationId;
@@ -7707,9 +7758,10 @@ async function rematchCampaignBattleSame() {
   const npc = location && location.npcs.find(n => n.id === npcId);
   if (!location || !npc) return;
   const rules = { ...state.rules };
-  const pointBudget = state.cpuPointBudget || campaignPointBudgetForNpc(npc);
-  const { forcedRareCardIds } = campaignRollForcedRareCards(npc, pointBudget);
-  await startCampaignBattle(locationId, npcId, rules, pointBudget, forcedRareCardIds);
+  const playerBudget = campaignPointBudgetCeilingForNpc(npc);
+  const npcBudget = state.cpuPointBudget || campaignPointBudgetForNpc(npc);
+  const { forcedRareCardIds } = campaignRollForcedRareCards(npc, npcBudget);
+  await startCampaignBattle(locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds);
 }
 const CPU_DIFFICULTY_LABELS = {
   1: 'Easy', 2: 'Casual', 3: 'Average', 4: 'Skilled', 5: 'Expert',
@@ -9492,10 +9544,20 @@ function renderCampaignNpcList(location) {
     const locked = campaignIsNpcLocked(npc, currentCampaignSave);
     const row = document.createElement('button');
     row.className = 'campaign-npc-row' + (defeated ? ' defeated' : '') + (locked ? ' locked' : '');
-    const remaining = locked ? npc.minUnlockedLocations - unlockedCount : 0;
-    const lockedStatus = locked
-      ? `<div class="campaign-npc-status locked-status">Locked - unlock ${remaining} more location${remaining === 1 ? '' : 's'}</div>`
-      : '';
+    const remaining = (locked && npc.minUnlockedLocations && unlockedCount < npc.minUnlockedLocations)
+      ? npc.minUnlockedLocations - unlockedCount : 0;
+    let lockedStatus = '';
+    if (locked) {
+      if (remaining > 0) {
+        lockedStatus = `<div class="campaign-npc-status locked-status">Locked - unlock ${remaining} more location${remaining === 1 ? '' : 's'}</div>`;
+      } else {
+        const missingNames = campaignNpcMissingPrereqs(npc, currentCampaignSave)
+          .map(id => { const n = campaignFindNpc(id); return n ? n.name : id; });
+        lockedStatus = missingNames.length
+          ? `<div class="campaign-npc-status locked-status">Locked - defeat ${missingNames.join(', ')} first</div>`
+          : `<div class="campaign-npc-status locked-status">Locked</div>`;
+      }
+    }
     row.innerHTML = `
       <div>
         <div class="campaign-npc-name">${npc.name}</div>
@@ -10740,6 +10802,18 @@ const CPU_LEVEL_WEIGHT_DEFS = {
     hint: 'When judging how dangerous an opponent reply is, how much to discount a threat that only works via Same/Plus/Up (0 = ignore that threat, 1 = treat it exactly like a normal capture).',
     min: 0, max: 1, step: 0.05,
     defaults: { 1: 0.6, 2: 0.6, 3: 0.2, 4: 0.4, 5: 0.6 },
+  },
+  pointVarianceMin: {
+    label: 'Campaign Point Budget Variance - Min',
+    hint: 'Lowest point total a Campaign NPC\'s hand can be built to for this level, instead of always maxing out at their difficulty cap. E.g. Min 30 / Max 35 means hands always land somewhere in 30-35. 0/0 (both) = disabled, use the normal difficulty cap.',
+    min: 0, max: 50, step: 1,
+    defaults: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  },
+  pointVarianceMax: {
+    label: 'Campaign Point Budget Variance - Max',
+    hint: 'Highest point total a Campaign NPC\'s hand can be built to for this level. If set below Min, the two are swapped so the range is always valid.',
+    min: 0, max: 50, step: 1,
+    defaults: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   },
 };
 const CPU_LEVEL_THRESHOLD_DEFS = [
@@ -12896,6 +12970,7 @@ function maybeStartVictoryMusic(result) {
     src: audio.src,
     selectValue: select.value,
     wasPlaying: !audio.paused,
+    currentTime: audio.currentTime,
   };
   audio.src = VICTORY_TRACK_FILE;
   audio.currentTime = 0;
@@ -12912,7 +12987,7 @@ function restorePreviousMusicIfNeeded() {
   if (!audio) return;
   if (select) select.value = saved.selectValue;
   audio.src = saved.src;
-  audio.currentTime = 0;
+  audio.currentTime = saved.currentTime || 0;
   const volumeSelect = document.getElementById('volumeSelect');
   if (volumeSelect) {
     const track = MUSIC_TRACKS[Number(saved.selectValue)];
@@ -13139,14 +13214,28 @@ function showRuleBanner(name) {
   const run = () => new Promise(resolve => {
     if (myToken !== ruleBannerToken) { resolve(); return; }
     const el = document.getElementById('ruleBanner');
+    el.classList.remove('show');
     el.src = RULE_BANNERS[name];
     el.classList.toggle('rule-up', name === 'up');
-    el.classList.add('show');
-    playSfx('cardEvent');
-    setTimeout(() => {
-      if (myToken === ruleBannerToken) el.classList.remove('show');
-      setTimeout(resolve, 200);
-    }, 650);
+    // Force the browser to actually paint the hidden (opacity:0, scale(0.7))
+    // state before re-adding .show. Without this, the src swap and the class
+    // add can land in the same style-recalc pass, so there's no committed
+    // "before" frame for the opacity/transform transition to animate from --
+    // the graphic just pops straight to fully visible instead of fading and
+    // scaling in. Same double-rAF technique used for the hand-card selection
+    // animation elsewhere in this file.
+    void el.offsetWidth;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (myToken !== ruleBannerToken) { resolve(); return; }
+        el.classList.add('show');
+        playSfx('cardEvent');
+        setTimeout(() => {
+          if (myToken === ruleBannerToken) el.classList.remove('show');
+          setTimeout(resolve, 200);
+        }, 650);
+      });
+    });
   });
   const result = ruleBannerQueue.then(run);
   ruleBannerQueue = result.catch(() => {});
