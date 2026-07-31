@@ -3459,14 +3459,28 @@
   body.mobile-mode .settings-row label { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #campaignHomeTitle,
   body.mobile-mode #campaignLocationsTitle,
-  body.mobile-mode #campaignNpcLocationName { font-size: calc(26px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #campaignNpcLocationName,
+  body.mobile-mode #campaignIntroNpcName { font-size: calc(26px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #campaignHomeSubtitle,
   body.mobile-mode #campaignLocationsSubtitle,
-  body.mobile-mode #campaignNpcLocationDesc { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #campaignNpcLocationDesc,
+  body.mobile-mode #campaignIntroRules { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode .campaign-npc-name { font-size: calc(16px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode .campaign-npc-desc { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
 
-  body.mobile-mode .campaign-location-btn { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .campaign-location-btn {
+    font-size: calc(14px * var(--mobile-text-scale, 1.25));
+    padding: calc(8px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #campaignLocationsClose,
+  body.mobile-mode #campaignIntroClose {
+    font-size: calc(22px * var(--mobile-btn-scale, 1.5));
+    padding: calc(4px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #campaignIntroQuote { font-size: calc(16px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #campaignIntroDifficulty,
+  body.mobile-mode #campaignIntroPoints { font-size: calc(13px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #campaignIntroNote { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
 
   /* Card selection in hand: skip the slide-into-place animation entirely on
      mobile much faster for both hands (still there, just quicker) instead
