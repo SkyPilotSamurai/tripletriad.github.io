@@ -4872,6 +4872,9 @@ const ROOMS_ROOT = 'rooms';
 const RANKED_ROOMS_ROOT = 'rankedRooms';
 const USERS_ROOT = 'users';
 const ADMIN_EMAIL = 'skypilotsamurai@gmail.com';
+function isCurrentUserAdmin() {
+  return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
+}
 const LEADERBOARD_RANKED_ROOT = 'leaderboardRanked';
 const LEADERBOARD_FREEPLAY_ROOT = 'leaderboardFreeplay';
 const GAME_CONFIG_ROOT = 'gameConfig';
@@ -4993,7 +4996,12 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNpcOneOfAKindHoldCap`).on('value', snap =>
 });
 let campaignOneOfAKindPlayChancePercent = 100;
 rtdb.ref(`${GAME_CONFIG_ROOT}/oneOfAKindPlayChancePercent`).on('value', snap => {
-  const v = Number(snap.val());
+  // snap.val() is null when this node has never been written -- Number(null)
+  // is 0 (a finite number), not NaN, so an unconditional Number.isFinite()
+  // check here would silently treat "never configured" as 0% instead of
+  // falling through to the intended 100% default. Guard on null explicitly.
+  const raw = snap.val();
+  const v = raw == null ? NaN : Number(raw);
   campaignOneOfAKindPlayChancePercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 100;
   const slider = document.getElementById('adminOneOfAKindPlayChanceSlider');
   const label = document.getElementById('adminOneOfAKindPlayChanceValue');
@@ -7233,7 +7241,18 @@ function maybeTriggerPracticeSuddenDeath() {
   const p2Captured = capturedIds('p2');
   const p1Hand = buildHandFromPicks(p1Captured) || dealHands().p1;
   const p2Hand = buildHandFromPicks(p2Captured) || dealHands().p2;
+  // Sudden Death continues the SAME match after a tie -- it's not a fresh
+  // match start, so the Campaign identity initGame() wipes (campaignLocationId
+  // /campaignNpcId, used to gate the whole trade-reveal/reward/defeat-tracking
+  // flow when the match finally ends) needs to survive the replay. Without
+  // this, a Campaign match that goes to Sudden Death silently stops being
+  // recognized as a Campaign match once it's decided -- no card won/lost,
+  // no gil, no NPC marked defeated, nothing.
+  const campaignLocationId = state.campaignLocationId;
+  const campaignNpcId = state.campaignNpcId;
   initGame({ p1: p1Hand, p2: p2Hand });
+  state.campaignLocationId = campaignLocationId;
+  state.campaignNpcId = campaignNpcId;
   return true;
 }
 let lastPracticeHands = null;
@@ -14098,7 +14117,7 @@ function updateAuthUi() {
       nameInput.value = getSavedDisplayName();
     }
   }
-  const isAdmin = !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
+  const isAdmin = isCurrentUserAdmin();
   const adminSection = document.getElementById('menuSectionAdmin');
   if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
   const elementalAdvancedSettings = document.getElementById('elementalAdvancedSettings');
