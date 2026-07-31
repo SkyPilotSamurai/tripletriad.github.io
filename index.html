@@ -2558,7 +2558,10 @@
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    z-index: 3;
+    /* Higher than .picker-hand-slot .card:hover's z-index: 20 -- otherwise
+       hovering/selecting the card lifts it above this button and the lock
+       icon gets covered by the card art. */
+    z-index: 25;
     transition: background 0.15s ease, border-color 0.15s ease;
   }
   .picker-hide-toggle:hover { border-color: #fff; }
@@ -7875,6 +7878,7 @@ function buildCampaignNpcRandomHand(npc, forcedRareCardIds) {
   return hand;
 }
 let lastCampaignP1HandIds = null;
+let lastCampaignP1HandNpcId = null;
 async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds) {
   if (!currentUser || !currentCampaignSave) return;
   const location = campaignFindLocation(locationId);
@@ -7896,12 +7900,17 @@ async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBu
   showGameScreen();
   const randomIgnoresPoints = state.rules.random && campaignRandomIgnoresPointsEnabled;
   const randomCardsMinLevel = randomIgnoresPoints ? campaignRandomCardsLevelFloor(npc) : null;
-  const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(lastCampaignP1HandIds, playerBudget);
+  // Only prefill the picker with the previous hand when it's the same NPC
+  // (e.g. a rematch) -- a fresh challenge against a different opponent should
+  // always start from an empty hand instead of carrying over the last pick.
+  const prefillSourceIds = lastCampaignP1HandNpcId === npcId ? lastCampaignP1HandIds : null;
+  const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(prefillSourceIds, playerBudget);
   const prefillP1ClosedSingle = state.closedSingleCardId ? state.closedSingleCardId.p1 : null;
   const p1Hand = state.rules.random
     ? buildRandomHand(randomIgnoresPoints ? null : playerBudget, randomCardsMinLevel)
     : await runCardPicker('p1', `Challenge: ${npc.name}`, playerBudget, prefillP1Ids, prefillP1ClosedSingle);
   lastCampaignP1HandIds = p1Hand.map(c => c.id);
+  lastCampaignP1HandNpcId = npcId;
   const p2Hand = randomIgnoresPoints
     ? buildCampaignNpcRandomHand(npc, forcedRareCardIds)
     : buildCampaignNpcHand(npc, npcBudget, forcedRareCardIds);
