@@ -3455,7 +3455,11 @@
     height: calc(29px * var(--mobile-btn-scale, 1.5));
     font-size: calc(15px * var(--mobile-btn-scale, 1.5));
   }
-  body.mobile-mode .icon-label { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
+  /* Title bar labels get only half the normal text-scale effect -- full-
+     strength scaling crowded "Music"/"SFX"/"Matchmaking"/etc. too aggressively
+     into the title bar row. Dampens the deviation from 1x rather than the
+     scale itself, so a 1.25x slider setting here behaves like 1.125x. */
+  body.mobile-mode .icon-label { font-size: calc(12px * (1 + (var(--mobile-text-scale, 1.25) - 1) * 0.5)); }
   body.mobile-mode .matchmaking-toggle-btn {
     width: calc(40px * var(--mobile-btn-scale, 1.5));
     padding: calc(5px * var(--mobile-btn-scale, 1.5)) 0;
