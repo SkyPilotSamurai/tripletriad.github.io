@@ -11508,6 +11508,21 @@ async function campaignClearActiveMatch(uid) {
   if (currentCampaignSave) currentCampaignSave.activeMatch = null;
   await rtdb.ref(`${USERS_ROOT}/${uid}/campaign/activeMatch`).set(null).catch(() => {});
 }
+// When a Campaign NPC wins a card off the player (forfeit or a normal match
+// loss), it should go for the player's highest-level eligible card, picking
+// randomly among any that tie at that top level -- not a flat random pick
+// across the whole eligible pool. `items` can be a plain array of card ids
+// or an array of objects; cardIdOf extracts the id from each entry.
+function pickHighestLevelFromPool(items, cardIdOf) {
+  if (!items || !items.length) return null;
+  const levelOf = item => {
+    const card = CARD_DB.find(c => c.id === cardIdOf(item));
+    return card ? card.level : 0;
+  };
+  const bestLevel = items.reduce((max, item) => Math.max(max, levelOf(item)), -Infinity);
+  const topTier = items.filter(item => levelOf(item) === bestLevel);
+  return topTier[Math.floor(Math.random() * topTier.length)];
+}
 async function campaignForfeitCardToNpc(uid, npc, handCardIds) {
   if (!npc || !handCardIds || !handCardIds.length) return null;
   const ownedIds = handCardIds.filter(id => campaignCollectionStockOf(currentCampaignSave, id) > 0);
@@ -11517,7 +11532,7 @@ async function campaignForfeitCardToNpc(uid, npc, handCardIds) {
     const nonOneOfAKind = pool.filter(id => !isOneOfAKindCardId(id));
     if (nonOneOfAKind.length) pool = nonOneOfAKind;
   }
-  const cardId = pool[Math.floor(Math.random() * pool.length)];
+  const cardId = pickHighestLevelFromPool(pool, id => id);
   await campaignRemoveCard(uid, cardId);
   const card = CARD_DB.find(c => c.id === cardId);
   if (card && isShopPurchaseLimited(card)) {
@@ -11587,7 +11602,7 @@ function buildCampaignTradeState(result) {
         if (nonOneOfAKind.length) pickPool = nonOneOfAKind;
       }
     }
-    const pick = pickPool[Math.floor(Math.random() * pickPool.length)];
+    const pick = pickHighestLevelFromPool(pickPool, p => p.cardId);
     return { token, winner, loser, pool: pool.filter(p => p.poolKey !== pick.poolKey), takeCount, picked: [pick], revealIndex: 0, done: false };
   }
   return { token, winner, loser, pool, takeCount, picked: [], revealIndex: 0, done: false };
