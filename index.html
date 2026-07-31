@@ -3428,6 +3428,20 @@
     cursor: pointer;
   }
 
+  /* --- Touch tap-delay removal (unconditional, NOT gated behind Mobile Mode) ---
+     Without a viewport meta tag (deliberately absent -- see below), mobile
+     browsers can't tell this page is optimized for touch, so they hold every
+     tap for ~300ms waiting to see if it turns into a double-tap-to-zoom
+     gesture before firing the click. That delay is what "responsiveness
+     feels laggy on mobile" usually is -- every button/card tap, everywhere,
+     pays it. touch-action: manipulation tells the browser to skip that wait
+     and fire taps immediately, while still allowing normal scrolling/pinch
+     panning. This has zero visual effect, so unlike everything below it
+     doesn't need an opt-in -- it applies to any touch device regardless of
+     whether the admin has Mobile Mode's size scaling turned on. */
+  @media (hover: none) and (pointer: coarse) {
+    html { touch-action: manipulation; }
+  }
   /* --- Mobile Mode (admin toggle, body.mobile-mode) ---
      Bumps text/button size across menus so they're easier to tap on a phone,
      without touching layout: no page has a viewport meta tag, so phones lay
@@ -3492,6 +3506,19 @@
   body.mobile-mode .campaign-npc-desc { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #campaignHomeStatus { font-size: calc(13px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode .campaign-npc-difficulty { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
+
+  /* Post-match result overlay: Rematch / Back to Menu / Leave. #overlayRematchSame
+     is a more specific id override in the base stylesheet (smaller font/padding
+     to fit its longer "Rematch (Same Rules/Points)" label), so it needs its own
+     mobile rule too -- the generic #overlay button rule alone won't win against it. */
+  body.mobile-mode #overlay button {
+    font-size: calc(23px * var(--mobile-btn-scale, 1.5));
+    padding: calc(15px * var(--mobile-btn-scale, 1.5)) calc(33px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #overlayRematchSame {
+    font-size: calc(17px * var(--mobile-btn-scale, 1.5));
+    padding: calc(15px * var(--mobile-btn-scale, 1.5)) calc(24px * var(--mobile-btn-scale, 1.5));
+  }
   body.mobile-mode .campaign-npc-status { font-size: calc(11px * var(--mobile-text-scale, 1.25)); }
 
   body.mobile-mode .campaign-location-btn {
@@ -13307,7 +13334,22 @@ const RULE_BANNERS = {
   combo: "Cards/FF8/icons/text/combo.png",
   up: "Cards/FF8/icons/text/up.png",
 };
-Object.values(RULE_BANNERS).forEach(src => { const img = new Image(); img.src = src; });
+// Preload AND fully decode each banner graphic up front, so the first time
+// one actually shows mid-match the browser already has a ready-to-paint
+// bitmap instead of fetching/decoding it live. Just setting .src (the old
+// approach) only guarantees the bytes get fetched -- mobile browsers in
+// particular can defer the actual decode of an off-DOM image until it's
+// inserted/painted, which is what was causing the jump right as the
+// double-rAF reveal in showRuleBanner tried to commit its "before" frame.
+// img.decode() forces that decode work to happen now, off the critical path.
+// Kept in an array so these Image objects (and their decoded bitmaps) can't
+// be garbage collected before they're ever used.
+const preloadedRuleBannerImages = Object.values(RULE_BANNERS).map(src => {
+  const img = new Image();
+  img.src = src;
+  if (img.decode) img.decode().catch(() => {});
+  return img;
+});
 const RESULT_GRAPHICS = {
   win: "Cards/FF8/icons/text/you_win.png",
   lose: "Cards/FF8/icons/text/you_lose.png",
