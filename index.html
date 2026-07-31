@@ -3058,7 +3058,7 @@
   }
   #campaignIntroRules { font-size: 14px; color: #fff; font-weight: bold; text-align: center; }
   #campaignIntroPoints { font-size: 13px; color: #9aa4b8; text-align: center; }
-  #campaignIntroNote { font-size: 12px; color: #6b7488; text-align: center; margin-top: 12px; }
+  #campaignIntroNote { font-size: 12px; color: #ffa64f; text-align: center; margin-top: 12px; }
   #campaignIntroButtons { display: flex; gap: 12px; margin-top: 18px; width: 100%; max-width: 340px; }
   #campaignIntroButtons button { flex: 1; }
   #campaignHomeButtons { display: flex; flex-direction: column; gap: 10px; width: 260px; }
@@ -13114,6 +13114,17 @@ const MUSIC_TRACKS = [
   { name: "FF8 - Ultimica's Castle - The Castle", file: "Music/FF8 - Ultimica's Castle - The Castle.mp3", gain: 1 },
 ];
 const MUSIC_WAS_PLAYING_KEY = 'tripleTriadMusicWasPlaying';
+// The standalone desktop app build launches with ?musicDefault=on in the URL
+// (see run_triple_triad.py) so it defaults to music ON, unlike the plain
+// website's default of off. This only seeds the very first time there's no
+// stored preference yet -- once a real on/off choice is saved, that always
+// wins over this from then on.
+try {
+  if (new URLSearchParams(location.search).get('musicDefault') === 'on'
+      && localStorage.getItem(MUSIC_WAS_PLAYING_KEY) === null) {
+    localStorage.setItem(MUSIC_WAS_PLAYING_KEY, '1');
+  }
+} catch (e) {}
 function initMusicPlayer() {
   const select = document.getElementById('musicSelect');
   const audio = document.getElementById('bgAudio');
@@ -13572,6 +13583,15 @@ function unlockSfxPlayback() {
 }
 window.addEventListener('pointerdown', unlockSfxPlayback, { once: true, capture: true });
 window.addEventListener('keydown', unlockSfxPlayback, { once: true, capture: true });
+// Browsers require a real user gesture before audio.play() is allowed to
+// actually produce sound -- there's no way around that from page code, so
+// music can never truly autoplay with zero interaction. This listens for
+// the very first tap/click/keypress ANYWHERE on the page (not just inside
+// the main menu, unlike the narrower listener in initMainMenu) so that
+// whatever the player was about to do anyway satisfies the gesture and
+// music starts immediately, without needing a dedicated extra click.
+window.addEventListener('pointerdown', () => tryStartMusicIfEnabled(), { once: true, capture: true });
+window.addEventListener('keydown', () => tryStartMusicIfEnabled(), { once: true, capture: true });
 function initSfxControls() {
   const toggle = document.getElementById('sfxToggle');
   const hoverToggle = document.getElementById('sfxHoverToggle');
