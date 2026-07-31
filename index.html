@@ -3607,6 +3607,72 @@
   body.mobile-mode #shopSellBtn:hover:not(:disabled) { transform: none; }
   body.mobile-mode .tutorial-rule-btn:hover { transform: none; }
   body.mobile-mode .campaign-location-btn:hover { transform: none; }
+
+  /* --- Center Board & Hands (opt-in player setting, Settings > Mobile) ---
+     body.mobile-center-layout, gated the same as everything else here on a
+     touch device with Mobile Mode on. Simple normal-flow centering
+     reinforcement for the match screen. */
+  body.mobile-mode.mobile-center-layout #gameScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  body.mobile-mode.mobile-center-layout .game-row {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* --- Horizontal Hand Layout (opt-in player setting, Settings > Mobile) ---
+     body.mobile-horizontal-hands. Puts P2's hand above the board and P1's
+     hand below it, both laid out as a horizontal overlapping stack instead
+     of the default vertical one on either side of the board. game-row's DOM
+     order is P1, board, P2, so column-reverse flips the visual stacking
+     order to P2 (top), board (middle), P1 (bottom) without touching markup.
+     Card width (129px) is constant across both Shape settings -- only
+     height changes for Natural shape -- so the horizontal overlap amount
+     below doesn't need a shape-natural override the way the vertical one
+     does. The toward-board hover/select nudge (originally translateX,
+     sliding sideways toward the board) becomes translateY here -- up for
+     P1's hand since the board is above it, down for P2's hand since the
+     board is below it. */
+  body.mobile-mode.mobile-horizontal-hands .game-row {
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+  body.mobile-mode.mobile-horizontal-hands .hand {
+    flex-direction: row;
+    justify-content: center;
+    min-width: 0;
+    min-height: 129px;
+    width: 705px;
+    height: auto;
+  }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack {
+    width: 465px;
+    height: auto;
+  }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card {
+    margin-top: 0;
+    margin-left: -49.02px;
+  }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card:first-child { margin-left: 0; }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card .hit-zone {
+    top: 0;
+    left: 0;
+    width: auto;
+    height: 100%;
+  }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card:not(:last-child) .hit-zone { width: 62%; height: 100%; }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card:last-child .hit-zone { width: 100%; }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card.selected .hit-zone { top: 0; left: -15px; }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card:not(:last-child).selected .hit-zone { width: calc(62% + 15px); }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card:last-child.selected .hit-zone { width: calc(100% + 15px); }
+  body.mobile-mode.mobile-horizontal-hands .hand.stack .card:has(+ .card.selected) .hit-zone { width: calc(62% - 15px); }
+  body.mobile-mode.mobile-horizontal-hands #handP1 .card:not(.selected):hover .card-inner { transform: translateY(-24px); }
+  body.mobile-mode.mobile-horizontal-hands #handP2 .card:not(.selected):hover .card-inner { transform: translateY(24px); }
+  body.mobile-mode.mobile-horizontal-hands #handP1 .card.selected .card-inner { transform: translateY(-24px) translateX(-15px); }
+  body.mobile-mode.mobile-horizontal-hands #handP2 .card.selected .card-inner { transform: translateY(24px) translateX(-15px); }
   }
 </style>
 </head>
@@ -4466,6 +4532,12 @@
       <div class="settings-row checkbox-row" title="Widens the Main Menu, Tutorial, Campaign Locations, and NPC Select/Challenge panels, and increases text size across menus and buttons site-wide. Applies live to every player -- no per-player override.">
         <label><input type="checkbox" id="adminMobileModeToggle"> Mobile Mode</label>
       </div>
+      <div class="settings-row checkbox-row" title="Reinforces normal-flow centering of the board and hands during matches. Only visible on mobile devices while Mobile Mode is on. Applies live to every player -- no per-player override.">
+        <label><input type="checkbox" id="adminMobileCenterLayoutToggle"> Center Board &amp; Hands (Mobile)</label>
+      </div>
+      <div class="settings-row checkbox-row" title="Puts the opponent's hand above the board and the player's hand below it, both as a horizontal card stack, instead of the default hand on either side. Only visible on mobile devices while Mobile Mode is on. Applies live to every player -- no per-player override.">
+        <label><input type="checkbox" id="adminMobileHorizontalHandsToggle"> Horizontal Hand Layout (Mobile)</label>
+      </div>
       <div class="settings-row admin-region-bias-row" title="Scales menu button size and title text while Mobile Mode is on.">
         <label for="adminMobileBtnScaleSlider">Mobile Menu Button Size: <span id="adminMobileBtnScaleValue">150%</span></label>
         <input type="range" id="adminMobileBtnScaleSlider" min="100" max="250" step="5" value="150">
@@ -5027,6 +5099,20 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).on('value', snap => {
   const toggle = document.getElementById('adminMobileModeToggle');
   if (toggle) toggle.checked = mobileModeEnabled;
   document.body.classList.toggle('mobile-mode', mobileModeEnabled);
+});
+let mobileCenterLayoutEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCenterLayoutEnabled`).on('value', snap => {
+  mobileCenterLayoutEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminMobileCenterLayoutToggle');
+  if (toggle) toggle.checked = mobileCenterLayoutEnabled;
+  document.body.classList.toggle('mobile-center-layout', mobileCenterLayoutEnabled);
+});
+let mobileHorizontalHandsEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileHorizontalHandsEnabled`).on('value', snap => {
+  mobileHorizontalHandsEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminMobileHorizontalHandsToggle');
+  if (toggle) toggle.checked = mobileHorizontalHandsEnabled;
+  document.body.classList.toggle('mobile-horizontal-hands', mobileHorizontalHandsEnabled);
 });
 let mobileMenuButtonScalePercent = 150;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).on('value', snap => {
@@ -13109,9 +13195,7 @@ function maybeStartVictoryMusic(result) {
   const audio = document.getElementById('bgAudio');
   const select = document.getElementById('musicSelect');
   if (!audio || !select) return;
-  let musicPreferredOn = false;
-  try { musicPreferredOn = localStorage.getItem(MUSIC_WAS_PLAYING_KEY) === '1'; } catch (e) {}
-  if (audio.paused && !musicPreferredOn) return;
+  if (audio.paused) return;
   preVictoryMusicState = {
     src: audio.src,
     selectValue: select.value,
@@ -13175,9 +13259,7 @@ function resolveTrackUrl(file) {
 function startCampaignLocationMusic(location) {
   const audio = document.getElementById('bgAudio');
   if (!audio || !location) return;
-  let musicPreferredOn = false;
-  try { musicPreferredOn = localStorage.getItem(MUSIC_WAS_PLAYING_KEY) === '1'; } catch (e) {}
-  if (audio.paused && !musicPreferredOn) return;
+  if (audio.paused) return;
   const track = campaignMusicFileFor(location);
   if (!audio.paused && audio.src === resolveTrackUrl(track)) return;
   if (!campaignPrevMusicState) {
@@ -13210,9 +13292,7 @@ const CAMPAIGN_WORLD_MAP_MUSIC_FILE = "Music/FF8 - Blue Fields.mp3";
 function startCampaignWorldMapMusic() {
   const audio = document.getElementById('bgAudio');
   if (!audio) return;
-  let musicPreferredOn = false;
-  try { musicPreferredOn = localStorage.getItem(MUSIC_WAS_PLAYING_KEY) === '1'; } catch (e) {}
-  if (audio.paused && !musicPreferredOn) return;
+  if (audio.paused) return;
   const track = CAMPAIGN_WORLD_MAP_MUSIC_FILE;
   if (!audio.paused && audio.src === resolveTrackUrl(track)) return;
   if (!campaignPrevMusicState) {
@@ -14687,6 +14767,14 @@ document.getElementById('adminCampaignRandomIgnoresPointsToggle').addEventListen
 document.getElementById('adminMobileModeToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileModeEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminMobileCenterLayoutToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCenterLayoutEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminMobileHorizontalHandsToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileHorizontalHandsEnabled`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminMobileBtnScaleSlider').addEventListener('input', e => {
   const v = Math.max(100, Math.min(250, Number(e.target.value) || 150));
