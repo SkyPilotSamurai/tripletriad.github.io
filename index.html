@@ -13530,6 +13530,13 @@ function resetOrLeaveToMenu() {
     }
     playSfx('cursorCancel');
     const locationId = state.campaignLocationId;
+    // Victory music (if it played) needs to hand control back to whatever was
+    // playing beforehand -- and resume it from its saved position -- before
+    // openCampaignNpcs/showMenuScreen get a chance to force a fresh track in
+    // underneath it and strand preVictoryMusicState. Without this, leaving a
+    // won campaign match makes the previous song restart from 0 (or never
+    // actually resume at all) instead of picking back up where it left off.
+    restorePreviousMusicIfNeeded();
     leaveOnlineRoomOrSpectate();
     if (locationId) openCampaignNpcs(locationId); else showMenuScreen();
   } else {
