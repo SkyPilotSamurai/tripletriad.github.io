@@ -3448,6 +3448,19 @@
   }
   body.mobile-mode .menu-panel-actions .menu-btn { font-size: 18px; }
   body.mobile-mode .menu-section-label { font-size: calc(13px * var(--mobile-text-scale, 1.25)); }
+  /* Title bars (Music/SFX/Matchmaking/Settings row) are shared across every
+     screen -- scaling these three classes covers all of them at once. */
+  body.mobile-mode .icon-btn {
+    width: calc(29px * var(--mobile-btn-scale, 1.5));
+    height: calc(29px * var(--mobile-btn-scale, 1.5));
+    font-size: calc(15px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode .icon-label { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .matchmaking-toggle-btn {
+    width: calc(40px * var(--mobile-btn-scale, 1.5));
+    padding: calc(5px * var(--mobile-btn-scale, 1.5)) 0;
+    font-size: calc(12px * var(--mobile-btn-scale, 1.5));
+  }
   body.mobile-mode #settingsPanel h2,
   body.mobile-mode #rulesPanel h2,
   body.mobile-mode #adminGivePanel h2,
@@ -3473,6 +3486,7 @@
     padding: calc(8px * var(--mobile-btn-scale, 1.5));
   }
   body.mobile-mode #campaignLocationsClose,
+  body.mobile-mode #campaignNpcClose,
   body.mobile-mode #campaignIntroClose {
     font-size: calc(22px * var(--mobile-btn-scale, 1.5));
     padding: calc(4px * var(--mobile-btn-scale, 1.5));
@@ -3481,6 +3495,43 @@
   body.mobile-mode #campaignIntroDifficulty,
   body.mobile-mode #campaignIntroPoints { font-size: calc(13px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode #campaignIntroNote { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
+  /* #campaignLocationsShortcuts button is a more specific selector than the
+     plain .menu-btn class rule above, so despite these having the .menu-btn
+     class too, the mobile .menu-btn override was losing to it -- needs its
+     own explicit override to actually take effect. */
+  body.mobile-mode #campaignLocationsShortcuts button {
+    font-size: calc(13px * var(--mobile-btn-scale, 1.5));
+    padding: calc(8px * var(--mobile-btn-scale, 1.5)) calc(16px * var(--mobile-btn-scale, 1.5));
+  }
+
+  /* Card Picker: level tabs (Recent/Lv.1-10/Custom) and footer buttons --
+     none of these carry the .menu-btn class, so they need their own rules. */
+  body.mobile-mode .picker-tab {
+    font-size: calc(14px * var(--mobile-btn-scale, 1.5));
+    padding: calc(8px * var(--mobile-btn-scale, 1.5)) calc(14px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #pickerBackToMenu {
+    font-size: calc(16px * var(--mobile-btn-scale, 1.5));
+    padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(22px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #pickerAuto {
+    font-size: calc(16px * var(--mobile-btn-scale, 1.5));
+    padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(26px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #pickerConfirm {
+    font-size: calc(18px * var(--mobile-btn-scale, 1.5));
+    padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(34px * var(--mobile-btn-scale, 1.5));
+  }
+
+  /* Card Shop: Buy/Sell buttons -- same story, no .menu-btn class to inherit from. */
+  body.mobile-mode #shopBuyBtn {
+    font-size: calc(16px * var(--mobile-btn-scale, 1.5));
+    padding: calc(12px * var(--mobile-btn-scale, 1.5)) calc(30px * var(--mobile-btn-scale, 1.5));
+  }
+  body.mobile-mode #shopSellBtn {
+    font-size: calc(16px * var(--mobile-btn-scale, 1.5));
+    padding: calc(10px * var(--mobile-btn-scale, 1.5)) calc(26px * var(--mobile-btn-scale, 1.5));
+  }
 
   /* Card selection in hand: skip the slide-into-place animation entirely on
      mobile much faster for both hands (still there, just quicker) instead
