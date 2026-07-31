@@ -1242,6 +1242,7 @@
     width: 100%;
     pointer-events: auto;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
   .hand.stack .card:not(:last-child) .hit-zone { height: 62%; }
   .hand.stack .card:last-child .hit-zone { height: 100%; }
@@ -1270,6 +1271,11 @@
     position: relative;
     cursor: pointer;
     transition: transform 0.15s ease;
+    /* Kills the browser's default translucent tap-highlight box (shows up as
+       a semi-transparent bluish glow over the whole card while it's pressed/
+       selected on touch devices) -- our own .selected styling handles that
+       feedback, so the built-in one is just visual noise on top of it. */
+    -webkit-tap-highlight-color: transparent;
   }
   .card-inner {
     position: absolute;
@@ -1277,6 +1283,7 @@
     border-radius: 0;
     box-shadow: 0 3px 8px rgba(0,0,0,0.5);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
   }
   #board .card-inner {
     transform: none !important;
