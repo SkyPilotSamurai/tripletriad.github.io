@@ -13447,6 +13447,10 @@ function applyCampaignMatchMusic() {
   if (!(state.mode === 'practice' && state.cpuOpponent && state.campaignNpcId)) return;
   const audio = document.getElementById('bgAudio');
   if (!audio) return;
+  // Don't switch tracks or start playback if the player currently has music
+  // paused -- otherwise starting a campaign match force-turns music back on
+  // regardless of their preference.
+  if (audio.paused) return;
   if (isMatchMusicEnabled()) {
     const select = document.getElementById('musicSelect');
     const idx = select ? Number(select.value) : 0;
@@ -13836,6 +13840,13 @@ function resetOrLeaveToMenu() {
       const npcId = state.campaignNpcId;
       const handCardIds = (state.hands && state.hands.p1 ? state.hands.p1 : []).map(c => c.id);
       state.gameOver = true;
+      // Without this, the next renderAll()/updateOverlay() call (which fires
+      // during the navigation below) sees gameOver=true and shows the normal
+      // win/lose overlay -- computed from the mid-match board, so a bogus
+      // result -- instead of (or behind/after) the intended forfeit "lost
+      // card" reveal screen. suppressOverlay is the same flag every other
+      // match-ending path sets alongside gameOver for this exact reason.
+      state.suppressOverlay = true;
       forfeitCampaignMatchThenLeave(locationId, npcId, handCardIds);
       return;
     }
