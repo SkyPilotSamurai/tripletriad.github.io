@@ -3429,21 +3429,18 @@
   }
 
   /* --- Mobile Mode (admin toggle, body.mobile-mode) ---
-     Widens key menu panels and bumps text size across menus/buttons so the
-     site is easier to use on a phone. Off by default; every rule here is
-     scoped under body.mobile-mode so nothing changes unless the admin
-     switches it on, and it reverts instantly when switched off. Also wrapped
-     in @media (max-width: 700px) so the toggle can never affect how the
-     site looks on desktop -- it only takes effect on screens that are
-     actually mobile-sized, regardless of the admin setting. */
-  @media (max-width: 700px) {
-  body.mobile-mode #menuPanel { width: min(98vw, 920px); }
-  body.mobile-mode #tutorialListBoard { max-width: 960px; }
-  body.mobile-mode #campaignHomeBoard,
-  body.mobile-mode #campaignLocationsBoard,
-  body.mobile-mode #campaignNpcBoard,
-  body.mobile-mode #campaignIntroBoard { max-width: 960px; }
-
+     Bumps text/button size across menus so they're easier to tap on a phone,
+     without touching layout: no page has a viewport meta tag, so phones lay
+     the whole page out at its normal (desktop) size and zoom the result to
+     fit the screen, same as any unstyled site -- elements keep their real
+     size and can extend past the visible edge, exactly like desktop just
+     shown smaller. Off by default; every rule here is scoped under
+     body.mobile-mode so nothing changes unless the admin switches it on.
+     Gated on @media (hover: none) and (pointer: coarse) -- a touch-primary
+     device, detected from input hardware rather than screen width (screen
+     width isn't a reliable phone/desktop signal without a viewport tag) --
+     so the toggle can never affect how the site looks on a mouse/desktop. */
+  @media (hover: none) and (pointer: coarse) {
   body.mobile-mode #menuTitle { font-size: calc(40px * var(--mobile-btn-scale, 1.5)); }
   body.mobile-mode .menu-btn {
     font-size: calc(20px * var(--mobile-btn-scale, 1.5));
@@ -3469,9 +3466,7 @@
   body.mobile-mode .campaign-npc-name { font-size: calc(16px * var(--mobile-text-scale, 1.25)); }
   body.mobile-mode .campaign-npc-desc { font-size: calc(12px * var(--mobile-text-scale, 1.25)); }
 
-  /* Campaign location thumbnails: bigger, fixed rows of 3. */
-  body.mobile-mode #campaignLocationsGrid { grid-template-columns: repeat(3, 1fr); }
-  body.mobile-mode .campaign-location-btn { height: 150px; font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode .campaign-location-btn { font-size: calc(14px * var(--mobile-text-scale, 1.25)); }
 
   /* Card selection in hand: skip the slide-into-place animation entirely on
      mobile much faster for both hands (still there, just quicker) instead
