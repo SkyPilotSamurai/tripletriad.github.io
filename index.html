@@ -12580,11 +12580,18 @@ function updateOverlay() {
       const drawNpc = campaignFindNpc(state.campaignNpcId);
       const drawGilEarned = (drawNpc && campaignGilRewardsEnabled)
         ? (CAMPAIGN_DRAW_GIL_BY_DIFFICULTY[drawNpc.cpuDifficulty] || 0) : 0;
-      if (drawGilEarned > 0) {
+      if (drawGilEarned > 0 && campaignResultEl) {
+        // Reveal this line immediately (like the other gil-reward branches
+        // below do) instead of waiting on the addGilToUser round-trip first.
+        // Un-hiding it only after the async credit finished grew the overlay
+        // after it was already on screen, which -- since the overlay is
+        // vertically centered -- shifted the whole result screen upward as
+        // it settled into its new, taller size. Just refresh the total in
+        // place once the real credit finishes; no layout change either way.
+        campaignResultEl.textContent = `Gil Obtained: ${drawGilEarned} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
+        campaignResultEl.classList.remove('hidden');
         addGilToUser(currentUser.uid, drawGilEarned).then(() => {
-          if (!campaignResultEl) return;
           campaignResultEl.textContent = `Gil Obtained: ${drawGilEarned} - Total: ${currentUserProfile ? (currentUserProfile.gil || 0) : 0}`;
-          campaignResultEl.classList.remove('hidden');
         }).catch(() => {});
       }
     }
