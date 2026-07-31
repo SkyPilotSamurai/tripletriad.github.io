@@ -3461,6 +3461,12 @@
     padding: calc(5px * var(--mobile-btn-scale, 1.5)) 0;
     font-size: calc(12px * var(--mobile-btn-scale, 1.5));
   }
+  /* Its JS visibility check requires isMusicPlaying() to be true, which in
+     practice never happens on mobile (autoplay restrictions keep bgAudio
+     from actually starting on its own) -- so this option never shows up on
+     mobile anyway. Hide it outright instead of leaving dead title bar space
+     reserved for a toggle that can't appear. */
+  body.mobile-mode #victoryMusicGroup { display: none; }
   body.mobile-mode #settingsPanel h2,
   body.mobile-mode #rulesPanel h2,
   body.mobile-mode #adminGivePanel h2,
