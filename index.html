@@ -3465,6 +3465,22 @@
      width isn't a reliable phone/desktop signal without a viewport tag) --
      so the toggle can never affect how the site looks on a mouse/desktop. */
   @media (hover: none) and (pointer: coarse) {
+  /* Kill every tap-driven selection highlight site-wide while Mobile Mode is
+     on: the translucent tap-highlight box Android/Chrome draws over
+     whatever you touch (buttons, menu rows, toggles, everything -- not just
+     the cards, which already get this unconditionally elsewhere), plus the
+     blue focus ring some elements pick up after being tapped. Doesn't touch
+     the actual "selected" state styling (e.g. .card.selected, .cpu-behavior-
+     btn.selected) -- those still visually indicate what's selected, this
+     only removes the extra highlight/glow layered on top of a tap. */
+  body.mobile-mode *,
+  body.mobile-mode *::before,
+  body.mobile-mode *::after {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.mobile-mode *:focus {
+    outline: none;
+  }
   body.mobile-mode #menuTitle { font-size: calc(40px * var(--mobile-btn-scale, 1.5)); }
   body.mobile-mode .menu-btn {
     font-size: calc(20px * var(--mobile-btn-scale, 1.5));
