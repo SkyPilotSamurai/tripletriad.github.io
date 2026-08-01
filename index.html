@@ -3586,6 +3586,7 @@
   }
   body.mobile-mode .menu-panel-actions .menu-btn { font-size: 18px; }
   body.mobile-mode .menu-section-label { font-size: calc(13px * var(--mobile-text-scale, 1.25)); }
+  body.mobile-mode #overlayGilResult { font-size: calc(18px * var(--mobile-text-scale, 1.25)); }
   /* Title bars (Music/SFX/Matchmaking/Settings row) are shared across every
      screen -- scaling these three classes covers all of them at once. */
   body.mobile-mode .icon-btn {
@@ -4229,10 +4230,8 @@
     <div class="settings-section" id="settingsControlsSection">
       <h3>Controls</h3>
       <div class="settings-row checkbox-row">
-        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller Enabled</label>
-      </div>
-      <div class="settings-row">
         <button type="button" id="settingsConfigureControllerBtn">Configure Controller</button>
+        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller Enabled</label>
       </div>
     </div>
   </div>
@@ -4721,9 +4720,9 @@
         <label for="adminMobileCardScaleSlider">Mobile Card Size (Shop/Picker): <span id="adminMobileCardScaleValue">1x</span></label>
         <input type="range" id="adminMobileCardScaleSlider" min="1" max="3" step="0.05" value="1">
       </div>
-      <div class="settings-row admin-region-bias-row" title="Shifts the board and both hands down by this many pixels during a match while Mobile Mode is on -- useful for clearing space above them for a notch, browser chrome, or other header content.">
-        <label for="adminMobileBoardOffsetSlider">Board & Hands Vertical Offset (Mobile): <span id="adminMobileBoardOffsetValue">0px</span></label>
-        <input type="range" id="adminMobileBoardOffsetSlider" min="0" max="150" step="5" value="0">
+      <div class="settings-row admin-region-bias-row" title="Shifts the board and both hands down by this many pixels during a match while Mobile Mode is on -- useful for clearing space above them for a notch, browser chrome, or other header content. Negative numbers shift up instead.">
+        <label for="adminMobileBoardOffsetSlider">Board & Hands Vertical Offset (Mobile, px)</label>
+        <input type="number" id="adminMobileBoardOffsetSlider" step="1" value="0">
       </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
@@ -5334,16 +5333,16 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).on('value', snap => {
 // Shifts .game-row (board + both hands, as a unit, whichever mobile layout
 // variant is active) down by a flat pixel amount, only while Mobile Mode is
 // on -- lets an admin carve out space above the match area for a notch or
-// other header content without touching the desktop layout at all.
+// other header content without touching the desktop layout at all. Any
+// number is allowed (including negative, to shift up instead), so this is a
+// free-form number input rather than a range slider.
 let mobileBoardOffsetPx = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileBoardOffsetPx`).on('value', snap => {
   const v = Number(snap.val());
-  mobileBoardOffsetPx = Number.isFinite(v) ? Math.max(0, Math.min(150, v)) : 0;
+  mobileBoardOffsetPx = Number.isFinite(v) ? v : 0;
   document.body.style.setProperty('--mobile-board-offset', `${mobileBoardOffsetPx}px`);
-  const slider = document.getElementById('adminMobileBoardOffsetSlider');
-  const label = document.getElementById('adminMobileBoardOffsetValue');
-  if (slider && document.activeElement !== slider) slider.value = mobileBoardOffsetPx;
-  if (label) label.textContent = `${mobileBoardOffsetPx}px`;
+  const input = document.getElementById('adminMobileBoardOffsetSlider');
+  if (input && document.activeElement !== input) input.value = mobileBoardOffsetPx;
 });
 rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights`).on('value', snap => {
   cpuWeightOverrides = snap.val() || {};
@@ -15273,13 +15272,12 @@ document.getElementById('adminMobileCardScaleSlider').addEventListener('change',
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).set(v).catch(() => {});
 });
 document.getElementById('adminMobileBoardOffsetSlider').addEventListener('input', e => {
-  const v = Math.max(0, Math.min(150, Number(e.target.value) || 0));
-  const label = document.getElementById('adminMobileBoardOffsetValue');
-  if (label) label.textContent = `${v}px`;
+  const v = Number(e.target.value);
+  if (Number.isFinite(v)) document.body.style.setProperty('--mobile-board-offset', `${v}px`);
 });
 document.getElementById('adminMobileBoardOffsetSlider').addEventListener('change', e => {
   playSfx('cursorMove');
-  const v = Math.max(0, Math.min(150, Number(e.target.value) || 0));
+  const v = Number(e.target.value) || 0;
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileBoardOffsetPx`).set(v).catch(() => {});
 });
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
