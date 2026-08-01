@@ -3744,6 +3744,16 @@
   body.mobile-mode .tutorial-rule-btn:hover { transform: none; }
   body.mobile-mode .campaign-location-btn:hover { transform: none; }
 
+  /* --- Board & Hands Vertical Offset (admin setting, Misc) ---
+     Shifts .game-row (board + both hands, together, whichever layout
+     variant is active below) down by a flat pixel amount while Mobile Mode
+     is on. Unconditional on top of mobile-mode alone -- not gated behind
+     the center-layout/horizontal-hands opt-ins -- so it applies regardless
+     of which of those a player has chosen. */
+  body.mobile-mode .game-row {
+    margin-top: var(--mobile-board-offset, 0px);
+  }
+
   /* --- Center Board & Hands (opt-in player setting, Settings > Mobile) ---
      body.mobile-center-layout, gated the same as everything else here on a
      touch device with Mobile Mode on. Simple normal-flow centering
@@ -4711,6 +4721,10 @@
         <label for="adminMobileCardScaleSlider">Mobile Card Size (Shop/Picker): <span id="adminMobileCardScaleValue">1x</span></label>
         <input type="range" id="adminMobileCardScaleSlider" min="1" max="3" step="0.05" value="1">
       </div>
+      <div class="settings-row admin-region-bias-row" title="Shifts the board and both hands down by this many pixels during a match while Mobile Mode is on -- useful for clearing space above them for a notch, browser chrome, or other header content.">
+        <label for="adminMobileBoardOffsetSlider">Board & Hands Vertical Offset (Mobile): <span id="adminMobileBoardOffsetValue">0px</span></label>
+        <input type="range" id="adminMobileBoardOffsetSlider" min="0" max="150" step="5" value="0">
+      </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
         <input type="range" id="adminRegionCardBiasSlider" min="0" max="100" step="1" value="0">
@@ -5316,6 +5330,20 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).on('value', snap => {
   const label = document.getElementById('adminMobileCardScaleValue');
   if (slider && document.activeElement !== slider) slider.value = mobileCardSizeMultiplier;
   if (label) label.textContent = `${mobileCardSizeMultiplier}x`;
+});
+// Shifts .game-row (board + both hands, as a unit, whichever mobile layout
+// variant is active) down by a flat pixel amount, only while Mobile Mode is
+// on -- lets an admin carve out space above the match area for a notch or
+// other header content without touching the desktop layout at all.
+let mobileBoardOffsetPx = 0;
+rtdb.ref(`${GAME_CONFIG_ROOT}/mobileBoardOffsetPx`).on('value', snap => {
+  const v = Number(snap.val());
+  mobileBoardOffsetPx = Number.isFinite(v) ? Math.max(0, Math.min(150, v)) : 0;
+  document.body.style.setProperty('--mobile-board-offset', `${mobileBoardOffsetPx}px`);
+  const slider = document.getElementById('adminMobileBoardOffsetSlider');
+  const label = document.getElementById('adminMobileBoardOffsetValue');
+  if (slider && document.activeElement !== slider) slider.value = mobileBoardOffsetPx;
+  if (label) label.textContent = `${mobileBoardOffsetPx}px`;
 });
 rtdb.ref(`${GAME_CONFIG_ROOT}/cpuWeights`).on('value', snap => {
   cpuWeightOverrides = snap.val() || {};
@@ -15244,6 +15272,16 @@ document.getElementById('adminMobileCardScaleSlider').addEventListener('change',
   const v = Math.round(Math.max(1, Math.min(3, Number(e.target.value) || 1)) * 100) / 100;
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).set(v).catch(() => {});
 });
+document.getElementById('adminMobileBoardOffsetSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(150, Number(e.target.value) || 0));
+  const label = document.getElementById('adminMobileBoardOffsetValue');
+  if (label) label.textContent = `${v}px`;
+});
+document.getElementById('adminMobileBoardOffsetSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(150, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/mobileBoardOffsetPx`).set(v).catch(() => {});
+});
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   const label = document.getElementById('adminRegionCardBiasValue');
@@ -16910,6 +16948,14 @@ function controllerPickInitialFocus(focusables, containerId) {
       const playBtn = document.getElementById('tutorialPlayBtn');
       if (playBtn && focusables.includes(playBtn)) return playBtn;
     }
+  }
+  // Picker: if the hand is already full (e.g. a rematch prefilled it, or
+  // the player backed in from elsewhere) there's nothing left to pick --
+  // Confirm Hand is the only thing worth doing, so land there instead of a
+  // card that can't add anything.
+  if (containerId === 'pickerScreen') {
+    const confirmBtn = document.getElementById('pickerConfirm');
+    if (confirmBtn && !confirmBtn.disabled && focusables.includes(confirmBtn)) return confirmBtn;
   }
   // Card Index and the card picker are both browsing/picking grids --
   // default straight to the first card tile instead of whatever a plain
