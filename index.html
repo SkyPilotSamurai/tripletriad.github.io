@@ -17064,15 +17064,15 @@ function controllerFindNext(current, dir, focusables, preferredCross) {
     const score = primary + crossPenalty * 2 + crossRefDist * 0.5;
     // Rounded comparison so near-identical floating-point scores (two
     // candidates genuinely equidistant, e.g. a 5-wide row centered under a
-    // 6-wide one) count as a tie instead of an arbitrary DOM-order win --
-    // moving Up or Down through a tie like that prefers the card on the
-    // right, both ways, instead of only Down favoring right and Up quietly
-    // falling back to whichever candidate DOM order happened to visit first
-    // (always the left one, since rows are built left-to-right).
+    // 6-wide one) count as a tie instead of an arbitrary DOM-order win.
+    // Down through a tie prefers the card on the right; Up through a tie
+    // always prefers the card on the left (e.g. stepping up from the 6-wide
+    // bottom row of the picker/shop grid onto the 5-wide row above it).
     const rounded = Math.round(score * 100) / 100;
     const roundedBest = Math.round(bestScore * 100) / 100;
     if (best === null || rounded < roundedBest
-      || ((dir === 'down' || dir === 'up') && rounded === roundedBest && cx > bestCx)) {
+      || (dir === 'down' && rounded === roundedBest && cx > bestCx)
+      || (dir === 'up' && rounded === roundedBest && cx < bestCx)) {
       bestScore = score; best = el; bestCx = cx;
     }
   });
