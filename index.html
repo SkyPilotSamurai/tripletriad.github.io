@@ -7736,6 +7736,14 @@ async function rematchPracticeMatch() {
 }
 async function rematchPracticeMatchSame() {
   restorePreviousMusicIfNeeded();
+  // "Same Rules/Points" still means a fresh roll for Roulette specifically --
+  // it rolls new rules every match, so reusing the exact previous roll on
+  // rematch would be stale rather than actually "same as always" (matches
+  // rematchPracticeMatch/rematchCpuMatch/rematchCampaignBattleSame).
+  if (state.rules.roulette) {
+    state.rules = rollRouletteRules(state.rules);
+    syncRuleCheckboxesFromState();
+  }
   showGameScreen();
   const prevP1Ids = lastPracticeHands ? lastPracticeHands.p1.map(c => c.id) : null;
   const prevP2Ids = lastPracticeHands ? lastPracticeHands.p2.map(c => c.id) : null;
@@ -8474,6 +8482,14 @@ async function rematchCpuMatch() {
 }
 async function rematchCpuMatchSame() {
   restorePreviousMusicIfNeeded();
+  // "Same Rules/Points" still means a fresh roll for Roulette specifically --
+  // it rolls new rules every match, so reusing the exact previous roll on
+  // rematch would be stale rather than actually "same as always" (matches
+  // rematchPracticeMatch/rematchCpuMatch/rematchCampaignBattleSame).
+  if (state.rules.roulette) {
+    state.rules = rollRouletteRules(state.rules);
+    syncRuleCheckboxesFromState();
+  }
   const pointBudget = state.cpuPointBudget || POINT_BUDGET_MAX;
   showGameScreen();
   const prevP1Ids = lastPracticeHands ? lastPracticeHands.p1.map(c => c.id) : null;
@@ -9307,6 +9323,11 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
   const bothWantRematch = !!(room.rematch && room.rematch.p1 && room.rematch.p2);
   const bothWantSame = !!(room.rematch && room.rematch.p1 === 'same' && room.rematch.p2 === 'same');
   if (seat === 'p1' && bothWantSame && room._dealt) {
+    // "Same Rules/Points" still means a fresh roll for Roulette specifically --
+    // it rolls new rules every match, so reusing the exact previous roll on
+    // rematch would be stale rather than actually "same as always" (matches
+    // rematchPracticeMatchSame/rematchCpuMatchSame/rematchCampaignBattleSame).
+    const rematchRules = room.rules && room.rules.roulette ? rollRouletteRules(room.rules) : room.rules;
     roomRef.update({
       board: toRoomBoard(Array(9).fill(null)),
       boardElements: toRoomBoard(Array(9).fill(null)),
@@ -9314,6 +9335,7 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
       gameOver: false,
       rematch: { p1: false, p2: false },
       picks: null,
+      rules: rematchRules,
       closedSingleCardId: { p1: null, p2: null },
       sameRematchActive: true,
       suddenDeathHandIds: null,
@@ -16954,6 +16976,18 @@ function controllerPickInitialFocus(focusables, containerId) {
   if (containerId === 'campaignNpcScreen' && controllerLastViewedCampaignNpcId) {
     const lastViewed = focusables.find(el => el.dataset && el.dataset.npcId === controllerLastViewedCampaignNpcId);
     if (lastViewed) return lastViewed;
+  }
+  // Post-match overlay in Campaign: after a Campaign battle, picking a
+  // different opponent is the far more common next action than replaying
+  // the same one, so default there -- #overlayLeave is relabeled "Choose
+  // Opponent" for Campaign matches (see renderOverlayButtons-equivalent
+  // logic). Without this, reading order would land on Play Again/Rematch
+  // since it comes first in the button row.
+  if (containerId === 'overlay' && typeof state !== 'undefined' && state && state.campaignNpcId) {
+    const chooseOpponentBtn = document.getElementById('overlayLeave');
+    if (chooseOpponentBtn && !chooseOpponentBtn.classList.contains('hidden') && focusables.includes(chooseOpponentBtn)) {
+      return chooseOpponentBtn;
+    }
   }
   // Tutorials: land on the one actionable thing for whichever half of the
   // tutorial is currently live -- the narration panel's Play Example button
