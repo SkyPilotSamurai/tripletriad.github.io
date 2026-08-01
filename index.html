@@ -1258,10 +1258,17 @@
   .hand.stack .card.selected { z-index: 60; }
   .hand.stack .card:hover { z-index: 50; }
   .hand .card:hover { z-index: 50; }
+  .hand.stack .card.controller-focus { z-index: 50; }
   #handP1 .card:not(.selected):hover .card-inner { transform: translateX(24px); }
   #handP2 .card:not(.selected):hover .card-inner { transform: translateX(-24px); }
   #handP1 .card.selected .card-inner { transform: translateX(24px) translateY(-15px); }
   #handP2 .card.selected .card-inner { transform: translateX(-24px) translateY(-15px); }
+  /* Controller focus on a hand card mirrors the mouse-hover lift so the
+     highlight ring (drawn on the card itself, not the inner face) travels
+     with it instead of being left behind at the un-lifted position. */
+  #handP1 .card.controller-focus:not(.selected) { transform: translateX(24px); }
+  #handP2 .card.controller-focus:not(.selected) { transform: translateX(-24px); }
+  #board .cell > .card.controller-focus { z-index: 10; }
   body.shape-natural .hand.stack .card { margin-top: -58.824px; }
   body.shape-natural .hand.stack .card:first-child { margin-top: 0; }
   .card {
@@ -1512,6 +1519,13 @@
     box-sizing: border-box;
   }
   #tradePanel.hidden { display: none; }
+  /* Lets the forfeit-reveal trade panel display even when there's no
+     active match on screen (e.g. resuming Campaign and resolving a
+     leftover forfeit from a match that was abandoned last session) --
+     #gameScreen has to be un-hidden for its fixed-position #tradePanel
+     child to render at all, but the stale board/hands/footer underneath
+     shouldn't flash through the panel's semi-transparent backdrop. */
+  #gameScreen.forfeit-reveal-only > *:not(#tradePanel) { visibility: hidden; }
   body.spectate-mode #titleBar, body.replay-mode #titleBar { position: relative; z-index: 410; }
   body.replay-mode #replayControls { position: relative; z-index: 410; }
   #tradePanelInner {
@@ -1963,6 +1977,90 @@
   #watchRoomInput:focus { outline: none; border-color: #ffffff; }
   #watchRoomRow .menu-btn { padding: 10px 18px; font-size: 14px; }
   .hidden { display: none; }
+  .controller-focus {
+    outline: 3px solid color-mix(in srgb, var(--controller-highlight-color, var(--p1-color-a, #ffcc33)) 50%, white 50%) !important;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  body.controller-mouse-active .controller-focus {
+    outline: none !important;
+  }
+  /* Picker/index tiles dim disabled, over-budget, or unstocked cards via
+     opacity -- which also washes out the controller focus ring drawn on
+     them, since opacity affects outlines too (and, for the picker-tile
+     wrapper case, opacity on an ancestor can't be undone by styling the
+     child). Force full opacity back whenever the dimmed element -- or its
+     picker-tile wrapper -- currently holds focus, so the ring stays clearly
+     visible while browsing/inspecting those cards. */
+  #pickerGrid .picker-tile.pick-disabled:has(.controller-focus),
+  #pickerGrid .picker-tile.pick-over-budget:has(.controller-focus) {
+    opacity: 1;
+  }
+  #pickerGrid .card.card-dim-unstocked.controller-focus,
+  #indexGrid .card.card-dim-unstocked.controller-focus {
+    opacity: 1;
+  }
+  #controllerConfigModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 430;
+  }
+  #controllerConfigModal.show { display: flex; }
+  #controllerConfigPanel {
+    position: relative;
+    background: var(--panel-bg, #1a2130);
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 12px;
+    padding: 12px 20px 14px;
+    width: 420px;
+    max-width: 96vw;
+    max-height: 97vh;
+    overflow-y: auto;
+    margin-top: 40px;
+    color: #e6e6e6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #controllerConfigPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
+  #controllerConfigClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #controllerConfigClose:hover { color: #eee; }
+  #controllerConfigBody { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+  .controller-config-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .controller-config-label { font-size: 14px; color: #e6e6e6; }
+  .controller-config-binding {
+    font-size: 13px;
+    color: #ffcc33;
+    min-width: 120px;
+    text-align: right;
+  }
+  .controller-config-rebind-btn { padding: 5px 10px; font-size: 12px; }
+  #controllerConfigHint { font-size: 12px; color: #999; text-align: center; margin-top: 4px; }
+  #controllerConfigResetBtn { margin-top: 8px; }
   #accountStatusRow {
     display: flex;
     align-items: center;
@@ -3716,6 +3814,8 @@
   body.mobile-mode.mobile-horizontal-hands #handP2 .card:not(.selected):hover .card-inner { transform: translateY(24px); }
   body.mobile-mode.mobile-horizontal-hands #handP1 .card.selected .card-inner { transform: translateY(-24px) translateX(-15px); }
   body.mobile-mode.mobile-horizontal-hands #handP2 .card.selected .card-inner { transform: translateY(24px) translateX(-15px); }
+  body.mobile-mode.mobile-horizontal-hands #handP1 .card.controller-focus:not(.selected) { transform: translateY(-24px); }
+  body.mobile-mode.mobile-horizontal-hands #handP2 .card.controller-focus:not(.selected) { transform: translateY(24px); }
   }
 </style>
 </head>
@@ -4116,6 +4216,24 @@
       </div>
       <audio id="bgAudio" loop></audio>
     </div>
+    <div class="settings-section" id="settingsControlsSection">
+      <h3>Controls</h3>
+      <div class="settings-row checkbox-row">
+        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller Enabled</label>
+      </div>
+      <div class="settings-row">
+        <button type="button" id="settingsConfigureControllerBtn">Configure Controller</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="controllerConfigModal">
+  <div id="controllerConfigPanel">
+    <button id="controllerConfigClose" aria-label="Close">✕</button>
+    <h2>Configure Controller</h2>
+    <div id="controllerConfigBody"></div>
+    <button type="button" id="controllerConfigResetBtn" class="menu-btn-secondary">Reset to Defaults</button>
+    <div id="controllerConfigHint">Click Rebind, then press a button on your controller.</div>
   </div>
 </div>
 <div id="matchmakingPrompt" class="hidden">
@@ -4591,7 +4709,7 @@
       </div>
       <div class="settings-row admin-region-bias-row" title="Increases card size in the Shop and Card Picker screens while Mobile Mode is on. Only affects those two screens.">
         <label for="adminMobileCardScaleSlider">Mobile Card Size (Shop/Picker): <span id="adminMobileCardScaleValue">1x</span></label>
-        <input type="range" id="adminMobileCardScaleSlider" min="1" max="3" step="0.5" value="1">
+        <input type="range" id="adminMobileCardScaleSlider" min="1" max="3" step="0.05" value="1">
       </div>
       <div class="settings-row admin-region-bias-row">
         <label for="adminRegionCardBiasSlider">Region Card Bias: <span id="adminRegionCardBiasValue">0%</span></label>
@@ -5161,6 +5279,10 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileHorizontalHandsEnabled`).on('value', snap =>
   if (toggle) toggle.checked = mobileHorizontalHandsEnabled;
   document.body.classList.toggle('mobile-horizontal-hands', mobileHorizontalHandsEnabled);
 });
+// Whether gamepad navigation is active -- a per-player preference now (see
+// getControllerEnabled/setControllerEnabled + initControllerConfigUi), not
+// an admin-controlled setting.
+let controllerSupportEnabled = false;
 let mobileMenuButtonScalePercent = 150;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).on('value', snap => {
   const v = Number(snap.val());
@@ -5188,7 +5310,7 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).on('value', snap =
 let mobileCardSizeMultiplier = 1;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).on('value', snap => {
   const v = Number(snap.val());
-  mobileCardSizeMultiplier = Number.isFinite(v) ? Math.max(1, Math.min(3, v)) : 1;
+  mobileCardSizeMultiplier = Number.isFinite(v) ? Math.round(Math.max(1, Math.min(3, v)) * 100) / 100 : 1;
   document.body.style.setProperty('--mobile-card-scale', mobileCardSizeMultiplier);
   const slider = document.getElementById('adminMobileCardScaleSlider');
   const label = document.getElementById('adminMobileCardScaleValue');
@@ -6423,7 +6545,7 @@ const CAMPAIGN_LOCATIONS = [
         rules: campaignEmptyRules({ same: true, sameWall: true, plus: true, up: true, combo: true, elemental: true, suddenDeath: true, random: true }), cpuDifficulty: 4, cpuBehavior: 'elemental' },
       { id: 'piet', name: 'Piet', desc: 'Head researcher at the Lunar Base.',
         rules: campaignEmptyRules({ same: true, sameWall: true, plus: true, up: true, combo: true, elemental: true, suddenDeath: true, random: true }), cpuDifficulty: 5, cpuBehavior: 'elemental', rewardCardId: 95 },
-      { id: 'ellone', name: 'Ellone', desc: 'A narrow window aboard the Lunar Base.',
+      { id: 'ellone', name: 'Ellone', desc: "In a secluded room on the 2nd floor of the Lunar Base, surprised by your offer for a card game, but also a veteran player.",
         rules: campaignEmptyRules({ same: true, sameWall: true, plus: true, up: true, combo: true, elemental: true, suddenDeath: true, random: true }), cpuDifficulty: 5, cpuBehavior: 'elemental', rewardCardId: 102 },
     ],
   },
@@ -6801,7 +6923,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
         handOrder.push(id);
       });
     }
-    let activeLevel = 1;
+    let activeLevel = PICKER_RECENT_LEVEL;
     let closedSingleSlot = prefillClosedSingleCardId != null
       ? handOrder.indexOf(prefillClosedSingleCardId)
       : -1;
@@ -7350,6 +7472,7 @@ const state = {
   hands: { p1: [], p2: [] },
   turn: 'p1',
   selected: null,
+  animating: false,
   rules: { same: true, plus: true, up: false, combo: false, elemental: false, random: false, sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false, reverse: false, chaos: false, order: false, swap: false, roulette: false },
   forcedCardId: { p1: null, p2: null },
   forcedCardTurnKey: { p1: null, p2: null },
@@ -7478,6 +7601,7 @@ function getWallSides(index) {
 function fmt(v) { return v >= 10 ? 'A' : v; }
 function initGame(hands) {
   restorePreviousMusicIfNeeded();
+  state.animating = false;
   state.board = Array(9).fill(null);
   state.hands = hands || dealHands();
   tagHandOwnership(state.hands);
@@ -8033,10 +8157,16 @@ async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBu
   await campaignSetActiveMatch(currentUser.uid, locationId, npcId, lastCampaignP1HandIds);
 }
 let campaignIntroContext = null;
+// Outlives campaignIntroContext (which gets cleared before the NPC list
+// screen is rebuilt on the way back out) so the controller can re-select
+// whichever NPC row the player just came from instead of defaulting back
+// to the top of the list.
+let controllerLastViewedCampaignNpcId = null;
 function openCampaignBattleIntro(locationId, npcId) {
   const location = campaignFindLocation(locationId);
   const npc = location && location.npcs.find(n => n.id === npcId);
   if (!location || !npc) return;
+  controllerLastViewedCampaignNpcId = npcId;
   let rules = { ...npc.rules };
   if (rules.roulette) rules = rollRouletteRules(rules);
   // Point Budget Variance only affects the NPC's own hand -- the player always
@@ -9725,6 +9855,15 @@ async function openCampaignHome() {
       continueBtn.disabled = false;
       const defeated = Object.keys(save.defeatedNpcs || {}).length;
       statusEl.textContent = `Saved game found - ${defeated} opponent${defeated === 1 ? '' : 's'} defeated so far.`;
+      // A save exists, so Continue is almost certainly what the player
+      // wants -- nudge the ring over to it, but only if they're still
+      // sitting on the just-mounted default (New Game) and haven't already
+      // navigated somewhere themselves while this was loading.
+      if (typeof controllerSupportEnabled !== 'undefined' && controllerSupportEnabled
+        && typeof controllerFocusedEl !== 'undefined' && controllerFocusedEl
+        && controllerFocusedEl.id === 'campaignNewGameBtn') {
+        controllerSetFocus(continueBtn);
+      }
     } else {
       continueBtn.disabled = true;
       statusEl.textContent = 'No saved game yet - start a New Game.';
@@ -9891,6 +10030,7 @@ function renderCampaignNpcList(location) {
     const locked = campaignIsNpcLocked(npc, currentCampaignSave);
     const row = document.createElement('button');
     row.className = 'campaign-npc-row' + (defeated ? ' defeated' : '') + (locked ? ' locked' : '');
+    row.dataset.npcId = npc.id;
     const remaining = (locked && npc.minUnlockedLocations && unlockedCount < npc.minUnlockedLocations)
       ? npc.minUnlockedLocations - unlockedCount : 0;
     let lockedStatus = '';
@@ -9986,6 +10126,7 @@ function stageTutorialScenario(rule, skipRender) {
   state.seat = null;
   state.cpuOpponent = !!rule.cpu;
   state.tutorialInteractive = false;
+  state.animating = false;
   state.rules = Object.assign({
     same: false, plus: false, up: false, combo: false, elemental: false, random: false,
     sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false,
@@ -10076,6 +10217,7 @@ function stageBasicsStep(index) {
   state.roomId = null;
   state.seat = null;
   state.cpuOpponent = false;
+  state.animating = false;
   state.rules = {
     same: false, plus: false, up: false, combo: false, elemental: false, random: false,
     sameWall: false, suddenDeath: false, closed: false, closedSingle: false, fallenAce: false,
@@ -10683,6 +10825,13 @@ function buildRemoteFlightClone(card, owner) {
 }
 function placeCard(cellIndex) {
   if (state.gameOver || !state.selected || state.board[cellIndex]) return;
+  // Held for the full flip/flight animation sequence below, regardless of
+  // whose card this is -- state.turn flips to the next actor immediately
+  // (synchronously, right below) well before that animation actually
+  // finishes playing, so canAct() needs its own separate signal or the next
+  // actor could select/place (mouse or controller "Confirm" mashed
+  // repeatedly) mid-animation and visually skip/interrupt it.
+  state.animating = true;
   const { owner, idx } = state.selected;
   const card = state.hands[owner][idx];
   stopTurnTimer();
@@ -10718,7 +10867,18 @@ function placeCard(cellIndex) {
   if (state.mode === 'online') markMoveAnimated(moveId);
   const writeDone = writeLocalStateToRoom({ moveId, cellIndex, owner, card, captureResult });
   renderAll();
-  playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDone });
+  Promise.resolve(playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDone }))
+    .finally(() => {
+      state.animating = false;
+      // renderHand() only attaches a hand card's click listener (and drops
+      // its "disabled" look) when canAct() was true at render time -- and
+      // the renderAll() call above ran while state.animating (and so
+      // canAct()) was still forcing every hand disabled. Re-render now that
+      // the lock is actually lifted, or the next player's cards (and any
+      // other canAct()-dependent styling) stay stuck until some unrelated
+      // state change happens to trigger another render.
+      if (!state.gameOver) renderAll();
+    });
 }
 function playCardPlacementSequence({ cellIndex, captureResult, flightEl, writeDone }) {
   let placementDone = Promise.resolve();
@@ -11358,18 +11518,35 @@ function cpuScoreReflipper(move, owner, level) {
   // to ever actually set up their signature bait.
   let bestPlan = null;
   if (cpuUsesTwoPly(level)) {
+    // Collect every opponent reply that would take the bait at move.cellIndex,
+    // noting for each whether we have a verified-safe recapture lined up.
+    const takingReplies = [];
     replyHand.forEach(oppCard => {
       openCellsAfter.forEach(oppCellIndex => {
         const { flips: oppFlips } = evaluateMove(boardAfterOwnMove, oppCellIndex, oppCard, opponent);
         if (!oppFlips.has(move.cellIndex)) return;
         const boardAfterOpponentReply = simulateBoardAfterMove(boardAfterOwnMove, oppCellIndex, oppCard, opponent);
         const recapture = findReflipRecapture(boardAfterOpponentReply, move.cellIndex, owner, move.card);
-        if (recapture) {
-          const bonus = cpuWeight('reflipper', 'planBonusBase') + recapture.recaptureFlips * cpuWeight('reflipper', 'planBonusPerFlip');
-          if (!bestPlan || bonus > bestPlan.bonus) bestPlan = { bonus, oppFlips: oppFlips.size };
-        }
+        takingReplies.push({ oppFlipCount: oppFlips.size, recapture });
       });
     });
+    if (takingReplies.length) {
+      // A rational opponent takes whichever reply captures the most for them.
+      // The bait is only genuinely safe if EVERY one of their most-damaging
+      // options (ties included) still leaves us a confirmed-safe recapture --
+      // a plan that only guards against a smaller, less-attractive reply
+      // doesn't protect us from the bigger one they'd actually choose, which
+      // is exactly the "unsafe reflip we can't flip back" the plan is meant
+      // to avoid.
+      const maxOppFlips = Math.max(...takingReplies.map(r => r.oppFlipCount));
+      const worstReplies = takingReplies.filter(r => r.oppFlipCount === maxOppFlips);
+      const allWorstSafe = worstReplies.every(r => r.recapture);
+      if (allWorstSafe) {
+        const best = worstReplies.reduce((a, b) => (b.recapture.recaptureFlips > a.recapture.recaptureFlips ? b : a));
+        const bonus = cpuWeight('reflipper', 'planBonusBase') + best.recapture.recaptureFlips * cpuWeight('reflipper', 'planBonusPerFlip');
+        bestPlan = { bonus, oppFlips: maxOppFlips };
+      }
+    }
   }
   const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
   const captures = flips.size;
@@ -11640,14 +11817,18 @@ async function advanceTradeReveal(room, roomId, roomRef) {
   if (winnerUid) await replenishCollectionIfLow(winnerUid);
   if (loserUid) await replenishCollectionIfLow(loserUid);
   if (room.lastDisconnectForfeit && loserUid && room.lastDisconnectForfeit.losingUid === loserUid) {
-    const lostCardNames = ts.picked
-      .filter(p => !p.selfReturn && p.originalOwner !== ts.winner)
+    const lostCards = ts.picked.filter(p => !p.selfReturn && p.originalOwner !== ts.winner);
+    const lostCardNames = lostCards
       .map(p => { const c = CARD_DB.find(cc => cc.id === p.cardId); return c ? c.name : 'a card'; });
     const winnerName = (room.seats && room.seats[ts.winner] && room.seats[ts.winner].name) || (ts.winner === 'p1' ? 'Player 1' : 'Player 2');
     await rtdb.ref(`${USERS_ROOT}/${loserUid}/pendingRankedNotice`).set({
       opponentName: winnerName,
       rule: room.lastDisconnectForfeit.rule,
       cardNames: lostCardNames,
+      // Raw ids alongside the display names -- lets the notice show the
+      // same animated card-reveal panel Campaign forfeits use instead of
+      // just a plain text alert, once the player is back to see it.
+      cardIds: lostCards.map(p => p.cardId),
       at: firebase.database.ServerValue.TIMESTAMP,
     }).catch(() => {});
   }
@@ -11767,6 +11948,16 @@ async function addGilToUser(uid, amount) {
   }
 }
 let currentCampaignSave = null;
+// Separate from currentCampaignSave/defeatedNpcs (which lives inside the
+// campaign node and gets wiped by startNewCampaignSave's full overwrite) --
+// this is a permanent, account-level record of every NPC this player has
+// ever beaten on ANY campaign file, so "first defeat" rewards can't be
+// farmed over and over by starting a fresh campaign each time.
+let currentCampaignEverDefeated = {};
+async function loadCampaignEverDefeated(uid) {
+  const snap = await rtdb.ref(`${USERS_ROOT}/${uid}/campaignEverDefeatedNpcs`).once('value');
+  return snap.val() || {};
+}
 // Tracks in-flight campaign-save writes (card removal/award, NPC won-card
 // tracking, etc.) that happen asynchronously in the background (e.g. via
 // advanceCampaignTradeReveal, which runs on its own timer, decoupled from
@@ -11824,6 +12015,7 @@ async function startNewCampaignSave(uid) {
   await rtdb.ref(`${USERS_ROOT}/${uid}/campaign`).set(fresh);
   currentCampaignSave = fresh;
   if (currentUserProfile) currentUserProfile.campaign = fresh;
+  currentCampaignEverDefeated = await loadCampaignEverDefeated(uid);
   return fresh;
 }
 async function continueCampaignSave(uid) {
@@ -11831,6 +12023,7 @@ async function continueCampaignSave(uid) {
   if (!save) save = await startNewCampaignSave(uid);
   currentCampaignSave = save;
   if (currentUserProfile) currentUserProfile.campaign = save;
+  currentCampaignEverDefeated = await loadCampaignEverDefeated(uid);
   return save;
 }
 async function campaignAwardCard(uid, cardId) {
@@ -11905,6 +12098,10 @@ async function campaignMarkNpcDefeated(uid, locationId, npcId) {
   if (currentCampaignSave.defeatedNpcs[npcId]) return null;
   currentCampaignSave.defeatedNpcs[npcId] = true;
   await rtdb.ref(`${USERS_ROOT}/${uid}/campaign/defeatedNpcs/${npcId}`).set(true).catch(() => {});
+  if (!currentCampaignEverDefeated[npcId]) {
+    currentCampaignEverDefeated[npcId] = true;
+    await rtdb.ref(`${USERS_ROOT}/${uid}/campaignEverDefeatedNpcs/${npcId}`).set(true).catch(() => {});
+  }
   const location = campaignFindLocation(locationId);
   if (!location) return null;
   const defeatedCount = location.npcs.filter(n => currentCampaignSave.defeatedNpcs[n.id]).length;
@@ -12039,7 +12236,12 @@ async function advanceCampaignTradeReveal() {
         bonusCardName = bonusCard ? bonusCard.name : null;
       }
     }
-    const wasAlreadyDefeated = !!(currentCampaignSave && currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[state.campaignNpcId]);
+    // Gate first-defeat rewards on the permanent, account-level record, not
+    // just this save's defeatedNpcs -- otherwise starting a fresh campaign
+    // would let a player farm first-defeat gil again on NPCs they already
+    // beat on a previous file.
+    const wasAlreadyDefeated = !!(currentCampaignSave && currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[state.campaignNpcId])
+      || !!currentCampaignEverDefeated[state.campaignNpcId];
     const unlockedLocationId = await campaignMarkNpcDefeated(currentUser.uid, state.campaignLocationId, state.campaignNpcId);
     let gilEarned = 0;
     if (npc && campaignGilRewardsEnabled) {
@@ -12080,6 +12282,20 @@ function showCampaignForfeitReveal(cardId, npcName, headline) {
     const labelStage = document.getElementById('tradeRevealLabel');
     const dupNoteStage = document.getElementById('tradeRevealDupNote');
     if (!tradePanel || !cardStage || !card) { resolve(); return; }
+    // #tradePanel lives inside #gameScreen -- if there's no active match on
+    // screen (e.g. resolving a forfeit left over from a match abandoned
+    // last session, resolved right from Campaign Home on Continue), a
+    // display:none ancestor hides it no matter what classes get toggled on
+    // the panel itself. That's why this could play its sound but never
+    // actually appear. Temporarily surface #gameScreen for the reveal,
+    // hiding everything else inside it so no stale board/hands show
+    // through the panel's translucent backdrop, then put things back.
+    const gameScreenEl = document.getElementById('gameScreen');
+    const gameScreenWasHidden = !!(gameScreenEl && gameScreenEl.classList.contains('hidden'));
+    if (gameScreenWasHidden) {
+      gameScreenEl.classList.remove('hidden');
+      gameScreenEl.classList.add('forfeit-reveal-only');
+    }
     if (resultTextEl) resultTextEl.textContent = headline || 'Forfeit!';
     if (resultGraphicEl) {
       resultGraphicEl.src = RESULT_GRAPHICS.lose;
@@ -12105,6 +12321,10 @@ function showCampaignForfeitReveal(cardId, npcName, headline) {
       cardStage.onclick = null;
       tradePanel.classList.add('hidden');
       revealWrap.classList.add('hidden');
+      if (gameScreenWasHidden) {
+        gameScreenEl.classList.remove('forfeit-reveal-only');
+        gameScreenEl.classList.add('hidden');
+      }
       resolve();
     };
     cardStage.onclick = () => { playSfx('cursorMove'); finish(); };
@@ -12281,6 +12501,11 @@ function attachHoldToRevealListeners(el) {
 }
 function canAct(owner) {
   if (state.gameOver) return false;
+  // A card is still mid-flight/mid-flip from the *previous* placement --
+  // state.turn already points at the next actor by this point, but letting
+  // them act (mouse click or controller Confirm, including mashing it) here
+  // would select/place right on top of that animation and visibly skip it.
+  if (state.animating) return false;
   if (owner !== state.turn) return false;
   if (state.mode === 'spectate' || state.mode === 'replay') return false;
   if (state.mode === 'tutorial' && !(state.tutorialInteractive && owner === 'p1')) return false;
@@ -13408,6 +13633,7 @@ const CAMPAIGN_LOCATION_MUSIC_FILE = {
   'lunar-base': "FF8 - A Sacrifice.mp3",
   'chocobo-forest': "FF8 - Chocobo Theme.mp3",
   'centra-ruins': "FF8 - The Truth.mp3",
+  'shumi-village': "FF8 - Balamb Town - Breezy.mp3",
 };
 function campaignMusicFileFor(location) {
   const file = location && CAMPAIGN_LOCATION_MUSIC_FILE[location.id];
@@ -14480,6 +14706,20 @@ async function showPendingRankedNoticeIfAny(profile) {
   if (currentUserProfile) currentUserProfile.pendingRankedNotice = null;
   const ruleLabel = TRADE_RULE_LABELS[notice.rule] || notice.rule || '';
   const cardNames = Array.isArray(notice.cardNames) ? notice.cardNames : [];
+  const cardIds = Array.isArray(notice.cardIds) ? notice.cardIds : [];
+  // Reuse the same animated card-reveal panel Campaign forfeits use --
+  // it works standalone outside of an active match now too -- instead of
+  // a flat text alert, when there's an actual card (or cards) to show.
+  if (cardIds.length) {
+    for (const cardId of cardIds) {
+      await showCampaignForfeitReveal(
+        cardId,
+        notice.opponentName,
+        `Ranked Match Forfeited! (Trade rule: ${ruleLabel})`
+      );
+    }
+    return;
+  }
   let message = `Your Ranked match against ${notice.opponentName || 'your opponent'} was forfeited while you were disconnected (Trade rule: ${ruleLabel}).`;
   message += cardNames.length ? ` You lost: ${cardNames.join(', ')}.` : ' No cards changed hands.';
   window.alert(message);
@@ -14693,6 +14933,7 @@ function initMainMenu() {
   initAdminCpuWeightsUi();
   initAdminRewardGilUi();
   initAdminMiscUi();
+  initControllerConfigUi();
 }
 function initAccountUi() {
   updateAuthUi();
@@ -14994,13 +15235,13 @@ document.getElementById('adminMobileTextScaleSlider').addEventListener('change',
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileGeneralTextScalePercent`).set(v).catch(() => {});
 });
 document.getElementById('adminMobileCardScaleSlider').addEventListener('input', e => {
-  const v = Math.max(1, Math.min(3, Number(e.target.value) || 1));
+  const v = Math.round(Math.max(1, Math.min(3, Number(e.target.value) || 1)) * 100) / 100;
   const label = document.getElementById('adminMobileCardScaleValue');
   if (label) label.textContent = `${v}x`;
 });
 document.getElementById('adminMobileCardScaleSlider').addEventListener('change', e => {
   playSfx('cursorMove');
-  const v = Math.max(1, Math.min(3, Number(e.target.value) || 1));
+  const v = Math.round(Math.max(1, Math.min(3, Number(e.target.value) || 1)) * 100) / 100;
   rtdb.ref(`${GAME_CONFIG_ROOT}/mobileCardSizeMultiplier`).set(v).catch(() => {});
 });
 document.getElementById('adminRegionCardBiasSlider').addEventListener('input', e => {
@@ -16219,6 +16460,972 @@ function initAdminMiscUi() {
     });
   }
 }
+// ---- Controller Support --------------------------------------------------
+// Generic gamepad navigation layered on top of the existing click-driven UI.
+// Rather than hand-wiring every screen, this scans whichever top-level
+// screen/modal is currently on top (by z-index) for clickable elements and
+// lets the D-pad/stick move a focus ring between them, with Confirm/Back
+// simulating a real click on the focused element / the nearest close button.
+const CONTROLLER_ACTIONS = ['confirm', 'back', 'up', 'down', 'left', 'right', 'start', 'quick', 'tabPrev', 'tabNext'];
+const CONTROLLER_DEFAULT_MAP = { confirm: 0, back: 1, up: 12, down: 13, left: 14, right: 15, start: 9, quick: 2, tabPrev: 4, tabNext: 5 };
+const CONTROLLER_MAP_STORAGE_KEY = 'triple-triad-controller-map';
+const CONTROLLER_BUTTON_LABELS = {
+  0: 'A / Cross', 1: 'B / Circle', 2: 'X / Square', 3: 'Y / Triangle',
+  4: 'LB / L1', 5: 'RB / R1', 6: 'LT / L2', 7: 'RT / R2',
+  8: 'Back / Select', 9: 'Start / Options', 10: 'L Stick Click', 11: 'R Stick Click',
+  12: 'D-Pad Up', 13: 'D-Pad Down', 14: 'D-Pad Left', 15: 'D-Pad Right', 16: 'Guide / Home',
+};
+const CONTROLLER_ACTION_LABELS = {
+  confirm: 'Confirm / Select', back: 'Back / Cancel',
+  up: 'Move Up', down: 'Move Down', left: 'Move Left / Adjust -', right: 'Move Right / Adjust +',
+  start: 'Toggle Title Bar',
+  quick: 'Quick Action (e.g. Auto-Fill)',
+  tabPrev: 'Previous Tab/Level',
+  tabNext: 'Next Tab/Level',
+};
+// Title bars (Music/SFX/Matchmaking/Settings icons pinned to the top of
+// every screen) are excluded from normal navigation so the D-pad doesn't
+// wander up into them constantly -- they're reachable only by explicitly
+// pressing Start, which toggles this on/off.
+let controllerTitleBarActive = false;
+function controllerIsInTitleBar(el) {
+  // Plain JS walk instead of a CSS attribute selector: [id$="TitleBar"] is
+  // case-sensitive and silently misses the in-match #titleBar (lowercase
+  // "t" -- it doesn't follow the "prefix+TitleBar" camelCase pattern every
+  // other screen's title bar uses), which let the D-pad wander into it
+  // during matches even with Start never pressed.
+  let node = el;
+  while (node && node.nodeType === 1) {
+    if (node.id && /titlebar$/i.test(node.id)) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+const CONTROLLER_FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  '#board .cell:not(:has(> .card))',
+  '#board .cell > .card',
+  '.hand.stack > .card',
+  '.picker-tile .card',
+  '.picker-tile .booster-pack-card',
+  '#pickerHand .picker-hand-filled .card',
+  '#tradePool .card',
+  '#tradeRevealCard.skippable',
+  '[data-controller-focusable]',
+].join(', ');
+// ids ending in "Close" are always the small X button tucked in a corner --
+// technically the first thing in reading order on most screens, but never
+// what a player actually wants highlighted the moment a screen opens.
+function controllerIsCloseButton(el) {
+  return !!(el.id && /Close$/.test(el.id));
+}
+function controllerButtonLabel(index) {
+  return CONTROLLER_BUTTON_LABELS[index] !== undefined ? CONTROLLER_BUTTON_LABELS[index] : `Button ${index}`;
+}
+function getControllerMap() {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(CONTROLLER_MAP_STORAGE_KEY)); } catch (e) {}
+  const map = { ...CONTROLLER_DEFAULT_MAP };
+  if (stored && typeof stored === 'object') {
+    CONTROLLER_ACTIONS.forEach(action => {
+      if (Number.isInteger(stored[action])) map[action] = stored[action];
+    });
+  }
+  return map;
+}
+function setControllerMap(map) {
+  try { localStorage.setItem(CONTROLLER_MAP_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+}
+// Per-player preference (not an admin setting) -- defaults to on so
+// gamepad navigation just works out of the box, with an easy opt-out for
+// anyone it gets in the way of.
+const CONTROLLER_ENABLED_STORAGE_KEY = 'triple-triad-controller-enabled';
+function getControllerEnabled() {
+  try {
+    const stored = localStorage.getItem(CONTROLLER_ENABLED_STORAGE_KEY);
+    return stored === null ? true : stored === 'true';
+  } catch (e) { return true; }
+}
+function setControllerEnabled(enabled) {
+  try { localStorage.setItem(CONTROLLER_ENABLED_STORAGE_KEY, enabled ? 'true' : 'false'); } catch (e) {}
+}
+function controllerIsElementVisible(el) {
+  if (!el || !el.getClientRects) return false;
+  if (el.getClientRects().length === 0) return false;
+  const style = window.getComputedStyle(el);
+  if (style.visibility === 'hidden' || style.display === 'none') return false;
+  if (parseFloat(style.opacity) === 0) return false;
+  return true;
+}
+function controllerZIndexOf(el) {
+  const z = parseInt(window.getComputedStyle(el).zIndex, 10);
+  return Number.isFinite(z) ? z : 0;
+}
+function controllerPickTopLayer(elements) {
+  // Transient effects appended straight to <body> -- the flying card clone
+  // used for placement animations chief among them -- often carry a very
+  // high z-index (so they render above everything mid-flight) despite being
+  // tiny and non-interactive (pointer-events: none). Z-index alone would let
+  // one of these outrank the real screen underneath for the ~0.5s it's
+  // animating, hijacking the whole focus system into treating a single
+  // flying card as "the current screen". Anything the player could never
+  // actually click can never legitimately be that, so filter those out
+  // before ranking by z-index.
+  const candidates = elements
+    .filter(controllerIsElementVisible)
+    .filter(el => window.getComputedStyle(el).pointerEvents !== 'none');
+  if (!candidates.length) return null;
+  let best = candidates[0];
+  let bestZ = controllerZIndexOf(best);
+  for (let i = 1; i < candidates.length; i++) {
+    const z = controllerZIndexOf(candidates[i]);
+    if (z >= bestZ) { bestZ = z; best = candidates[i]; }
+  }
+  return best;
+}
+// A z-index bump alone doesn't mean an element is an exclusive overlay layer
+// -- title bars across every screen use position:relative + z-index:100
+// just for ordinary stacking, not to cover/replace their siblings. Only
+// fixed/absolute elements that actually span most of the viewport (the
+// win/lose overlay, the trade panel, the booster-open overlay, etc.) should
+// be treated as "this screen is now just this layer".
+function controllerIsOverlayLayer(el) {
+  const cs = window.getComputedStyle(el);
+  if (cs.position !== 'fixed' && cs.position !== 'absolute') return false;
+  const r = el.getBoundingClientRect();
+  return r.width >= window.innerWidth * 0.5 && r.height >= window.innerHeight * 0.5;
+}
+function controllerActiveContainer() {
+  let container = controllerPickTopLayer(Array.from(document.body.children));
+  if (!container) return null;
+  // Drill into a clearly-elevated child layer (e.g. the win/lose overlay or
+  // trade panel living inside #gameScreen alongside the board) so its
+  // buttons take priority over whatever it's covering. Stop once no child
+  // qualifies as its own overlay layer -- that means the current level is a
+  // normal single-layer screen (title bar + content + footer all belong
+  // together), so gather it flat.
+  for (let depth = 0; depth < 4; depth++) {
+    const visibleChildren = Array.from(container.children).filter(controllerIsElementVisible);
+    if (!visibleChildren.length) break;
+    const layerCandidates = visibleChildren.filter(controllerIsOverlayLayer);
+    if (!layerCandidates.length) break;
+    const zValues = layerCandidates.map(controllerZIndexOf);
+    const maxZ = Math.max(...zValues);
+    if (maxZ <= 0) break;
+    const topChildren = layerCandidates.filter((el, i) => zValues[i] === maxZ);
+    const next = topChildren[topChildren.length - 1];
+    if (!next || next === container) break;
+    container = next;
+  }
+  return container;
+}
+// While it's the CPU's or an online opponent's turn, canAct() is false for
+// both seats -- true for neither only ever happens mid-match while waiting
+// on a move that isn't the local player's to make (a real hotseat/practice
+// turn always leaves exactly one seat actionable). No highlight belongs on
+// screen during that wait.
+function controllerMatchAwaitingOpponent() {
+  // Tutorial mode doesn't have a real "opponent's turn" -- state.tutorialInteractive
+  // going false just means the narration/staging UI (e.g. the "Play Example"
+  // button) is up and waiting on the player, which needs the same live
+  // highlighting as everything else, not to be treated like a CPU thinking.
+  return typeof state !== 'undefined' && state && typeof canAct === 'function'
+    && !state.gameOver && state.mode !== 'tutorial' && !canAct('p1') && !canAct('p2');
+}
+function controllerTutorialAwaitingBoardPlay() {
+  return typeof state !== 'undefined' && state && state.mode === 'tutorial' && !!state.tutorialInteractive;
+}
+function controllerFocusablesFor(container) {
+  if (!container) return [];
+  if (container.id === 'gameScreen' && controllerMatchAwaitingOpponent()) return [];
+  const results = [];
+  if (container.matches && container.matches(CONTROLLER_FOCUSABLE_SELECTOR)) results.push(container);
+  container.querySelectorAll(CONTROLLER_FOCUSABLE_SELECTOR).forEach(el => results.push(el));
+  let visible = results.filter(controllerIsElementVisible);
+  if (!controllerTitleBarActive) visible = visible.filter(el => !controllerIsInTitleBar(el));
+  // Corner "X" close buttons are never worth a D-pad stop -- Back already
+  // triggers them directly -- except one that actually lives inside a
+  // title bar, which (if it ever exists) should stay reachable the same
+  // way everything else in an opened title bar is.
+  visible = visible.filter(el => !controllerIsCloseButton(el) || controllerIsInTitleBar(el));
+  // Tutorials default to their narration/menu panel, not the board -- the
+  // board and hands are only meant to be reachable during the basics
+  // tutorial's actual "now you try it" window (state.tutorialInteractive),
+  // and go back to being off-limits the moment that window ends (wrong
+  // attempt, success, or a plain non-interactive rule demo that never sets
+  // tutorialInteractive at all). Otherwise the board's cells, being visually
+  // central, tend to win the initial reading-order pick over the tutorial
+  // panel's own Play Example button.
+  if (container.id === 'gameScreen' && state && state.mode === 'tutorial' && !controllerTutorialAwaitingBoardPlay()) {
+    visible = visible.filter(el => !el.closest('#board') && !el.closest('.hand.stack'));
+  }
+  return visible;
+}
+function controllerFocusables() {
+  return controllerFocusablesFor(controllerActiveContainer());
+}
+let controllerFocusedEl = null;
+// Track which top-level screen/layer is active by a stable string key (its
+// element id) instead of the raw element reference. Anything that could
+// make controllerActiveContainer() resolve to an equivalent-but-different
+// object across two consecutive frames (re-renders, live-updated lists,
+// etc.) would otherwise look like "the screen changed" every single frame
+// and permanently snap focus back to the first item, making the D-pad feel
+// completely dead on any screen whose content refreshes.
+let controllerLastContainerId = undefined;
+function controllerContainerKey(container) {
+  return container ? (container.id || null) : null;
+}
+// Keeps a focus ring live on every screen at all times -- rather than only
+// setting focus the first time a direction is pressed, this runs every
+// frame so the moment a new menu/modal/screen becomes the active layer
+// (e.g. clicking Campaign from the main menu), something is already
+// highlighted and ready to confirm, with no throwaway first D-pad press.
+// Remembers "what" was focused (by id, falling back to visible text) so
+// that when a rebuild replaces the DOM node -- a tab click rebuilding the
+// shop/picker grid, a hand re-render, etc. -- the ring can find the same
+// conceptual item again in the fresh markup, instead of always resetting
+// to the first item in reading order.
+function controllerCaptureIdentity(el) {
+  if (!el) return null;
+  let rect = null;
+  try { rect = el.getBoundingClientRect(); } catch (e) {}
+  return { id: el.id || null, text: (el.textContent || '').trim().slice(0, 80), rect };
+}
+function controllerFindByIdentity(identity, focusables) {
+  if (!identity || !focusables.length) return null;
+  if (identity.id) {
+    const byId = focusables.find(el => el.id === identity.id);
+    if (byId) return byId;
+  }
+  if (identity.text) {
+    const byText = focusables.find(el => (el.textContent || '').trim().slice(0, 80) === identity.text);
+    if (byText) return byText;
+  }
+  // Neither id nor text held up (e.g. an "Auto"-fill button that goes
+  // disabled -- and so drops out of the focusable set -- the instant it's
+  // used). Land on whichever remaining focusable is spatially closest to
+  // where the old one was, rather than jumping all the way back to the
+  // first item on the screen.
+  if (identity.rect && (identity.rect.width || identity.rect.height)) {
+    const cx0 = identity.rect.left + identity.rect.width / 2;
+    const cy0 = identity.rect.top + identity.rect.height / 2;
+    let best = null, bestDist = Infinity;
+    focusables.forEach(el => {
+      const r = el.getBoundingClientRect();
+      const dist = Math.hypot((r.left + r.width / 2) - cx0, (r.top + r.height / 2) - cy0);
+      if (dist < bestDist) { bestDist = dist; best = el; }
+    });
+    return best;
+  }
+  return null;
+}
+// Whichever seat is actually the local player (vs CPU always p1, online
+// whatever seat this client owns, hotseat/practice whichever seat just
+// became actionable) -- used to land back on their hand, not either
+// player's arbitrarily, once the opponent's turn wraps up.
+function controllerLocalHandOwner() {
+  if (typeof state === 'undefined' || !state) return null;
+  if (state.mode === 'online' && state.seat) return state.seat;
+  if (state.cpuOpponent) return 'p1';
+  if (typeof canAct !== 'function') return null;
+  if (canAct('p1')) return 'p1';
+  if (canAct('p2')) return 'p2';
+  return null;
+}
+function controllerLocalHandTopCard() {
+  const owner = controllerLocalHandOwner();
+  if (!owner) return null;
+  const handEl = document.getElementById(owner === 'p1' ? 'handP1' : 'handP2');
+  const topCard = handEl && handEl.children[0];
+  return (topCard && controllerIsElementVisible(topCard)) ? topCard : null;
+}
+// The highlight ring uses P1's color everywhere by default, but while the
+// local player is actually seated/acting as P2 (online seat 'p2', or their
+// turn in a hotseat/practice match), it should match P2's color instead --
+// otherwise a P2 player's own ring is drawn in their opponent's color.
+let controllerHighlightSeat = null;
+function controllerUpdateHighlightColorVar() {
+  // Only trust the P2-seat check while actually inside a live match screen.
+  // Outside of that (main menu, settings, shop, anywhere else) always use
+  // P1's color -- state.mode/state.seat can be left over from however the
+  // last match was exited (forfeit, disconnect, a "leave" path that skips
+  // the usual reset), and none of that should ever bleed into menus that
+  // have nothing to do with either seat.
+  const container = controllerActiveContainer();
+  const owner = (container && container.id === 'gameScreen') ? controllerLocalHandOwner() : null;
+  const seat = owner === 'p2' ? 'p2' : 'p1';
+  if (seat === controllerHighlightSeat) return;
+  controllerHighlightSeat = seat;
+  document.body.style.setProperty(
+    '--controller-highlight-color',
+    seat === 'p2' ? 'var(--p2-color-a, #ff5fae)' : 'var(--p1-color-a, #ffcc33)'
+  );
+}
+let controllerWasAwaitingOpponent = false;
+function controllerEnsureFocus() {
+  controllerUpdateHighlightColorVar();
+  const container = controllerActiveContainer();
+  const key = controllerContainerKey(container);
+  if (!container) {
+    if (controllerFocusedEl) { controllerFocusedEl.classList.remove('controller-focus'); controllerFocusedEl = null; }
+    controllerLastContainerId = null;
+    controllerWasAwaitingOpponent = false;
+    return;
+  }
+  const isGameScreen = container.id === 'gameScreen';
+  const awaitingNow = isGameScreen && controllerMatchAwaitingOpponent();
+  if (isGameScreen && controllerWasAwaitingOpponent && !awaitingNow) {
+    // The opponent's turn (CPU or online) just wrapped up -- return the
+    // ring to the top of the local player's hand instead of wherever the
+    // generic "previously-focused element is gone" recovery below would
+    // otherwise land. The hand DOM can be a frame or two behind the turn
+    // flip (placeCard() flips state.turn before its flight animation
+    // settles) -- keep the "just came out of waiting" flag set and retry
+    // on subsequent frames instead of falling through to generic recovery
+    // the moment the top card isn't available yet.
+    const topHandCard = controllerLocalHandTopCard();
+    if (topHandCard) {
+      controllerWasAwaitingOpponent = false;
+      controllerLastContainerId = key;
+      controllerSetFocus(topHandCard);
+      return;
+    }
+    controllerLastContainerId = key;
+    return;
+  }
+  controllerWasAwaitingOpponent = awaitingNow;
+  const focusables = controllerFocusablesFor(container);
+  if (!focusables.length) {
+    if (controllerFocusedEl) { controllerFocusedEl.classList.remove('controller-focus'); controllerFocusedEl = null; }
+    controllerLastContainerId = key;
+    return;
+  }
+  const screenChanged = key !== controllerLastContainerId;
+  controllerLastContainerId = key;
+  if (screenChanged) {
+    // Always land outside the title bar on a fresh screen -- Start is the
+    // only way in, every time.
+    controllerTitleBarActive = false;
+    controllerSetFocus(controllerPickInitialFocus(controllerFocusablesFor(container), container.id));
+    return;
+  }
+  if (!controllerFocusedEl || !document.body.contains(controllerFocusedEl) || !focusables.includes(controllerFocusedEl)) {
+    // Same screen, but the previously-focused element is gone -- most
+    // likely a list (campaign locations, NPCs, shop grid, etc.) refreshed
+    // its DOM nodes. Try to keep the player's place via its remembered
+    // identity before falling back to the first item.
+    const identity = controllerCaptureIdentity(controllerFocusedEl);
+    const replacement = controllerFindByIdentity(identity, focusables) || controllerPickInitialFocus(focusables);
+    controllerSetFocus(replacement);
+  }
+}
+// Remembers the cross-axis position (column for up/down, row for
+// left/right) a chain of same-direction-type moves started from, so
+// pressing the opposite direction the same number of times lands back on
+// the exact original element even through uneven grid rows. Any focus
+// change that isn't part of that chain (a fresh screen, a confirm press,
+// identity-based recovery, etc.) resets it via controllerSetFocus below;
+// controllerMove re-establishes it afterward for its own directional call.
+let controllerPreferredCrossPos = null;
+let controllerLastMoveAxis = null;
+function controllerSetFocus(el) {
+  controllerPreferredCrossPos = null;
+  controllerLastMoveAxis = null;
+  if (controllerFocusedEl && controllerFocusedEl !== el) controllerFocusedEl.classList.remove('controller-focus');
+  controllerFocusedEl = el || null;
+  if (controllerFocusedEl) {
+    controllerFocusedEl.classList.add('controller-focus');
+    try { controllerFocusedEl.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+    // Only move real browser focus for form controls that need it (typing,
+    // native dropdown behavior). Calling .focus() on plain buttons/cards
+    // risks triggering unrelated focus/blur listeners elsewhere in the app;
+    // the visual ring is all a button needs.
+    const tag = controllerFocusedEl.tagName;
+    if ((tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') && typeof controllerFocusedEl.focus === 'function') {
+      try { controllerFocusedEl.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
+}
+// A handful of screens have an obvious primary action that isn't
+// necessarily the topmost/leftmost element (e.g. the NPC challenge intro's
+// big "Play" button, which sits below the rules display) -- default to
+// that instead of whatever reading order would otherwise pick.
+const CONTROLLER_PREFERRED_INITIAL_FOCUS = {
+  campaignBattleIntroScreen: 'campaignIntroConfirm',
+  // The card picker's most-used action by far is Auto -- default there
+  // instead of the generic "Confirm" preference below.
+  pickerScreen: 'pickerAuto',
+  mainMenu: 'menuRanked',
+};
+// Placed board cards and the opponent's (or a currently-inactive) hand are
+// reachable so the player can look them over, but they're not something to
+// ever land on the instant the match screen comes up -- only demote them
+// when picking the *default* target, same treatment as the corner X button.
+function controllerIsInspectOnly(el) {
+  return !!(el.matches && (el.matches('#board .cell > .card') || el.matches('.hand.stack > .card.disabled')));
+}
+// The controller-focusable target for a given board cell index -- the
+// placed card if the cell is occupied (that's the element the focus ring
+// actually attaches to per CONTROLLER_FOCUSABLE_SELECTOR), otherwise the
+// empty cell itself.
+function controllerBoardCellFocusTarget(index) {
+  const cellEl = document.querySelectorAll('#board .cell')[index];
+  if (!cellEl) return null;
+  const cardEl = cellEl.querySelector('.card');
+  return (cardEl && controllerIsElementVisible(cardEl)) ? cardEl : cellEl;
+}
+// Whatever screen is open, a "Confirm"-labeled action (by id or text) is
+// almost always the sensible thing to have pre-highlighted -- fall back to
+// it before resorting to plain reading order.
+function controllerFindConfirmCandidate(focusables) {
+  const eligible = el => !controllerIsCloseButton(el) && !controllerIsInspectOnly(el);
+  const byId = focusables.find(el => eligible(el) && el.id && /confirm/i.test(el.id));
+  if (byId) return byId;
+  return focusables.find(el => eligible(el) && (el.textContent || '').trim().toLowerCase() === 'confirm') || null;
+}
+function controllerPickInitialFocus(focusables, containerId) {
+  // Coming back out of an NPC's battle-intro screen, re-select whichever
+  // NPC row was just being viewed instead of resetting to the top of the
+  // list -- only relevant on campaignNpcScreen, and only if that NPC is
+  // actually still in the (freshly rebuilt) list.
+  if (containerId === 'campaignNpcScreen' && controllerLastViewedCampaignNpcId) {
+    const lastViewed = focusables.find(el => el.dataset && el.dataset.npcId === controllerLastViewedCampaignNpcId);
+    if (lastViewed) return lastViewed;
+  }
+  // Tutorials: land on the one actionable thing for whichever half of the
+  // tutorial is currently live -- the narration panel's Play Example button
+  // while watching/reading, or the player's own hand card the moment the
+  // basics tutorial opens the board up for a real attempt. Without this,
+  // reading order would just as happily land on the panel's small "-"
+  // collapse button, or (before the board/hand exclusion above) on a board
+  // cell that isn't even meant to be reachable yet.
+  if (typeof state !== 'undefined' && state && state.mode === 'tutorial') {
+    if (controllerTutorialAwaitingBoardPlay()) {
+      const handCard = controllerLocalHandTopCard();
+      if (handCard && focusables.includes(handCard)) return handCard;
+    } else {
+      const playBtn = document.getElementById('tutorialPlayBtn');
+      if (playBtn && focusables.includes(playBtn)) return playBtn;
+    }
+  }
+  // Card Index and the card picker are both browsing/picking grids --
+  // default straight to the first card tile instead of whatever a plain
+  // reading-order sort would otherwise land on (the level tabs sit above
+  // the grid and would normally win that sort), or, for the picker, the
+  // Auto button it used to prefer.
+  if (containerId === 'indexScreen' || containerId === 'pickerScreen') {
+    const firstTile = controllerGridTilesFor(document.getElementById(containerId))[0];
+    if (firstTile && focusables.includes(firstTile)) return firstTile;
+  }
+  const preferredId = containerId && CONTROLLER_PREFERRED_INITIAL_FOCUS[containerId];
+  if (preferredId) {
+    const preferred = focusables.find(el => el.id === preferredId);
+    if (preferred) return preferred;
+  }
+  const confirmCandidate = controllerFindConfirmCandidate(focusables);
+  if (confirmCandidate) return confirmCandidate;
+  const sorted = focusables.slice().sort((a, b) => {
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    if (Math.abs(ra.top - rb.top) > 8) return ra.top - rb.top;
+    return ra.left - rb.left;
+  });
+  return sorted.find(el => !controllerIsCloseButton(el) && !controllerIsInspectOnly(el))
+    || sorted.find(el => !controllerIsCloseButton(el))
+    || sorted[0] || null;
+}
+function controllerFindNext(current, dir, focusables, preferredCross) {
+  const pool = focusables.filter(el => el !== current);
+  const r0 = current.getBoundingClientRect();
+  const cx0 = r0.left + r0.width / 2, cy0 = r0.top + r0.height / 2;
+  const vertical = dir === 'up' || dir === 'down';
+  // Ranking normally uses the CURRENT element's own cross-axis center, but
+  // a chain of moves along the same axis (e.g. down, down, up, up) instead
+  // ranks against wherever that chain started -- otherwise stepping through
+  // uneven rows (a 6-wide row above a 5-wide row, say) can drift a column
+  // at a time instead of snapping straight back to the card the chain
+  // began on.
+  const crossRef = preferredCross != null ? preferredCross : (vertical ? cx0 : cy0);
+  let best = null, bestScore = Infinity, bestCx = null;
+  pool.forEach(el => {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dx = cx - cx0, dy = cy - cy0;
+    // Center-to-center comparison decides whether a candidate is even in
+    // the right general direction (simple, reliable half-plane test).
+    let valid, primary, crossOverlap, crossGap, crossRefDist;
+    if (dir === 'right') {
+      valid = dx > 4;
+      primary = Math.max(0, r.left - r0.right);
+      crossOverlap = Math.min(r0.bottom, r.bottom) - Math.max(r0.top, r.top);
+      crossGap = Math.min(Math.abs(r0.top - r.bottom), Math.abs(r0.bottom - r.top));
+      crossRefDist = Math.abs(cy - crossRef);
+    } else if (dir === 'left') {
+      valid = dx < -4;
+      primary = Math.max(0, r0.left - r.right);
+      crossOverlap = Math.min(r0.bottom, r.bottom) - Math.max(r0.top, r.top);
+      crossGap = Math.min(Math.abs(r0.top - r.bottom), Math.abs(r0.bottom - r.top));
+      crossRefDist = Math.abs(cy - crossRef);
+    } else if (dir === 'down') {
+      valid = dy > 4;
+      primary = Math.max(0, r.top - r0.bottom);
+      crossOverlap = Math.min(r0.right, r.right) - Math.max(r0.left, r.left);
+      crossGap = Math.min(Math.abs(r0.left - r.right), Math.abs(r0.right - r.left));
+      crossRefDist = Math.abs(cx - crossRef);
+    } else {
+      valid = dy < -4;
+      primary = Math.max(0, r0.top - r.bottom);
+      crossOverlap = Math.min(r0.right, r.right) - Math.max(r0.left, r.left);
+      crossGap = Math.min(Math.abs(r0.left - r.right), Math.abs(r0.right - r.left));
+      crossRefDist = Math.abs(cx - crossRef);
+    }
+    if (!valid) return;
+    // For RANKING among valid candidates, edge-to-edge gap (not center
+    // distance) is what actually matches what a player perceives as
+    // "closest", and any real overlap along the cross-axis (e.g. sitting in
+    // the same column when moving up/down) means "directly ahead" and
+    // should always beat a same-distance but diagonally-offset neighbor --
+    // otherwise Up/Down/Left/Right can drift to the wrong element in a grid
+    // of unevenly sized rows. crossRefDist then breaks ties (and settles
+    // genuinely ambiguous cases) in favor of whichever candidate is
+    // actually closest to the remembered column/row, not just whichever
+    // happens to overlap at all.
+    const crossPenalty = crossOverlap > 0 ? 0 : crossGap;
+    const score = primary + crossPenalty * 2 + crossRefDist * 0.5;
+    // Rounded comparison so near-identical floating-point scores (two
+    // candidates genuinely equidistant, e.g. a 5-wide row centered under a
+    // 6-wide one) count as a tie instead of an arbitrary DOM-order win --
+    // moving Up or Down through a tie like that prefers the card on the
+    // right, both ways, instead of only Down favoring right and Up quietly
+    // falling back to whichever candidate DOM order happened to visit first
+    // (always the left one, since rows are built left-to-right).
+    const rounded = Math.round(score * 100) / 100;
+    const roundedBest = Math.round(bestScore * 100) / 100;
+    if (best === null || rounded < roundedBest
+      || ((dir === 'down' || dir === 'up') && rounded === roundedBest && cx > bestCx)) {
+      bestScore = score; best = el; bestCx = cx;
+    }
+  });
+  return best;
+}
+function controllerAdjustValue(el, dir) {
+  if (el.tagName === 'SELECT') {
+    const opts = Array.from(el.options).filter(o => !o.disabled);
+    if (!opts.length) return false;
+    let idx = opts.indexOf(el.selectedOptions[0]);
+    if (idx === -1) idx = 0;
+    idx = dir === 'right' ? Math.min(opts.length - 1, idx + 1) : Math.max(0, idx - 1);
+    if (opts[idx] !== el.selectedOptions[0]) {
+      el.value = opts[idx].value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    return true;
+  }
+  if (el.tagName === 'INPUT' && el.type === 'range') {
+    const step = parseFloat(el.step) || 1;
+    const min = parseFloat(el.min);
+    const max = parseFloat(el.max);
+    let v = (parseFloat(el.value) || 0) + (dir === 'right' ? step : -step);
+    if (Number.isFinite(min)) v = Math.max(min, v);
+    if (Number.isFinite(max)) v = Math.min(max, v);
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+  return false;
+}
+function controllerMove(dir) {
+  const focusables = controllerFocusables();
+  if (!focusables.length) { controllerFocusedEl = null; return; }
+  if (!controllerFocusedEl || !focusables.includes(controllerFocusedEl)) {
+    controllerSetFocus(controllerPickInitialFocus(focusables));
+    return;
+  }
+  if ((dir === 'left' || dir === 'right') && controllerAdjustValue(controllerFocusedEl, dir)) {
+    playSfx('cursorMove');
+    return;
+  }
+  const axis = (dir === 'up' || dir === 'down') ? 'vertical' : 'horizontal';
+  const r0 = controllerFocusedEl.getBoundingClientRect();
+  const currentCross = axis === 'vertical' ? (r0.left + r0.width / 2) : (r0.top + r0.height / 2);
+  // A fresh run of moves along this axis (first press, or switching from
+  // horizontal to vertical or vice versa) starts remembering from here;
+  // continuing the same axis keeps the original reference instead.
+  const preferredCross = controllerLastMoveAxis === axis ? controllerPreferredCrossPos : currentCross;
+  const next = controllerFindNext(controllerFocusedEl, dir, focusables, preferredCross);
+  if (next) {
+    controllerSetFocus(next);
+    controllerPreferredCrossPos = preferredCross;
+    controllerLastMoveAxis = axis;
+    playSfx('cursorMove');
+  }
+}
+function controllerActivate() {
+  const focusables = controllerFocusables();
+  if (!controllerFocusedEl || !focusables.includes(controllerFocusedEl)) {
+    controllerSetFocus(controllerPickInitialFocus(focusables));
+    return;
+  }
+  const el = controllerFocusedEl;
+  if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type === 'range')) return;
+  const isHandCard = !!el.closest('.hand.stack');
+  const wasSelected = el.classList.contains('selected');
+  const isPickerAddAction = el.id === 'pickerAuto' || !!el.closest('.picker-tile');
+  const identity = controllerCaptureIdentity(el);
+  el.click();
+  // Selecting a hand card is only half of placing it -- jump straight to
+  // the literal top-left board cell every time, occupied or not, so the
+  // next press is always a confirm placement/inspect from the same fixed
+  // starting corner instead of wherever the first open slot happens to be.
+  if (isHandCard && !wasSelected && typeof state !== 'undefined' && state && state.selected) {
+    const topLeftTarget = controllerBoardCellFocusTarget(0);
+    if (topLeftTarget) { controllerSetFocus(topLeftTarget); return; }
+  }
+  // Auto-filling or manually picking the last card the hand needs both
+  // finish the same job -- the instant the hand is complete, jump straight
+  // to Confirm Hand instead of leaving the ring on the button/tile just
+  // used.
+  if (isPickerAddAction) {
+    const confirmBtn = document.getElementById('pickerConfirm');
+    if (confirmBtn && !confirmBtn.disabled && controllerIsElementVisible(confirmBtn)) {
+      controllerSetFocus(confirmBtn);
+      return;
+    }
+  }
+  // Clicking a tab/filter (shop levels, picker tabs, etc.) often rebuilds
+  // the grid below it, removing the very element we just clicked from the
+  // DOM. Re-anchor immediately instead of leaving the ring looking frozen
+  // in place until the next frame's passive recovery catches up -- and try
+  // to land back on the same tab/card by identity (e.g. the newly-active
+  // "Lv.2" tab) rather than always snapping to the first item.
+  if (!document.body.contains(controllerFocusedEl)) {
+    const fresh = controllerFocusables();
+    const restored = controllerFindByIdentity(identity, fresh);
+    if (restored) { controllerSetFocus(restored); return; }
+    if (fresh.length) controllerSetFocus(controllerPickInitialFocus(fresh));
+  }
+}
+function controllerToggleTitleBar() {
+  controllerTitleBarActive = !controllerTitleBarActive;
+  const focusables = controllerFocusables();
+  if (focusables.length) controllerSetFocus(controllerPickInitialFocus(focusables));
+  else controllerFocusedEl = null;
+  playSfx('cursorMove');
+}
+function controllerBack() {
+  // Mid-match, with a hand card selected, Back cancels that selection
+  // instead of closing anything -- mirrors clicking the selected card again.
+  if (typeof state !== 'undefined' && state && state.selected) {
+    const handEl = document.getElementById(state.selected.owner === 'p1' ? 'handP1' : 'handP2');
+    const cardEl = handEl && handEl.children[state.selected.idx];
+    if (cardEl) {
+      cardEl.click();
+      // Land the ring back on the card that was just deselected, instead
+      // of wherever the next frame's passive recovery would default to.
+      if (document.body.contains(cardEl)) controllerSetFocus(cardEl);
+      return;
+    }
+    state.selected = null;
+    if (typeof renderAll === 'function') renderAll();
+    playSfx('cursorCancel');
+    return;
+  }
+  if (controllerTitleBarActive) { controllerToggleTitleBar(); return; }
+  const container = controllerActiveContainer();
+  if (!container) return;
+  // In the card picker, Back undoes the most recently picked card first --
+  // same as clicking it in the hand tray -- and only actually leaves the
+  // screen once every picked card has been removed that way.
+  if (container.id === 'pickerScreen') {
+    const filledSlots = container.querySelectorAll('#pickerHand .picker-hand-filled .card');
+    if (filledSlots.length) {
+      filledSlots[filledSlots.length - 1].click();
+      return;
+    }
+  }
+  const backSelector = '[id$="Close"], [id$="Back"], [id$="Cancel"]';
+  // Only ever act on a close/back control that belongs to (and is visible
+  // within) the screen currently on top -- and check every match in this
+  // container, not just the first one in DOM order, since some screens
+  // (e.g. the card picker outside Practice mode) keep one of their two
+  // exit buttons hidden. Falling back to some unrelated, currently-visible
+  // button elsewhere on the page used to let Back silently do the wrong
+  // thing (e.g. landing on a picker hand-tray card's remove handler) when
+  // the current screen simply has no visible exit at all.
+  const candidates = (container.matches && container.matches(backSelector))
+    ? [container]
+    : Array.from(container.querySelectorAll(backSelector));
+  const btn = candidates.find(controllerIsElementVisible);
+  if (btn) btn.click();
+}
+// A dedicated shortcut button for whatever a screen's single most-used
+// "just do the obvious thing" action is -- currently only the card
+// picker's Auto-Fill, but written generically so other screens can gain
+// their own quick action later without touching the poll loop.
+function controllerQuickAction() {
+  const container = controllerActiveContainer();
+  if (!container) return;
+  if (container.id === 'pickerScreen') {
+    const autoBtn = document.getElementById('pickerAuto');
+    if (autoBtn && !autoBtn.disabled && controllerIsElementVisible(autoBtn)) {
+      autoBtn.click();
+      // Same as clicking Auto directly through controllerActivate() -- a
+      // completed hand means the next sensible stop is Confirm, not the
+      // Auto button itself.
+      const confirmBtn = document.getElementById('pickerConfirm');
+      if (confirmBtn && !confirmBtn.disabled && controllerIsElementVisible(confirmBtn)) {
+        controllerSetFocus(confirmBtn);
+      }
+    }
+  }
+}
+// Cycles the level/category tabs (card picker, shop) left/right without
+// disturbing whatever's focused elsewhere on the screen -- shares the same
+// .picker-tab/.picker-tab-active markup both screens already use.
+// Reading-order tile list for a picker/shop/index grid -- shared by the tab
+// switcher below so "which slot was I on" and "what's in that slot now" are
+// always computed the same way.
+function controllerGridTilesFor(container) {
+  return Array.from(container.querySelectorAll('.picker-tile .card, .picker-tile .booster-pack-card'))
+    .filter(controllerIsElementVisible)
+    .sort((a, b) => {
+      const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      if (Math.abs(ra.top - rb.top) > 8) return ra.top - rb.top;
+      return ra.left - rb.left;
+    });
+}
+function controllerCycleTab(dir) {
+  const container = controllerActiveContainer();
+  if (!container) return;
+  const tabs = Array.from(container.querySelectorAll('.picker-tab')).filter(controllerIsElementVisible);
+  if (!tabs.length) return;
+  const activeIdx = tabs.findIndex(t => t.classList.contains('picker-tab-active'));
+  if (activeIdx === -1) return;
+  const nextIdx = (activeIdx + dir + tabs.length) % tabs.length;
+  if (nextIdx === activeIdx) return;
+  // Remember which tile (by reading-order position, not identity -- the old
+  // element is about to be destroyed) was focused before switching. Every
+  // level's grid is built from the same PICKER_ROW_SIZES/SHOP_ROW_SIZES row
+  // shape, so the same index lands in the same row/column across tabs --
+  // keep the ring there instead of always resetting to the first card.
+  const priorTiles = controllerGridTilesFor(container);
+  const priorIndex = controllerFocusedEl ? priorTiles.indexOf(controllerFocusedEl) : -1;
+  tabs[nextIdx].click();
+  const freshTiles = controllerGridTilesFor(container);
+  if (freshTiles.length) {
+    const target = priorIndex === -1
+      ? freshTiles[0]
+      : freshTiles[Math.min(priorIndex, freshTiles.length - 1)];
+    controllerSetFocus(target);
+  }
+}
+const CONTROLLER_STICK_DEADZONE = 0.5;
+const CONTROLLER_MOVE_INITIAL_DELAY = 380;
+const CONTROLLER_MOVE_REPEAT_INTERVAL = 140;
+let controllerRafId = null;
+let controllerPrevPressed = {};
+let controllerMoveTimers = { up: 0, down: 0, left: 0, right: 0 };
+let controllerRebindingAction = null;
+let controllerRebindPrevPressed = [];
+// The moment the player touches the mouse, the controller focus ring is
+// visual noise (it's sitting wherever the pad last left it, not wherever
+// the cursor is). Hide it via a body class as soon as real mouse movement
+// is seen, and bring it back the instant any controller input arrives.
+let controllerMouseActive = false;
+function controllerMarkMouseActive() {
+  if (!controllerSupportEnabled || controllerMouseActive) return;
+  controllerMouseActive = true;
+  document.body.classList.add('controller-mouse-active');
+}
+function controllerMarkControllerActive() {
+  if (!controllerMouseActive) return;
+  controllerMouseActive = false;
+  document.body.classList.remove('controller-mouse-active');
+}
+document.addEventListener('mousemove', controllerMarkMouseActive);
+document.addEventListener('mousedown', controllerMarkMouseActive);
+function controllerButtonActive(gp, index) {
+  const btn = gp.buttons[index];
+  return !!(btn && (btn.pressed || btn.value > 0.5));
+}
+function controllerGamepadDirections(gp, map) {
+  const dirs = { up: false, down: false, left: false, right: false };
+  ['up', 'down', 'left', 'right'].forEach(dir => {
+    if (controllerButtonActive(gp, map[dir])) dirs[dir] = true;
+  });
+  const ax0 = gp.axes[0] || 0, ax1 = gp.axes[1] || 0;
+  if (ax0 < -CONTROLLER_STICK_DEADZONE) dirs.left = true;
+  if (ax0 > CONTROLLER_STICK_DEADZONE) dirs.right = true;
+  if (ax1 < -CONTROLLER_STICK_DEADZONE) dirs.up = true;
+  if (ax1 > CONTROLLER_STICK_DEADZONE) dirs.down = true;
+  return dirs;
+}
+function controllerPollLoop() {
+  if (!controllerSupportEnabled) { controllerRafId = null; return; }
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp = pads && Array.from(pads).find(p => p);
+  if (!gp) {
+    controllerRafId = requestAnimationFrame(controllerPollLoop);
+    return;
+  }
+  controllerEnsureFocus();
+  if (controllerRebindingAction) {
+    for (let i = 0; i < gp.buttons.length; i++) {
+      const pressed = controllerButtonActive(gp, i);
+      if (pressed && !controllerRebindPrevPressed[i]) {
+        const map = getControllerMap();
+        map[controllerRebindingAction] = i;
+        setControllerMap(map);
+        controllerRebindingAction = null;
+        renderControllerConfigRows();
+        break;
+      }
+    }
+    controllerRebindPrevPressed = gp.buttons.map((b, i) => controllerButtonActive(gp, i));
+    controllerRafId = requestAnimationFrame(controllerPollLoop);
+    return;
+  }
+  const map = getControllerMap();
+  const confirmPressed = controllerButtonActive(gp, map.confirm);
+  const backPressed = controllerButtonActive(gp, map.back);
+  const startPressed = controllerButtonActive(gp, map.start);
+  const quickPressed = controllerButtonActive(gp, map.quick);
+  const tabPrevPressed = controllerButtonActive(gp, map.tabPrev);
+  const tabNextPressed = controllerButtonActive(gp, map.tabNext);
+  if (confirmPressed && !controllerPrevPressed.confirm) controllerActivate();
+  if (backPressed && !controllerPrevPressed.back) controllerBack();
+  if (startPressed && !controllerPrevPressed.start) controllerToggleTitleBar();
+  if (quickPressed && !controllerPrevPressed.quick) controllerQuickAction();
+  if (tabPrevPressed && !controllerPrevPressed.tabPrev) controllerCycleTab(-1);
+  if (tabNextPressed && !controllerPrevPressed.tabNext) controllerCycleTab(1);
+  controllerPrevPressed.confirm = confirmPressed;
+  controllerPrevPressed.back = backPressed;
+  controllerPrevPressed.start = startPressed;
+  controllerPrevPressed.quick = quickPressed;
+  controllerPrevPressed.tabPrev = tabPrevPressed;
+  controllerPrevPressed.tabNext = tabNextPressed;
+  const dirs = controllerGamepadDirections(gp, map);
+  if (confirmPressed || backPressed || startPressed || quickPressed || tabPrevPressed || tabNextPressed
+    || dirs.up || dirs.down || dirs.left || dirs.right) {
+    controllerMarkControllerActive();
+  }
+  const now = performance.now();
+  ['up', 'down', 'left', 'right'].forEach(dir => {
+    if (!dirs[dir]) { controllerMoveTimers[dir] = 0; return; }
+    if (!controllerMoveTimers[dir]) {
+      controllerMove(dir);
+      controllerMoveTimers[dir] = now + CONTROLLER_MOVE_INITIAL_DELAY;
+    } else if (now >= controllerMoveTimers[dir]) {
+      controllerMove(dir);
+      controllerMoveTimers[dir] = now + CONTROLLER_MOVE_REPEAT_INTERVAL;
+    }
+  });
+  controllerRafId = requestAnimationFrame(controllerPollLoop);
+}
+function startControllerSupport() {
+  if (controllerRafId) return;
+  controllerPrevPressed = {};
+  controllerMoveTimers = { up: 0, down: 0, left: 0, right: 0 };
+  controllerRafId = requestAnimationFrame(controllerPollLoop);
+}
+function stopControllerSupport() {
+  if (controllerRafId) { cancelAnimationFrame(controllerRafId); controllerRafId = null; }
+  if (controllerFocusedEl) { controllerFocusedEl.classList.remove('controller-focus'); controllerFocusedEl = null; }
+  controllerLastContainerId = undefined;
+  controllerTitleBarActive = false;
+  controllerRebindingAction = null;
+  controllerMouseActive = false;
+  document.body.classList.remove('controller-mouse-active');
+}
+function renderControllerConfigRows() {
+  const body = document.getElementById('controllerConfigBody');
+  if (!body) return;
+  const map = getControllerMap();
+  body.innerHTML = '';
+  CONTROLLER_ACTIONS.forEach(action => {
+    const row = document.createElement('div');
+    row.className = 'controller-config-row';
+    const label = document.createElement('span');
+    label.className = 'controller-config-label';
+    label.textContent = CONTROLLER_ACTION_LABELS[action];
+    const binding = document.createElement('span');
+    binding.className = 'controller-config-binding';
+    binding.textContent = controllerRebindingAction === action ? 'Press a button...' : controllerButtonLabel(map[action]);
+    const rebindBtn = document.createElement('button');
+    rebindBtn.type = 'button';
+    rebindBtn.className = 'menu-btn-secondary controller-config-rebind-btn';
+    rebindBtn.textContent = 'Rebind';
+    rebindBtn.addEventListener('click', () => {
+      controllerRebindingAction = action;
+      renderControllerConfigRows();
+    });
+    row.appendChild(label);
+    row.appendChild(binding);
+    row.appendChild(rebindBtn);
+    body.appendChild(row);
+  });
+}
+function openControllerConfigModal() {
+  playSfx('cursorMove');
+  renderControllerConfigRows();
+  document.getElementById('controllerConfigModal').classList.add('show');
+}
+function closeControllerConfigModal() {
+  controllerRebindingAction = null;
+  document.getElementById('controllerConfigModal').classList.remove('show');
+}
+function initControllerConfigUi() {
+  const enabledToggle = document.getElementById('settingsControllerEnabledToggle');
+  if (enabledToggle) {
+    enabledToggle.addEventListener('change', e => {
+      playSfx('cursorMove');
+      controllerSupportEnabled = e.target.checked;
+      setControllerEnabled(e.target.checked);
+      if (e.target.checked) {
+        if (typeof startControllerSupport === 'function') startControllerSupport();
+      } else {
+        if (typeof stopControllerSupport === 'function') stopControllerSupport();
+      }
+    });
+  }
+  // Deferred a tick: initControllerConfigUi() runs synchronously and early
+  // (as part of initMainMenu(), well before this point in the file), while
+  // CONTROLLER_ENABLED_STORAGE_KEY/getControllerEnabled/startControllerSupport
+  // (all declared further down, with the rest of the controller-support
+  // code) haven't been initialized yet at that point in the script's
+  // top-to-bottom execution -- reading/calling them immediately would throw
+  // a temporal-dead-zone ReferenceError.
+  setTimeout(() => {
+    const enabled = getControllerEnabled();
+    controllerSupportEnabled = enabled;
+    if (enabledToggle) enabledToggle.checked = enabled;
+    if (enabled && typeof startControllerSupport === 'function') startControllerSupport();
+  }, 0);
+  const openBtn = document.getElementById('settingsConfigureControllerBtn');
+  if (openBtn) openBtn.addEventListener('click', openControllerConfigModal);
+  const closeBtn = document.getElementById('controllerConfigClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeControllerConfigModal(); });
+  const modal = document.getElementById('controllerConfigModal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      if (e.target.id === 'controllerConfigModal') { playSfx('cursorCancel'); closeControllerConfigModal(); }
+    });
+  }
+  const resetBtn = document.getElementById('controllerConfigResetBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      setControllerMap({ ...CONTROLLER_DEFAULT_MAP });
+      controllerRebindingAction = null;
+      renderControllerConfigRows();
+      playSfx('cursorMove');
+    });
+  }
+}
+// ---------------------------------------------------------------------------
 function renderWatchRoomItem(container, { id, root, room }) {
   const p1Name = room.seats.p1 ? room.seats.p1.name : '(open)';
   const p2Name = room.seats.p2 ? room.seats.p2.name : '(open)';
