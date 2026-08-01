@@ -8031,10 +8031,6 @@ async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBu
   await campaignSetActiveMatch(currentUser.uid, locationId, npcId, lastCampaignP1HandIds);
 }
 let campaignIntroContext = null;
-// Guards the delayed roulette-rules reveal below -- bumped every time the
-// intro screen opens so a pending reveal from a screen the player already
-// left/reopened can't land on the wrong NPC's rules line.
-let campaignIntroRulesRevealToken = 0;
 function openCampaignBattleIntro(locationId, npcId) {
   const location = campaignFindLocation(locationId);
   const npc = location && location.npcs.find(n => n.id === npcId);
@@ -8053,25 +8049,11 @@ function openCampaignBattleIntro(locationId, npcId) {
   document.getElementById('campaignIntroDifficulty').textContent = CPU_DIFFICULTY_LABELS[npc.cpuDifficulty] || '';
   document.getElementById('campaignIntroQuote').textContent = `"${campaignNpcQuote(npc)}"`;
   const rulesEl = document.getElementById('campaignIntroRules');
-  const rulesText = formatActiveRules(rules) || '[No rules]';
-  campaignIntroRulesRevealToken++;
-  if (rules.roulette) {
-    // The Queen of Cards rolls her rules at random each challenge -- keep
-    // the line hidden until just after her battle quote appears, so it
-    // reads as her actually announcing the rules rather than everything
-    // (quote + rules) dumping onto the screen at once.
-    const myToken = campaignIntroRulesRevealToken;
-    rulesEl.textContent = '';
-    rulesEl.classList.add('hidden');
-    setTimeout(() => {
-      if (campaignIntroRulesRevealToken !== myToken) return;
-      rulesEl.textContent = rulesText;
-      rulesEl.classList.remove('hidden');
-    }, 1400);
-  } else {
-    rulesEl.textContent = rulesText;
-    rulesEl.classList.remove('hidden');
-  }
+  rulesEl.classList.remove('hidden');
+  // The Queen of Cards rolls her rules at random each challenge -- show just
+  // "Roulette" here instead of spoiling the roll immediately. The real rules
+  // only get revealed once the player clicks Play (see confirmCampaignBattleIntro).
+  rulesEl.textContent = rules.roulette ? 'Roulette' : (formatActiveRules(rules) || '[No rules]');
   document.getElementById('campaignIntroPoints').textContent = (rules.random && campaignRandomIgnoresPointsEnabled)
     ? campaignRandomCardsLabel(npc)
     : `Point Max: ${campaignPointBudgetCeilingForNpc(npc)}`;
@@ -8100,6 +8082,12 @@ function closeCampaignBattleIntro() {
 async function confirmCampaignBattleIntro() {
   if (!campaignIntroContext) return;
   const { locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds } = campaignIntroContext;
+  if (rules.roulette) {
+    // Reveal the actual rolled rules (instead of the "Roulette" placeholder)
+    // the instant Play is clicked -- no delay.
+    const rulesEl = document.getElementById('campaignIntroRules');
+    if (rulesEl) rulesEl.textContent = formatActiveRules(rules) || '[No rules]';
+  }
   campaignIntroContext = null;
   document.getElementById('campaignBattleIntroScreen').classList.add('hidden');
   await startCampaignBattle(locationId, npcId, rules, playerBudget, npcBudget, forcedRareCardIds);
