@@ -14047,13 +14047,28 @@ function initSfxControls() {
     });
   }
 }
+// Reuse a small round-robin pool of <audio> elements per sound instead of
+// instantiating `new Audio(src)` on every play. Creating a brand-new Audio
+// object each time re-triggers the browser/OS audio session on mobile,
+// which is what causes any music playing outside the app (e.g. the
+// player's own music app) to audibly duck every time a card is placed.
+// Reusing existing elements avoids re-opening that session on every call.
+const SFX_POOL_SIZE = 3;
+const sfxAudioPools = new Map();
 function playSfx(name) {
   if (!sfxState.enabled) return;
   const src = SFX[name];
   if (!src) return;
-  const audio = new Audio(src);
+  let entry = sfxAudioPools.get(name);
+  if (!entry) {
+    entry = { pool: Array.from({ length: SFX_POOL_SIZE }, () => new Audio(src)), idx: 0 };
+    sfxAudioPools.set(name, entry);
+  }
+  const audio = entry.pool[entry.idx];
+  entry.idx = (entry.idx + 1) % entry.pool.length;
   const category = SFX_CATEGORY[name] || 'card';
   audio.volume = (category === 'cursor' ? sfxState.cursorVolume : sfxState.cardVolume) * GLOBAL_VOLUME_SCALE;
+  try { audio.currentTime = 0; } catch (e) {}
   audio.play().catch(() => {});
 }
 function rulesLockedForCurrentMode() {
@@ -17881,7 +17896,7 @@ function refreshShopBuySlot() {
   priceEl.classList.toggle('shop-price-unaffordable', !canAfford);
   buyBtn.disabled = !canAfford || capped;
   buyBtn.textContent = capped ? 'Already Owned' : 'Buy';
-  const sellDisabledForCampaign = shopCampaignMode && !campaignSellingEnabled;
+  const sellDisabledForCampaign = shopCampaignMode && (!campaignSellingEnabled || isOneOfAKindCardId(card.id));
   sellBtn.classList.toggle('hidden', sellDisabledForCampaign);
   if (sellDisabledForCampaign) {
     sellBtn.disabled = true;
@@ -18033,7 +18048,8 @@ function renderBoosterOpenStep() {
 }
 async function completeShopSale() {
   if (shopPurchaseInFlight || shopSelectedCardId == null || !currentUser
-      || (shopCampaignMode && !campaignSellingEnabled)) return;
+      || (shopCampaignMode && !campaignSellingEnabled)
+      || (shopCampaignMode && isOneOfAKindCardId(shopSelectedCardId))) return;
   const cardId = shopSelectedCardId;
   const card = CARD_DB.find(c => c.id === cardId);
   const proceeds = sellPrice(cardId, shopCampaignMode);
