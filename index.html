@@ -6446,7 +6446,9 @@ const CAMPAIGN_LOCATIONS = [
       { id: 'shumi-elder-attendant', name: "Elder's Attendant", desc: "Sulks at the corner of the workshop, refusing to help with the statue - he'd rather be out fighting alongside Master Laguna.",
         rules: campaignEmptyRules({ same: true, plus: true, up: true, random: true }), cpuDifficulty: 4, cpuBehavior: 'risky' },
       { id: 'queen-of-cards', name: 'Queen of Cards', desc: "Found at the village hotel - her sidequest has taken her all over the world, and this is where her trail leads.",
-        rules: campaignEmptyRules({ roulette: true }), cpuDifficulty: 5, cpuBehavior: 'reflipper', finalBoss: true },
+        // No finalBoss flag on purpose -- she should never hand out the
+        // finalBoss bonus-card reward on top of the normal trade win.
+        rules: campaignEmptyRules({ roulette: true }), cpuDifficulty: 5, cpuBehavior: 'reflipper' },
     ],
   },
 ];
@@ -8098,7 +8100,11 @@ async function rematchCampaignBattleSame() {
   const location = campaignFindLocation(locationId);
   const npc = location && location.npcs.find(n => n.id === npcId);
   if (!location || !npc) return;
-  const rules = { ...state.rules };
+  let rules = { ...state.rules };
+  // "Same Rules/Points" still means a fresh roll for Roulette specifically --
+  // she rolls new rules every challenge, so reusing the exact previous roll
+  // on rematch would be stale rather than actually "same as always".
+  if (rules.roulette) rules = rollRouletteRules(rules);
   const playerBudget = campaignPointBudgetCeilingForNpc(npc);
   const npcBudget = state.cpuPointBudget || campaignPointBudgetForNpc(npc);
   const { forcedRareCardIds } = campaignRollForcedRareCards(npc, npcBudget);
