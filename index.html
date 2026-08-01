@@ -1986,20 +1986,11 @@
     outline: none !important;
   }
   /* Picker/index tiles dim disabled, over-budget, or unstocked cards via
-     opacity -- which also washes out the controller focus ring drawn on
-     them, since opacity affects outlines too (and, for the picker-tile
-     wrapper case, opacity on an ancestor can't be undone by styling the
-     child). Force full opacity back whenever the dimmed element -- or its
-     picker-tile wrapper -- currently holds focus, so the ring stays clearly
-     visible while browsing/inspecting those cards. */
-  #pickerGrid .picker-tile.pick-disabled:has(.controller-focus),
-  #pickerGrid .picker-tile.pick-over-budget:has(.controller-focus) {
-    opacity: 1;
-  }
-  #pickerGrid .card.card-dim-unstocked.controller-focus,
-  #indexGrid .card.card-dim-unstocked.controller-focus {
-    opacity: 1;
-  }
+     opacity on .card-inner/.picker-stock (see the pick-disabled/
+     pick-over-budget/card-dim-unstocked rules below) rather than on .card
+     itself, so the controller focus ring drawn on .card always stays at
+     full strength -- no override needed here, and the card correctly stays
+     dimmed while it's focused. */
   #controllerConfigModal {
     position: fixed;
     inset: 0;
@@ -2487,9 +2478,18 @@
     outline-offset: 0;
     box-shadow: none;
   }
-  .picker-tile.pick-disabled { opacity: 0.4; }
+  /* Dim via opacity on .card-inner/.picker-stock rather than the .picker-tile
+     wrapper or the .card itself -- an ancestor's opacity flattens and fades
+     everything under it during compositing (including any outline drawn on
+     a descendant), so dimming that way would also wash out the controller
+     focus ring. Dimming only the inner content keeps .card itself -- and
+     the outline attached to it -- at full strength no matter what, while
+     the card still reads as visually dimmed/disabled underneath the ring. */
+  .picker-tile.pick-disabled .card-inner,
+  .picker-tile.pick-disabled .picker-stock { opacity: 0.4; }
   .picker-tile.pick-disabled .card { cursor: default; pointer-events: none; }
-  .picker-tile.pick-over-budget { opacity: 0.75; }
+  .picker-tile.pick-over-budget .card-inner,
+  .picker-tile.pick-over-budget .picker-stock { opacity: 0.75; }
   .picker-tile.pick-over-budget .card { cursor: default; pointer-events: none; }
   .picker-count-badge {
     position: absolute;
@@ -2523,7 +2523,9 @@
     border: 2px solid #1a2130;
     box-shadow: 0 2px 7px rgba(0,0,0,0.65);
   }
-  .card.card-dim-unstocked { opacity: 0.6; }
+  /* Same reasoning as .pick-disabled/.pick-over-budget above -- dim the
+     inner content, not .card itself, so the focus outline never fades. */
+  .card.card-dim-unstocked .card-inner { opacity: 0.6; }
   .picker-stock {
     font-size: 15px;
     font-weight: bold;
