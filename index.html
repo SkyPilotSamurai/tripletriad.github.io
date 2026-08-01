@@ -7504,6 +7504,24 @@ function capturesBeats(attackerIndex, attackerCard, attackerSide, defenderIndex,
   const defenderRank = rank(defenderIndex, defenderCard, defenderSide);
   return state.rules.reverse ? attackerRank < defenderRank : attackerRank > defenderRank;
 }
+// CPU/NPC hand-building (buildMaxPointsHandIds, ensureElementalCardsInHand,
+// buildCampaignNpcHand) picks the "best" card for a budget slot by level,
+// which normally means the highest-level (highest-stat) card affordable --
+// under Reverse that's backwards, since low stats beat high stats in every
+// matchup there, so the actually-strong pick within budget is the lowest
+// level instead. Centralizing the level<->"best" mapping here so every
+// hand-builder stays consistent instead of hardcoding Math.max in each one.
+function cpuPreferredLevelAmong(cards) {
+  return state.rules.reverse
+    ? cards.reduce((min, c) => Math.min(min, c.level), Infinity)
+    : cards.reduce((max, c) => Math.max(max, c.level), 0);
+}
+// Same idea, for picking which of two specific cards is the "weaker" one --
+// e.g. which non-elemental card to sacrifice first when swapping one in
+// should be whichever one is currently weakest.
+function cpuCardIsWeakerThan(a, b) {
+  return state.rules.reverse ? a.level > b.level : a.level < b.level;
+}
 const state = {
   board: Array(9).fill(null),
   boardElements: Array(9).fill(null),
@@ -7810,8 +7828,8 @@ function buildMaxPointsHandIds(pointBudget) {
       return c.level <= perSlotCap;
     });
     if (candidates.length === 0) break;
-    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
-    const best = candidates.filter(c => c.level === highestLevel);
+    const bestLevel = cpuPreferredLevelAmong(candidates);
+    const best = candidates.filter(c => c.level === bestLevel);
     const unused = best.filter(c => (counts.get(c.id) || 0) === 0);
     const finalists = unused.length ? unused : best;
     const card = finalists[Math.floor(Math.random() * finalists.length)];
@@ -7850,7 +7868,7 @@ function ensureElementalCardsInHand(ids, pointBudget) {
     if (nonElementalIdxs.length === 0) break;
     const outIdx = nonElementalIdxs.reduce((best, i) => {
       const bc = cardOf(best), ic = cardOf(i);
-      return (ic && bc && ic.level < bc.level) ? i : best;
+      return (ic && bc && cpuCardIsWeakerThan(ic, bc)) ? i : best;
     }, nonElementalIdxs[0]);
     const outCard = cardOf(outIdx);
     const spentWithoutOut = totalSpent() - (outCard ? outCard.level : 0);
@@ -7864,8 +7882,8 @@ function ensureElementalCardsInHand(ids, pointBudget) {
       return c.level <= budgetForSwap;
     });
     if (candidates.length === 0) break;
-    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
-    const best = candidates.filter(c => c.level === highestLevel);
+    const bestLevel = cpuPreferredLevelAmong(candidates);
+    const best = candidates.filter(c => c.level === bestLevel);
     const inCard = best[Math.floor(Math.random() * best.length)];
     counts.set(outCard.id, (counts.get(outCard.id) || 0) - 1);
     counts.set(inCard.id, (counts.get(inCard.id) || 0) + 1);
@@ -8064,14 +8082,14 @@ function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards
   while (elementalCount < minElemental) {
     const nonElementalIdxs = result.map((c, i) => i).filter(i => !result[i].element);
     if (nonElementalIdxs.length === 0) break;
-    const outIdx = nonElementalIdxs.reduce((best, i) => (result[i].level < result[best].level ? i : best), nonElementalIdxs[0]);
+    const outIdx = nonElementalIdxs.reduce((best, i) => (cpuCardIsWeakerThan(result[i], result[best]) ? i : best), nonElementalIdxs[0]);
     const outCard = result[outIdx];
     const spentWithoutOut = totalSpent() - outCard.level;
     const budgetForSwap = otherBudget - spentWithoutOut;
     const candidates = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
     if (candidates.length === 0) break;
-    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
-    const best = candidates.filter(c => c.level === highestLevel);
+    const bestLevel = cpuPreferredLevelAmong(candidates);
+    const best = candidates.filter(c => c.level === bestLevel);
     const inCard = best[Math.floor(Math.random() * best.length)];
     result[outIdx] = { ...inCard };
     elementalCount++;
@@ -8108,8 +8126,8 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
       const usedCandidates = biasedCandidates.filter(c => usageCounts.get(c.id));
       const wantsDouble = usedCandidates.length > 0 && Math.random() * 100 < (npc.doubleUpPercent || 0);
       const pickFrom = wantsDouble ? biasedCandidates : (unusedCandidates.length ? unusedCandidates : biasedCandidates);
-      const highestLevel = pickFrom.reduce((max, c) => Math.max(max, c.level), 0);
-      const best = pickFrom.filter(c => c.level === highestLevel);
+      const bestLevel = cpuPreferredLevelAmong(pickFrom);
+      const best = pickFrom.filter(c => c.level === bestLevel);
       card = best[Math.floor(Math.random() * best.length)];
     } else {
       card = pool.reduce((a, c) => (c.level < a.level ? c : a), pool[0]);
