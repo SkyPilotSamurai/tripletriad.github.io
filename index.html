@@ -4252,7 +4252,7 @@
       <h3>Controls</h3>
       <div class="settings-row checkbox-row">
         <button type="button" id="settingsConfigureControllerBtn">Configure Controller</button>
-        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller Enabled</label>
+        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller / Keyboard Enabled</label>
       </div>
     </div>
   </div>
@@ -5798,6 +5798,7 @@ async function joinFreePlayGame() {
 }
 let rankedFreePlayPromptRef = null;
 let rankedFreePlayPromptCb = null;
+let rankedFreePlayPromptCheckToken = 0;
 function updateRankedFreePlayPromptVisibility(hasOpenGame) {
   const promptEl = document.getElementById('spinnerFreePlayPrompt');
   if (!promptEl) return;
@@ -5808,8 +5809,31 @@ function startRankedFreePlayPrompt() {
   stopRankedFreePlayPrompt();
   const ref = rtdb.ref(ROOM_ID_LIST_PATH);
   const cb = snap => {
-    const hasOpenGame = snap.exists() && Object.keys(snap.val() || {}).length > 0;
-    updateRankedFreePlayPromptVisibility(hasOpenGame);
+    const roomIds = snap.exists() ? Object.keys(snap.val() || {}) : [];
+    if (!roomIds.length) { updateRankedFreePlayPromptVisibility(false); return; }
+    // tryClaimOpenSeat() removes a room from this index the instant its
+    // seats transaction reports full, but that removal is a separate write
+    // that lands a beat later -- for that brief gap, a room that just
+    // filled (someone else's free play match starting) can still show up
+    // here. Confirm at least one listed room still has a genuinely open
+    // seat (same openness rule tryClaimOpenSeat itself uses, including the
+    // presence-based reclaim of an abandoned seat) before trusting the
+    // index, instead of flashing "Free Play open" for a room that isn't.
+    const myToken = ++rankedFreePlayPromptCheckToken;
+    Promise.all(roomIds.map(id => Promise.all([
+      rtdb.ref(`${ROOMS_ROOT}/${id}/seats`).once('value').then(s => s.val()).catch(() => null),
+      rtdb.ref(`${ROOMS_ROOT}/${id}/presence`).once('value').then(s => s.val()).catch(() => null),
+    ]))).then(results => {
+      if (myToken !== rankedFreePlayPromptCheckToken) return; // superseded by a newer index update or stop
+      const hasOpenGame = results.some(([seats, presence]) => {
+        seats = seats || {};
+        presence = presence || {};
+        const p1Open = !seats.p1 || presence.p1 === false;
+        const p2Open = !seats.p2 || presence.p2 === false;
+        return p1Open || p2Open;
+      });
+      updateRankedFreePlayPromptVisibility(hasOpenGame);
+    });
   };
   ref.on('value', cb);
   rankedFreePlayPromptRef = ref;
@@ -5821,6 +5845,7 @@ function stopRankedFreePlayPrompt() {
   }
   rankedFreePlayPromptRef = null;
   rankedFreePlayPromptCb = null;
+  rankedFreePlayPromptCheckToken++; // invalidate any in-flight openness check
   const promptEl = document.getElementById('spinnerFreePlayPrompt');
   if (promptEl) promptEl.classList.add('hidden');
 }
@@ -16721,6 +16746,90 @@ const CONTROLLER_ACTION_LABELS = {
   tabPrev: 'Previous Tab/Level',
   tabNext: 'Next Tab/Level',
 };
+// Keyboard is just a second input source feeding the exact same actions as
+// the gamepad (see controllerPollLoop) -- same enable toggle, same
+// controllerActivate/controllerBack/controllerMove/etc. functions, same
+// continuous-hold elemental reveal. Not (currently) player-remappable like
+// the gamepad buttons are; these are fixed defaults. Each action lists every
+// KeyboardEvent.code that triggers it.
+const KEYBOARD_MAP = {
+  confirm: ['KeyZ', 'Space'],
+  back: ['KeyX', 'Backspace'],
+  up: ['ArrowUp', 'KeyW'],
+  down: ['ArrowDown'],
+  left: ['ArrowLeft'],
+  right: ['ArrowRight', 'KeyD'],
+  start: ['Tab'],
+  // Shift doubles as the elemental stat-diff reveal (see controllerPollLoop's
+  // Quick-hold handling / setAllElementalCardsRevealed) -- KeyQ still works
+  // too, this is purely additive.
+  quick: ['KeyQ', 'ShiftLeft', 'ShiftRight'],
+  // KeyA/KeyS are dedicated tab-prev/tab-next keys (alongside the brackets),
+  // not also Left/Down -- a single key can only drive one action (see
+  // KEYBOARD_CODE_TO_ACTION below), so leaving them double-booked would have
+  // silently made A/S do nothing but cycle tabs anyway, just without saying
+  // so. Movement keeps full 4-directional coverage via arrows + W/D.
+  tabPrev: ['BracketLeft', 'KeyA'],
+  tabNext: ['BracketRight', 'KeyS'],
+};
+const KEYBOARD_CODE_TO_ACTION = {};
+Object.keys(KEYBOARD_MAP).forEach(action => {
+  KEYBOARD_MAP[action].forEach(code => { KEYBOARD_CODE_TO_ACTION[code] = action; });
+});
+// Escape is intentionally NOT part of KEYBOARD_MAP/keyboardHeld -- it's not
+// an alternate input into one of the shared hold-based actions above, it's
+// its own one-shot, confirm()-gated "leave the match" action (see
+// controllerEscapeAction) and is handled directly below instead.
+const KEYBOARD_EXIT_MATCH_CODE = 'Escape';
+const keyboardHeld = { confirm: false, back: false, up: false, down: false, left: false, right: false, start: false, quick: false, tabPrev: false, tabNext: false };
+function controllerKeyboardTargetIsFormField() {
+  return controllerIsFormField(document.activeElement);
+}
+document.addEventListener('keydown', e => {
+  if (!controllerSupportEnabled) return;
+  // Belt-and-suspenders: browsers normally never deliver key events to a
+  // background tab/unfocused window at all, but check explicitly anyway so
+  // a stray global listener never reacts to keystrokes meant for something
+  // else on the user's screen.
+  if (!document.hasFocus()) return;
+  // Never hijack keystrokes while the player is actually typing into a real
+  // form field (settings inputs, admin panels, chat, etc.) -- same guard
+  // the mouse-only Back/reveal-all handlers use.
+  if (controllerKeyboardTargetIsFormField()) return;
+  if (e.code === KEYBOARD_EXIT_MATCH_CODE) {
+    // Guard against OS key-repeat re-firing this while confirm()'s dialog is
+    // still up (or right after it closes) and queuing up another prompt.
+    if (e.repeat) return;
+    e.preventDefault();
+    controllerEscapeAction();
+    return;
+  }
+  if (KEYBOARD_TAB_SELECT_CODES.includes(e.code)) {
+    if (e.repeat) return;
+    e.preventDefault();
+    controllerSelectTabByCode(e.code);
+    return;
+  }
+  const action = KEYBOARD_CODE_TO_ACTION[e.code];
+  if (!action) return;
+  e.preventDefault();
+  keyboardHeld[action] = true;
+});
+document.addEventListener('keyup', e => {
+  const action = KEYBOARD_CODE_TO_ACTION[e.code];
+  if (!action) return;
+  // Always clear on keyup regardless of focus/form-field state, even if the
+  // matching keydown never engaged this action -- otherwise a key held down
+  // while e.g. tabbing into a text field could leave it stuck "held"
+  // forever from controllerPollLoop's point of view.
+  keyboardHeld[action] = false;
+});
+// Held keys shouldn't keep steering the ring (or holding a reveal open)
+// once support is toggled off or the window loses focus while a key is
+// still physically down.
+window.addEventListener('blur', () => {
+  Object.keys(keyboardHeld).forEach(action => { keyboardHeld[action] = false; });
+});
 // Title bars (Music/SFX/Matchmaking/Settings icons pinned to the top of
 // every screen) are excluded from normal navigation so the D-pad doesn't
 // wander up into them constantly -- they're reachable only by explicitly
@@ -16877,7 +16986,20 @@ function controllerTutorialAwaitingBoardPlay() {
 }
 function controllerFocusablesFor(container) {
   if (!container) return [];
-  if (container.id === 'gameScreen' && controllerMatchAwaitingOpponent()) return [];
+  if (container.id === 'gameScreen' && controllerMatchAwaitingOpponent()) {
+    // Room setup (waiting for another player to join / both players to
+    // choose their cards) is also a form of "awaiting opponent" -- canAct()
+    // is false for both seats because the match hasn't started yet, not
+    // because it's someone else's turn. The board/hands have nothing worth
+    // focusing during that wait, but the first-player spinner overlay's own
+    // Back to Menu / Switch to Free Play controls do, and were otherwise
+    // being wiped out along with everything else by the early return below.
+    const spinner = document.getElementById('firstPlayerSpinner');
+    if (spinner && controllerIsElementVisible(spinner)) {
+      return Array.from(spinner.querySelectorAll(CONTROLLER_FOCUSABLE_SELECTOR)).filter(controllerIsElementVisible);
+    }
+    return [];
+  }
   const results = [];
   if (container.matches && container.matches(CONTROLLER_FOCUSABLE_SELECTOR)) results.push(container);
   container.querySelectorAll(CONTROLLER_FOCUSABLE_SELECTOR).forEach(el => results.push(el));
@@ -17405,7 +17527,12 @@ function controllerBack() {
       return;
     }
   }
-  const backSelector = '[id$="Close"], [id$="Back"], [id$="Cancel"]';
+  // [id$="ToMenu"] catches the game/spinner/picker screens' "Back to Menu"
+  // footer buttons (gameBackToMenu, spinnerBackToMenu, pickerBackToMenu) --
+  // those don't end in plain "Back" so they were falling through this
+  // selector entirely, leaving Back/right-click with nothing to click on
+  // the live match screen (including mid-tutorial, which reuses it).
+  const backSelector = '[id$="Close"], [id$="Back"], [id$="Cancel"], [id$="ToMenu"]';
   // Only ever act on a close/back control that belongs to (and is visible
   // within) the screen currently on top -- and check every match in this
   // container, not just the first one in DOM order, since some screens
@@ -17419,6 +17546,54 @@ function controllerBack() {
     : Array.from(container.querySelectorAll(backSelector));
   const btn = candidates.find(controllerIsElementVisible);
   if (btn) btn.click();
+  // Deliberately does NOT fall back to the title bar's #resetBtn '✕' face --
+  // that's a live match/tutorial/spectate/replay exit, and Back (controller
+  // Back button, X key, right-click) must never be able to trigger one
+  // silently. Only the dedicated Escape key can (see controllerEscapeAction),
+  // and only after a confirmation.
+}
+// The title bar's #resetBtn is the only exit control during a tutorial, CPU
+// practice match, spectate, replay, or campaign match -- it just never
+// matches controllerBack()'s id-suffix selector because the same id also
+// does double duty as the plain hotseat practice "Reset" button
+// (updateTitleBarControls swaps its face between '⟳' Reset and '✕'
+// Exit/Back depending on state.mode). Only its '✕' face counts, and only
+// when nothing (a modal, the settings panel, etc.) is currently covering
+// the match screen -- resetBtn stays technically visible underneath an open
+// modal, but Escape should close that modal first, not reach past it.
+function controllerMatchExitTarget() {
+  const container = controllerActiveContainer();
+  if (!container || container.id !== 'gameScreen') return null;
+  const resetBtnEl = document.getElementById('resetBtn');
+  if (resetBtnEl && resetBtnEl.textContent.trim() === '✕' && controllerIsElementVisible(resetBtnEl)) {
+    return resetBtnEl;
+  }
+  return null;
+}
+// Escape is the only input that can actually leave a live match. Campaign
+// (mid-match forfeit) and ranked online (mid-match forfeit) already show
+// their own confirm() dialog inside resetOrLeaveToMenu, so this skips adding
+// a second one for those two specifically -- everywhere else that resetBtn
+// currently exits from with zero warning (tutorial, spectate, replay, plain
+// CPU practice), this adds one. Falls back to plain Back when there's
+// nothing to exit from (no live match on top), so Escape still closes
+// modals/cancels a selection like it would anywhere else.
+function controllerEscapeAction() {
+  const target = controllerMatchExitTarget();
+  if (!target) { controllerBack(); return; }
+  const alreadyWarns = (state.mode === 'practice' && state.cpuOpponent && state.campaignNpcId && !state.gameOver)
+    || (state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT && !state.gameOver);
+  if (!alreadyWarns) {
+    const label = target.title || 'Leave this match';
+    // Only warn about losing progress for an actual live, ongoing game (a
+    // plain non-campaign CPU practice match) -- spectating, watching a
+    // replay, and browsing tutorial examples don't have any match progress
+    // to lose, so keep those confirmations short instead of implying they do.
+    const hasLiveProgress = state.mode === 'practice' && state.cpuOpponent && !state.gameOver;
+    const message = hasLiveProgress ? `${label}? Any progress in this match will be lost.` : `${label}?`;
+    if (!window.confirm(message)) return;
+  }
+  target.click();
 }
 // A dedicated shortcut button for whatever a screen's single most-used
 // "just do the obvious thing" action is -- currently only the card
@@ -17456,6 +17631,24 @@ function controllerGridTilesFor(container) {
       return ra.left - rb.left;
     });
 }
+// Shared by controllerCycleTab and the hardcoded number-row tab-select
+// shortcuts below -- clicks the tab at targetIdx and restores the ring to
+// the same reading-order position in the freshly-rebuilt grid (see
+// controllerGridTilesFor's comment) instead of resetting to the first card.
+function controllerActivateTabAtIndex(container, tabs, targetIdx) {
+  const activeIdx = tabs.findIndex(t => t.classList.contains('picker-tab-active'));
+  if (targetIdx === activeIdx) return;
+  const priorTiles = controllerGridTilesFor(container);
+  const priorIndex = controllerFocusedEl ? priorTiles.indexOf(controllerFocusedEl) : -1;
+  tabs[targetIdx].click();
+  const freshTiles = controllerGridTilesFor(container);
+  if (freshTiles.length) {
+    const target = priorIndex === -1
+      ? freshTiles[0]
+      : freshTiles[Math.min(priorIndex, freshTiles.length - 1)];
+    controllerSetFocus(target);
+  }
+}
 function controllerCycleTab(dir) {
   const container = controllerActiveContainer();
   if (!container) return;
@@ -17464,22 +17657,24 @@ function controllerCycleTab(dir) {
   const activeIdx = tabs.findIndex(t => t.classList.contains('picker-tab-active'));
   if (activeIdx === -1) return;
   const nextIdx = (activeIdx + dir + tabs.length) % tabs.length;
-  if (nextIdx === activeIdx) return;
-  // Remember which tile (by reading-order position, not identity -- the old
-  // element is about to be destroyed) was focused before switching. Every
-  // level's grid is built from the same PICKER_ROW_SIZES/SHOP_ROW_SIZES row
-  // shape, so the same index lands in the same row/column across tabs --
-  // keep the ring there instead of always resetting to the first card.
-  const priorTiles = controllerGridTilesFor(container);
-  const priorIndex = controllerFocusedEl ? priorTiles.indexOf(controllerFocusedEl) : -1;
-  tabs[nextIdx].click();
-  const freshTiles = controllerGridTilesFor(container);
-  if (freshTiles.length) {
-    const target = priorIndex === -1
-      ? freshTiles[0]
-      : freshTiles[Math.min(priorIndex, freshTiles.length - 1)];
-    controllerSetFocus(target);
-  }
+  controllerActivateTabAtIndex(container, tabs, nextIdx);
+}
+// Hardcoded (non-remappable) number-row shortcuts for the card picker and
+// shop's level tabs -- ` 1 2 3 4 5 6 7 8 9 0 - mirror the tab bar's actual
+// left-to-right order (Recent, Lv.1-Lv.10, Custom) one-for-one, jumping
+// straight to that tab instead of cycling toward it. Deliberately not part
+// of KEYBOARD_MAP/getControllerMap: these are fixed positions matching the
+// physical keyboard row to the on-screen tab row, not something a player
+// would ever want remapped.
+const KEYBOARD_TAB_SELECT_CODES = ['Backquote', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus'];
+function controllerSelectTabByCode(code) {
+  const slot = KEYBOARD_TAB_SELECT_CODES.indexOf(code);
+  if (slot === -1) return;
+  const container = controllerActiveContainer();
+  if (!container) return;
+  const tabs = Array.from(container.querySelectorAll('.picker-tab')).filter(controllerIsElementVisible);
+  if (slot >= tabs.length) return;
+  controllerActivateTabAtIndex(container, tabs, slot);
 }
 const CONTROLLER_STICK_DEADZONE = 0.5;
 const CONTROLLER_MOVE_INITIAL_DELAY = 380;
@@ -17556,34 +17751,40 @@ function controllerPollLoop() {
   if (!controllerSupportEnabled) { controllerRafId = null; return; }
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const gp = pads && Array.from(pads).find(p => p);
-  if (!gp) {
-    controllerRafId = requestAnimationFrame(controllerPollLoop);
-    return;
-  }
+  // Unlike the gamepad, keyboard input arrives as its own keydown/keyup
+  // events (see keyboardHeld above), not something to poll for -- so, unlike
+  // before keyboard support existed, this loop can no longer bail out early
+  // just because no gamepad happens to be connected. It still runs every
+  // frame purely to drive the focus ring and the continuous-hold elemental
+  // reveal from whichever keys are currently held.
   controllerEnsureFocus();
   if (controllerRebindingAction) {
-    for (let i = 0; i < gp.buttons.length; i++) {
-      const pressed = controllerButtonActive(gp, i);
-      if (pressed && !controllerRebindPrevPressed[i]) {
-        const map = getControllerMap();
-        map[controllerRebindingAction] = i;
-        setControllerMap(map);
-        controllerRebindingAction = null;
-        renderControllerConfigRows();
-        break;
+    if (gp) {
+      for (let i = 0; i < gp.buttons.length; i++) {
+        const pressed = controllerButtonActive(gp, i);
+        if (pressed && !controllerRebindPrevPressed[i]) {
+          const map = getControllerMap();
+          map[controllerRebindingAction] = i;
+          setControllerMap(map);
+          controllerRebindingAction = null;
+          renderControllerConfigRows();
+          break;
+        }
       }
+      controllerRebindPrevPressed = gp.buttons.map((b, i) => controllerButtonActive(gp, i));
     }
-    controllerRebindPrevPressed = gp.buttons.map((b, i) => controllerButtonActive(gp, i));
     controllerRafId = requestAnimationFrame(controllerPollLoop);
     return;
   }
   const map = getControllerMap();
-  const confirmPressed = controllerButtonActive(gp, map.confirm);
-  const backPressed = controllerButtonActive(gp, map.back);
-  const startPressed = controllerButtonActive(gp, map.start);
-  const quickPressed = controllerButtonActive(gp, map.quick);
-  const tabPrevPressed = controllerButtonActive(gp, map.tabPrev);
-  const tabNextPressed = controllerButtonActive(gp, map.tabNext);
+  // Each action fires if EITHER input source says it's active -- keyboard is
+  // a full alternate input into the same actions, not a separate system.
+  const confirmPressed = (gp && controllerButtonActive(gp, map.confirm)) || keyboardHeld.confirm;
+  const backPressed = (gp && controllerButtonActive(gp, map.back)) || keyboardHeld.back;
+  const startPressed = (gp && controllerButtonActive(gp, map.start)) || keyboardHeld.start;
+  const quickPressed = (gp && controllerButtonActive(gp, map.quick)) || keyboardHeld.quick;
+  const tabPrevPressed = (gp && controllerButtonActive(gp, map.tabPrev)) || keyboardHeld.tabPrev;
+  const tabNextPressed = (gp && controllerButtonActive(gp, map.tabNext)) || keyboardHeld.tabNext;
   if (confirmPressed && !controllerPrevPressed.confirm) controllerActivate();
   if (backPressed && !controllerPrevPressed.back) controllerBack();
   if (startPressed && !controllerPrevPressed.start) controllerToggleTitleBar();
@@ -17612,7 +17813,11 @@ function controllerPollLoop() {
   controllerPrevPressed.quick = quickPressed;
   controllerPrevPressed.tabPrev = tabPrevPressed;
   controllerPrevPressed.tabNext = tabNextPressed;
-  const dirs = controllerGamepadDirections(gp, map);
+  const dirs = gp ? controllerGamepadDirections(gp, map) : { up: false, down: false, left: false, right: false };
+  dirs.up = dirs.up || keyboardHeld.up;
+  dirs.down = dirs.down || keyboardHeld.down;
+  dirs.left = dirs.left || keyboardHeld.left;
+  dirs.right = dirs.right || keyboardHeld.right;
   if (confirmPressed || backPressed || startPressed || quickPressed || tabPrevPressed || tabNextPressed
     || dirs.up || dirs.down || dirs.left || dirs.right) {
     controllerMarkControllerActive();
@@ -17648,6 +17853,9 @@ function stopControllerSupport() {
   // stats if support gets disabled mid-hold.
   if (controllerElemRevealEl) { controllerElemRevealEl.classList.remove('showing-original'); controllerElemRevealEl = null; }
   setAllElementalCardsRevealed(false);
+  // Same reasoning as above, but for keys: don't leave any action stuck
+  // "held" from controllerPollLoop's point of view once support stops.
+  Object.keys(keyboardHeld).forEach(action => { keyboardHeld[action] = false; });
 }
 function renderControllerConfigRows() {
   const body = document.getElementById('controllerConfigBody');
