@@ -18041,6 +18041,14 @@ function controllerIsFormField(target) {
 document.addEventListener('mousedown', e => {
   if (e.button !== 1 || controllerIsFormField(e.target)) return;
   e.preventDefault();
+  // Middle-click is the mouse's stand-in for the controller/keyboard Quick
+  // button (see CONTROLLER_ACTION_LABELS.quick, "Auto / Check Elemental
+  // Stats") -- it already held the elemental-reveal half below, but not the
+  // Auto half (auto-filling the current hand in the card picker). mousedown
+  // only fires once per physical click, matching the edge-triggered
+  // controllerPrevPressed.quick check controllerPollLoop uses for the
+  // keyboard/gamepad Quick press, so this can just call it directly.
+  controllerQuickAction();
   setAllElementalCardsRevealed(true);
 });
 document.addEventListener('mouseup', e => {
