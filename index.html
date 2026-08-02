@@ -1842,6 +1842,14 @@
   .menu-btn:hover { background: var(--btn-bg-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
   .menu-btn:active { transform: translateY(0); }
   .menu-btn:disabled { opacity: 0.45; cursor: default; transform: none; box-shadow: none; }
+  /* Double-width -- spans the full row instead of sitting in the 1fr/1fr
+     grid like a normal menu button (see .menu-section-grid). Lives as a
+     direct child of the Offline section (below its button grid, above
+     Admin) so it picks up that section's own 10px flex gap for free --
+     see .menu-section -- instead of needing its own margin. Only ever
+     shown by JS (see initMainMenu) to Windows visitors using the plain
+     website, not the desktop app build. */
+  #menuDownloadExeBtn { width: 100%; text-decoration: none; box-sizing: border-box; }
   .menu-btn-secondary { background: var(--btn-bg); color: #fff; border: none; }
   .menu-btn-secondary:hover { background: var(--btn-bg-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
   #menuStatus { min-height: 20px; color: #ffa64f; font-size: 13px; margin-top: 10px; }
@@ -4002,6 +4010,7 @@
           <button class="menu-btn" id="menuCardShop">Card Shop</button>
           <button class="menu-btn" id="menuCardIndex">Card Index</button>
         </div>
+        <a id="menuDownloadExeBtn" class="menu-btn hidden" href="https://drive.usercontent.google.com/download?id=1dKK8hS2ZCfJQ-F7W5LxCBtbLrf1KxPfx&export=download&authuser=0" download>Download Exe Version</a>
       </div>
       <div class="menu-section hidden" id="menuSectionAdmin">
         <div class="menu-section-label admin">Admin</div>
@@ -15099,7 +15108,32 @@ function openAccountModal(mode) {
 function closeAccountModal() {
   document.getElementById('accountModal').classList.remove('show');
 }
+// The desktop app build (pywebview, or its Chrome/Edge "app mode" fallback
+// -- see run_triple_triad.py) always launches with ?musicDefault=on in the
+// URL; the plain website never has that param unless someone adds it by
+// hand. Reusing that existing signal here instead of inventing a new one --
+// see the music-default block above for where it's already relied on.
+function isDesktopAppBuild() {
+  try {
+    return new URLSearchParams(location.search).get('musicDefault') === 'on';
+  } catch (e) {
+    return false;
+  }
+}
+function isWindowsPlatform() {
+  const uaDataPlatform = navigator.userAgentData && navigator.userAgentData.platform;
+  if (uaDataPlatform) return uaDataPlatform.toLowerCase() === 'windows';
+  return /win/i.test(navigator.platform || navigator.userAgent || '');
+}
 function initMainMenu() {
+  // Download Exe: only worth offering to someone who (a) is actually on
+  // Windows, the only platform the built .exe runs on, and (b) is looking
+  // at the plain website, not already running the desktop app build --
+  // someone already in the app has nothing to download.
+  const downloadExeBtn = document.getElementById('menuDownloadExeBtn');
+  if (downloadExeBtn) {
+    downloadExeBtn.classList.toggle('hidden', !(isWindowsPlatform() && !isDesktopAppBuild()));
+  }
   const nameInput = document.getElementById('menuDisplayName');
   nameInput.value = getSavedDisplayName();
   nameInput.addEventListener('change', () => saveDisplayName(nameInput.value.trim()));
@@ -18062,15 +18096,18 @@ document.addEventListener('contextmenu', e => {
   e.preventDefault();
   controllerBack();
 });
-// Scrolling the mouse wheel while over a level/category tab row (Shop,
-// Card Picker, Card Index -- all share the same .picker-tab markup) cycles
-// tabs the same way tabPrev/tabNext already does, instead of doing nothing
-// since the tab row itself never scrolls. Scoped to just the tab bars
-// (rather than a page-wide listener) so scrolling anywhere else -- the
-// Settings modal, admin panels, anything with real scrollable content --
-// is completely unaffected.
+// Scrolling the mouse wheel anywhere over the Shop, Card Picker, or Card
+// Index screen cycles their level/category tabs the same way tabPrev/
+// tabNext already does -- covers the whole panel (header, tab row, and
+// grid), not just the narrow tab row itself, since none of those screens'
+// content actually scrolls (fixed grids, no overflow) and a bigger target
+// is far more forgiving to aim a scroll at than a ~30px-tall row of small
+// buttons. Scoped to just these three panels (rather than a page-wide
+// listener) so scrolling anywhere else -- the Settings modal, admin
+// panels, anything with real scrollable content -- is completely
+// unaffected.
 document.addEventListener('wheel', e => {
-  if (!e.target.closest || !e.target.closest('#pickerTabs, #shopTabs, #indexTabs')) return;
+  if (!e.target.closest || !e.target.closest('#pickerBoard, #shopBoard, #indexBoard')) return;
   e.preventDefault();
   controllerCycleTab(e.deltaY > 0 ? 1 : -1);
 }, { passive: false });
