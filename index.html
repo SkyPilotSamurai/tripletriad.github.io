@@ -254,7 +254,7 @@
     border: 1px solid var(--panel-border, #4a5568);
     border-radius: 12px;
     padding: 12px 34px 20px;
-    width: 460px;
+    width: 552px;
     max-width: 90vw;
     max-height: 92vh;
     margin-top: 6px;
@@ -1026,7 +1026,7 @@
   }
   #adminMiscClose:hover { color: #eee; }
   #adminMiscBody { width: 100%; display: flex; flex-direction: column; gap: 2px; }
-  .settings-section { margin-bottom: 20px; }
+  .settings-section { margin-bottom: 12px; }
   .settings-section h3 {
     color: #fff;
     font-size: 16px;
@@ -1268,17 +1268,22 @@
   .hand.stack .card.selected { z-index: 60; }
   .hand.stack .card:hover { z-index: 50; }
   .hand .card:hover { z-index: 50; }
-  .hand.stack .card.controller-focus { z-index: 50; }
+  body:not(.controller-mouse-active) .hand.stack .card.controller-focus { z-index: 50; }
   #handP1 .card:not(.selected):hover .card-inner { transform: translateX(24px); }
   #handP2 .card:not(.selected):hover .card-inner { transform: translateX(-24px); }
   #handP1 .card.selected .card-inner { transform: translateX(24px) translateY(-15px); }
   #handP2 .card.selected .card-inner { transform: translateX(-24px) translateY(-15px); }
   /* Controller focus on a hand card mirrors the mouse-hover lift so the
      highlight ring (drawn on the card itself, not the inner face) travels
-     with it instead of being left behind at the un-lifted position. */
-  #handP1 .card.controller-focus:not(.selected) { transform: translateX(24px); }
-  #handP2 .card.controller-focus:not(.selected) { transform: translateX(-24px); }
-  #board .cell > .card.controller-focus { z-index: 10; }
+     with it instead of being left behind at the un-lifted position -- but
+     only while the ring is actually visible (see body.controller-mouse-active
+     above, which hides its outline). Once the mouse takes over,
+     controllerFocusedEl can keep quietly pointing at a hand card with
+     nothing hovering it, and without this guard that card would stay
+     shifted forward as a ghost "hover" with no real input behind it. */
+  body:not(.controller-mouse-active) #handP1 .card.controller-focus:not(.selected) { transform: translateX(24px); }
+  body:not(.controller-mouse-active) #handP2 .card.controller-focus:not(.selected) { transform: translateX(-24px); }
+  body:not(.controller-mouse-active) #board .cell > .card.controller-focus { z-index: 10; }
   body.shape-natural .hand.stack .card { margin-top: -58.824px; }
   body.shape-natural .hand.stack .card:first-child { margin-top: 0; }
   .card {
@@ -1584,7 +1589,7 @@
     cursor: pointer;
     transition: transform 0.15s ease;
   }
-  #tradePool .card:hover { transform: translateY(-6px); }
+  #tradePool .card:hover { transform: translateY(-6px); z-index: 20; }
   #tradeReveal {
     display: flex;
     flex-direction: column;
@@ -1990,6 +1995,15 @@
   .controller-focus {
     outline: 3px solid color-mix(in srgb, var(--controller-highlight-color, var(--p1-color-a, #ffcc33)) 50%, white 50%) !important;
     outline-offset: 2px;
+  }
+  /* Forces a small rounded corner on the outline itself for otherwise
+     sharp-cornered focusables -- but only while the ring is actually meant
+     to be visible (see body.controller-mouse-active below). This used to be
+     unconditional, so any element the ring silently landed on (e.g. the
+     first menu button on a fresh screen, before any real input has ever
+     revealed the ring) had its own corners force-squared to 4px even while
+     the outline itself was invisible. */
+  body:not(.controller-mouse-active) .controller-focus {
     border-radius: 4px;
   }
   body.controller-mouse-active .controller-focus {
@@ -2062,6 +2076,76 @@
   .controller-config-rebind-btn { padding: 5px 10px; font-size: 12px; }
   #controllerConfigHint { font-size: 12px; color: #999; text-align: center; margin-top: 4px; }
   #controllerConfigResetBtn { margin-top: 8px; }
+  #keyboardConfigModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 430;
+  }
+  #keyboardConfigModal.show { display: flex; }
+  #keyboardConfigPanel {
+    position: relative;
+    background: var(--panel-bg, #1a2130);
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 12px;
+    padding: 12px 20px 14px;
+    width: 460px;
+    max-width: 96vw;
+    max-height: 97vh;
+    overflow-y: auto;
+    margin-top: 40px;
+    color: #e6e6e6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #keyboardConfigPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
+  #keyboardConfigClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #keyboardConfigClose:hover { color: #eee; }
+  #keyboardConfigBody { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+  .keyboard-config-row { align-items: center; }
+  .keyboard-config-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-end; }
+  .keyboard-config-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #2d3748;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 5px;
+    padding: 3px 6px 3px 9px;
+    font-size: 12px;
+    color: #ffcc33;
+  }
+  .keyboard-config-chip-remove {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .keyboard-config-chip-remove:hover { color: #f66; }
+  .keyboard-config-add-btn { padding: 4px 9px; font-size: 11px; }
+  .keyboard-config-capturing { font-size: 12px; color: #8ef58e; font-style: italic; }
+  #keyboardConfigHint { font-size: 12px; color: #999; text-align: center; margin-top: 4px; }
+  #keyboardConfigResetBtn { margin-top: 8px; }
   #accountStatusRow {
     display: flex;
     align-items: center;
@@ -3846,8 +3930,8 @@
   body.mobile-mode.mobile-horizontal-hands #handP2 .card:not(.selected):hover .card-inner { transform: translateY(24px); }
   body.mobile-mode.mobile-horizontal-hands #handP1 .card.selected .card-inner { transform: translateY(-24px) translateX(-15px); }
   body.mobile-mode.mobile-horizontal-hands #handP2 .card.selected .card-inner { transform: translateY(24px) translateX(-15px); }
-  body.mobile-mode.mobile-horizontal-hands #handP1 .card.controller-focus:not(.selected) { transform: translateY(-24px); }
-  body.mobile-mode.mobile-horizontal-hands #handP2 .card.controller-focus:not(.selected) { transform: translateY(24px); }
+  body.mobile-mode.mobile-horizontal-hands:not(.controller-mouse-active) #handP1 .card.controller-focus:not(.selected) { transform: translateY(-24px); }
+  body.mobile-mode.mobile-horizontal-hands:not(.controller-mouse-active) #handP2 .card.controller-focus:not(.selected) { transform: translateY(24px); }
   }
 </style>
 </head>
@@ -4232,8 +4316,10 @@
         </div>
         <div class="audio-col">
           <h4>Sound Effects</h4>
-          <div class="settings-row checkbox-row"><label><input type="checkbox" id="sfxToggle" checked> SFX</label></div>
-          <div class="settings-row checkbox-row"><label><input type="checkbox" id="sfxHoverToggle"> SFX (Hand Hover)</label></div>
+          <div class="settings-row checkbox-row">
+            <label><input type="checkbox" id="sfxToggle" checked> SFX</label>
+            <label><input type="checkbox" id="sfxHoverToggle"> SFX (Hand Hover)</label>
+          </div>
           <div class="settings-row">
             <label>Cursor Volume
               <select id="cursorVolumeSelect"></select>
@@ -4252,7 +4338,9 @@
       <h3>Controls</h3>
       <div class="settings-row checkbox-row">
         <button type="button" id="settingsConfigureControllerBtn">Configure Controller</button>
-        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller / Keyboard Enabled</label>
+        <button type="button" id="settingsConfigureKeyboardBtn">Configure Keyboard</button>
+        <label><input type="checkbox" id="settingsControllerEnabledToggle" checked> Controller Enabled</label>
+        <label><input type="checkbox" id="settingsKeyboardEnabledToggle" checked> Keyboard Enabled</label>
       </div>
     </div>
   </div>
@@ -4264,6 +4352,15 @@
     <div id="controllerConfigBody"></div>
     <button type="button" id="controllerConfigResetBtn" class="menu-btn-secondary">Reset to Defaults</button>
     <div id="controllerConfigHint">Click Rebind, then press a button on your controller.</div>
+  </div>
+</div>
+<div id="keyboardConfigModal">
+  <div id="keyboardConfigPanel">
+    <button id="keyboardConfigClose" aria-label="Close">✕</button>
+    <h2>Configure Keyboard</h2>
+    <div id="keyboardConfigBody"></div>
+    <button type="button" id="keyboardConfigResetBtn" class="menu-btn-secondary">Reset to Defaults</button>
+    <div id="keyboardConfigHint">Click + Add, then press a key.</div>
   </div>
 </div>
 <div id="matchmakingPrompt" class="hidden">
@@ -5317,10 +5414,17 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/mobileHorizontalHandsEnabled`).on('value', snap =>
   if (toggle) toggle.checked = mobileHorizontalHandsEnabled;
   document.body.classList.toggle('mobile-horizontal-hands', mobileHorizontalHandsEnabled);
 });
-// Whether gamepad navigation is active -- a per-player preference now (see
-// getControllerEnabled/setControllerEnabled + initControllerConfigUi), not
-// an admin-controlled setting.
-let controllerSupportEnabled = false;
+// Whether gamepad input specifically is read/acted on -- a per-player
+// preference (see getControllerEnabled/setControllerEnabled +
+// initControllerConfigUi), not an admin-controlled setting. Gates only the
+// gamepad half of controllerPollLoop (see the Configure Controller checkbox
+// in Settings). controllerKeyboardEnabled below is its keyboard equivalent.
+let controllerGamepadEnabled = false;
+// Whether keyboard input is read/acted on -- same idea as
+// controllerGamepadEnabled above, just for the keyboard half (see
+// getKeyboardEnabled/setKeyboardEnabled + initKeyboardConfigUi, and the
+// Keyboard Enabled checkbox in Settings). Defaults to on.
+let controllerKeyboardEnabled = true;
 let mobileMenuButtonScalePercent = 150;
 rtdb.ref(`${GAME_CONFIG_ROOT}/mobileMenuButtonScalePercent`).on('value', snap => {
   const v = Number(snap.val());
@@ -6859,7 +6963,7 @@ function cardStock(cardId) {
   }
   return 9;
 }
-function buildRandomHandIds(pointBudget, counts, handOrder, minLevel) {
+function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeakest) {
   const hasBudget = pointBudget != null;
   const hasFloor = minLevel != null && minLevel > 1;
   const added = [];
@@ -6886,7 +6990,18 @@ function buildRandomHandIds(pointBudget, counts, handOrder, minLevel) {
     if (candidates.length === 0) break;
     const isUnused = c => (counts.get(c.id) || 0) === 0;
     let card;
-    if (hasBudget && slotsRemaining === 1) {
+    if (preferWeakest) {
+      // Reverse rule: low stats win, so the strongest Auto-fill hand is the
+      // weakest one available -- always take the lowest level still legal
+      // for this slot (stock/budget/copy-cap already narrowed `candidates`
+      // down via baseFilter above) rather than chasing a budget target,
+      // picking randomly among whichever cards share that level.
+      const weakestLevel = candidates.reduce((min, c) => Math.min(min, c.level), Infinity);
+      const weakest = candidates.filter(c => c.level === weakestLevel);
+      const unused = weakest.filter(isUnused);
+      const pool = unused.length ? unused : weakest;
+      card = pool[Math.floor(Math.random() * pool.length)];
+    } else if (hasBudget && slotsRemaining === 1) {
       const remainingAfterThis = pointBudget - spent;
       let bestDistance = Infinity;
       let bestCandidates = [];
@@ -7068,7 +7183,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
       refreshUi();
     }
     function autoFillHand() {
-      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder);
+      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
       if (added.length) {
         added.forEach(id => handOrder.push(id));
         playSfx('cardPlace');
@@ -7267,7 +7382,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
     }
     function forceCompleteAndConfirm() {
       const preFillSlots = handOrder.length;
-      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder);
+      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
       added.forEach(id => handOrder.push(id));
       while (handOrder.length < PICKER_HAND_SIZE) {
         if (handOrder.length === 0) break;
@@ -7281,7 +7396,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
         const removedId = handOrder[removeIdx];
         handOrder.splice(removeIdx, 1);
         counts.set(removedId, Math.max(0, (counts.get(removedId) || 0) - 1));
-        const retryAdded = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder);
+        const retryAdded = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
         retryAdded.forEach(id => handOrder.push(id));
       }
       if (state.rules.closedSingle && closedSingleSlot === null && handOrder.length === PICKER_HAND_SIZE) {
@@ -9962,8 +10077,7 @@ async function openCampaignHome() {
       // wants -- nudge the ring over to it, but only if they're still
       // sitting on the just-mounted default (New Game) and haven't already
       // navigated somewhere themselves while this was loading.
-      if (typeof controllerSupportEnabled !== 'undefined' && controllerSupportEnabled
-        && typeof controllerFocusedEl !== 'undefined' && controllerFocusedEl
+      if (typeof controllerFocusedEl !== 'undefined' && controllerFocusedEl
         && controllerFocusedEl.id === 'campaignNewGameBtn') {
         controllerSetFocus(continueBtn);
       }
@@ -15117,6 +15231,7 @@ function initMainMenu() {
   initAdminRewardGilUi();
   initAdminMiscUi();
   initControllerConfigUi();
+  initKeyboardConfigUi();
 }
 function initAccountUi() {
   updateAuthUi();
@@ -16740,42 +16855,89 @@ const CONTROLLER_BUTTON_LABELS = {
 };
 const CONTROLLER_ACTION_LABELS = {
   confirm: 'Confirm / Select', back: 'Back / Cancel',
-  up: 'Move Up', down: 'Move Down', left: 'Move Left / Adjust -', right: 'Move Right / Adjust +',
+  up: 'Move Up', down: 'Move Down', left: 'Move Left', right: 'Move Right',
   start: 'Toggle Title Bar',
-  quick: 'Quick Action (e.g. Auto-Fill)',
-  tabPrev: 'Previous Tab/Level',
-  tabNext: 'Next Tab/Level',
+  quick: 'Auto / Check Elemental Stats',
+  tabPrev: 'Previous Tab',
+  tabNext: 'Next Tab',
 };
 // Keyboard is just a second input source feeding the exact same actions as
 // the gamepad (see controllerPollLoop) -- same enable toggle, same
 // controllerActivate/controllerBack/controllerMove/etc. functions, same
-// continuous-hold elemental reveal. Not (currently) player-remappable like
-// the gamepad buttons are; these are fixed defaults. Each action lists every
-// KeyboardEvent.code that triggers it.
-const KEYBOARD_MAP = {
-  confirm: ['KeyZ', 'Space'],
-  back: ['KeyX', 'Backspace'],
-  up: ['ArrowUp', 'KeyW'],
+// continuous-hold elemental reveal. Player-remappable the same way the
+// gamepad buttons are (see Configure Keyboard in Settings) -- these are just
+// the fixed defaults it starts from / resets back to. Each action lists
+// every KeyboardEvent.code that currently triggers it.
+const KEYBOARD_ACTIONS = ['confirm', 'back', 'up', 'down', 'left', 'right', 'start', 'quick', 'tabPrev', 'tabNext'];
+const KEYBOARD_DEFAULT_MAP = {
+  confirm: ['KeyX', 'Enter'],
+  back: ['KeyZ', 'ControlRight'],
+  up: ['ArrowUp'],
   down: ['ArrowDown'],
   left: ['ArrowLeft'],
-  right: ['ArrowRight', 'KeyD'],
+  right: ['ArrowRight'],
   start: ['Tab'],
-  // Shift doubles as the elemental stat-diff reveal (see controllerPollLoop's
-  // Quick-hold handling / setAllElementalCardsRevealed) -- KeyQ still works
-  // too, this is purely additive.
-  quick: ['KeyQ', 'ShiftLeft', 'ShiftRight'],
-  // KeyA/KeyS are dedicated tab-prev/tab-next keys (alongside the brackets),
-  // not also Left/Down -- a single key can only drive one action (see
+  quick: ['KeyC'],
+  // KeyA/KeyS are dedicated tab-prev/tab-next keys, not doubled up with
+  // movement -- a single key can only drive one action (see
   // KEYBOARD_CODE_TO_ACTION below), so leaving them double-booked would have
   // silently made A/S do nothing but cycle tabs anyway, just without saying
-  // so. Movement keeps full 4-directional coverage via arrows + W/D.
+  // so. Movement is arrows-only by default; W/A/S/D are all free for players
+  // to bind to whatever they want via Configure Keyboard.
   tabPrev: ['BracketLeft', 'KeyA'],
   tabNext: ['BracketRight', 'KeyS'],
 };
-const KEYBOARD_CODE_TO_ACTION = {};
-Object.keys(KEYBOARD_MAP).forEach(action => {
-  KEYBOARD_MAP[action].forEach(code => { KEYBOARD_CODE_TO_ACTION[code] = action; });
-});
+const KEYBOARD_MAP_STORAGE_KEY = 'triple-triad-keyboard-map';
+// Per-player preference, defaults to on -- mirrors
+// getControllerEnabled/setControllerEnabled below for the gamepad.
+const KEYBOARD_ENABLED_STORAGE_KEY = 'triple-triad-keyboard-enabled';
+function getKeyboardEnabled() {
+  try {
+    const stored = localStorage.getItem(KEYBOARD_ENABLED_STORAGE_KEY);
+    return stored === null ? true : stored === 'true';
+  } catch (e) { return true; }
+}
+function setKeyboardEnabled(enabled) {
+  try { localStorage.setItem(KEYBOARD_ENABLED_STORAGE_KEY, enabled ? 'true' : 'false'); } catch (e) {}
+}
+function cloneKeyboardMap(map) {
+  const clone = {};
+  KEYBOARD_ACTIONS.forEach(action => { clone[action] = [...map[action]]; });
+  return clone;
+}
+function getKeyboardMap() {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(KEYBOARD_MAP_STORAGE_KEY)); } catch (e) {}
+  const map = {};
+  KEYBOARD_ACTIONS.forEach(action => {
+    const storedCodes = stored && Array.isArray(stored[action])
+      ? stored[action].filter(c => typeof c === 'string')
+      : null;
+    map[action] = storedCodes && storedCodes.length ? storedCodes : [...KEYBOARD_DEFAULT_MAP[action]];
+  });
+  return map;
+}
+function setKeyboardMap(map) {
+  try { localStorage.setItem(KEYBOARD_MAP_STORAGE_KEY, JSON.stringify(map)); } catch (e) {}
+}
+// Live, currently-active map + its derived code->action lookup -- both get
+// rebuilt in place (not just reassigned) via refreshKeyboardMap() whenever a
+// rebind is saved, so every closure holding onto KEYBOARD_CODE_TO_ACTION by
+// reference (the keydown/keyup listeners below) sees the change immediately
+// without needing to re-read localStorage on every keystroke.
+let KEYBOARD_MAP = getKeyboardMap();
+let KEYBOARD_CODE_TO_ACTION = {};
+function rebuildKeyboardCodeToAction() {
+  KEYBOARD_CODE_TO_ACTION = {};
+  KEYBOARD_ACTIONS.forEach(action => {
+    KEYBOARD_MAP[action].forEach(code => { KEYBOARD_CODE_TO_ACTION[code] = action; });
+  });
+}
+rebuildKeyboardCodeToAction();
+function refreshKeyboardMap() {
+  KEYBOARD_MAP = getKeyboardMap();
+  rebuildKeyboardCodeToAction();
+}
 // Escape is intentionally NOT part of KEYBOARD_MAP/keyboardHeld -- it's not
 // an alternate input into one of the shared hold-based actions above, it's
 // its own one-shot, confirm()-gated "leave the match" action (see
@@ -16785,8 +16947,69 @@ const keyboardHeld = { confirm: false, back: false, up: false, down: false, left
 function controllerKeyboardTargetIsFormField() {
   return controllerIsFormField(document.activeElement);
 }
+// Configure Keyboard's "+ Add" sets this to the action awaiting its next
+// key, and the very next keydown anywhere gets consumed as that binding
+// instead of acting as normal input -- see captureKeyboardRebind below.
+let keyboardRebindAction = null;
+let keyboardRebindMessage = '';
+function keyboardCodeIsReserved(code) {
+  return code === KEYBOARD_EXIT_MATCH_CODE || KEYBOARD_TAB_SELECT_CODES.includes(code);
+}
+const KEYBOARD_CODE_LABELS = {
+  Space: 'Space', Backspace: 'Backspace', Tab: 'Tab', Escape: 'Esc', Enter: 'Enter',
+  ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+  ShiftLeft: 'Shift (L)', ShiftRight: 'Shift (R)',
+  ControlLeft: 'Ctrl (L)', ControlRight: 'Ctrl (R)',
+  AltLeft: 'Alt (L)', AltRight: 'Alt (R)',
+  BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Backquote: '`',
+  Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", Backslash: '\\',
+  CapsLock: 'Caps Lock', PageUp: 'Page Up', PageDown: 'Page Down', Home: 'Home', End: 'End',
+};
+function keyboardCodeLabel(code) {
+  if (!code) return '';
+  if (KEYBOARD_CODE_LABELS[code]) return KEYBOARD_CODE_LABELS[code];
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return 'Num ' + code.slice(6);
+  return code;
+}
+function captureKeyboardRebind(code) {
+  const action = keyboardRebindAction;
+  keyboardRebindAction = null;
+  if (!action) return;
+  if (code === 'Escape') { renderKeyboardConfigRows(); return; } // Esc cancels, no change
+  if (keyboardCodeIsReserved(code)) {
+    keyboardRebindMessage = `${keyboardCodeLabel(code)} is reserved and can't be rebound.`;
+    renderKeyboardConfigRows();
+    return;
+  }
+  const map = getKeyboardMap();
+  // A code can only resolve to one action in KEYBOARD_CODE_TO_ACTION's
+  // lookup -- moving it here instead of leaving it double-booked matches
+  // how the tab-select/movement keys above were deliberately kept conflict-
+  // free, rather than silently breaking whichever action loses the tie.
+  KEYBOARD_ACTIONS.forEach(a => { map[a] = map[a].filter(c => c !== code); });
+  map[action].push(code);
+  setKeyboardMap(map);
+  refreshKeyboardMap();
+  keyboardRebindMessage = '';
+  renderKeyboardConfigRows();
+}
+function removeKeyboardBinding(action, code) {
+  const map = getKeyboardMap();
+  if (map[action].length <= 1) return; // every action keeps at least one key
+  map[action] = map[action].filter(c => c !== code);
+  setKeyboardMap(map);
+  refreshKeyboardMap();
+  renderKeyboardConfigRows();
+}
 document.addEventListener('keydown', e => {
-  if (!controllerSupportEnabled) return;
+  if (keyboardRebindAction) {
+    e.preventDefault();
+    captureKeyboardRebind(e.code);
+    return;
+  }
+  if (!controllerKeyboardEnabled) return;
   // Belt-and-suspenders: browsers normally never deliver key events to a
   // background tab/unfocused window at all, but check explicitly anyway so
   // a stray global listener never reacts to keystrokes meant for something
@@ -17191,22 +17414,50 @@ function controllerEnsureFocus() {
 // controllerMove re-establishes it afterward for its own directional call.
 let controllerPreferredCrossPos = null;
 let controllerLastMoveAxis = null;
+// The form field (if any) currently holding real browser focus because the
+// player explicitly pressed Confirm on it -- see controllerEngageField/
+// controllerDisengageField below and their use in controllerActivate/
+// controllerBack. Ring movement alone never sets this; only an explicit
+// accept does, and only an explicit cancel (or moving the ring elsewhere)
+// clears it -- fixes fields like Vs CPU's point total silently grabbing
+// real keyboard focus the instant the ring passed over them and never
+// letting go, since nothing was ever wired to give it back.
+let controllerInteractingEl = null;
+function controllerEngageField(el) {
+  if (!el || typeof el.focus !== 'function') return;
+  controllerInteractingEl = el;
+  try { el.focus({ preventScroll: true }); } catch (e) {}
+}
+function controllerDisengageField() {
+  const el = controllerInteractingEl;
+  controllerInteractingEl = null;
+  if (el && typeof el.blur === 'function') {
+    try { el.blur(); } catch (e) {}
+  }
+}
+// Catches every way a field can lose real focus that isn't our own
+// controllerDisengageField() call (native Tab, a mouse click elsewhere,
+// etc.) so controllerInteractingEl never goes stale. blur doesn't bubble,
+// so this has to listen on the capture phase.
+document.addEventListener('blur', e => {
+  if (e.target === controllerInteractingEl) controllerInteractingEl = null;
+}, true);
 function controllerSetFocus(el) {
   controllerPreferredCrossPos = null;
   controllerLastMoveAxis = null;
   if (controllerFocusedEl && controllerFocusedEl !== el) controllerFocusedEl.classList.remove('controller-focus');
+  // Moving the ring off whatever field was engaged for real typing/
+  // interaction cancels that interaction -- the ring shouldn't visually
+  // move on while a field somewhere else still quietly holds real focus.
+  if (controllerInteractingEl && controllerInteractingEl !== el) controllerDisengageField();
   controllerFocusedEl = el || null;
   if (controllerFocusedEl) {
     controllerFocusedEl.classList.add('controller-focus');
     try { controllerFocusedEl.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
-    // Only move real browser focus for form controls that need it (typing,
-    // native dropdown behavior). Calling .focus() on plain buttons/cards
-    // risks triggering unrelated focus/blur listeners elsewhere in the app;
-    // the visual ring is all a button needs.
-    const tag = controllerFocusedEl.tagName;
-    if ((tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') && typeof controllerFocusedEl.focus === 'function') {
-      try { controllerFocusedEl.focus({ preventScroll: true }); } catch (e) {}
-    }
+    // Real browser focus is no longer handed out just because the ring
+    // landed on a field -- see controllerActivate: only an explicit Confirm
+    // press "accepts" and starts interacting with a typable field, and only
+    // Back/Cancel (or moving the ring away, above) ends it.
   }
 }
 // A handful of screens have an obvious primary action that isn't
@@ -17419,6 +17670,10 @@ function controllerAdjustValue(el, dir) {
   return false;
 }
 function controllerMove(dir) {
+  // While a field is explicitly engaged (see controllerActivate), D-pad/
+  // arrow input shouldn't steer the ring out from under it -- Back/Cancel
+  // is the only way out (or clicking/tabbing away natively).
+  if (controllerInteractingEl) return;
   const focusables = controllerFocusables();
   if (!focusables.length) { controllerFocusedEl = null; return; }
   if (!controllerFocusedEl || !focusables.includes(controllerFocusedEl)) {
@@ -17451,7 +17706,28 @@ function controllerActivate() {
     return;
   }
   const el = controllerFocusedEl;
-  if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && el.type === 'range')) return;
+  if (el.tagName === 'INPUT' && el.type === 'range') return;
+  // Selects are already fully driven by Left/Right while the ring just sits
+  // on them (see controllerAdjustValue/controllerMove), the same as a range
+  // slider -- Confirm has nothing useful to do here and, worse, a real
+  // browser can't be scripted into opening a <select>'s native dropdown
+  // (neither .focus() nor .click() does it -- Chrome only allows that from
+  // a genuine, trusted user gesture), so engaging one just silently grabbed
+  // real focus with zero visible change AND, because controllerMove()
+  // refuses to run while a field is engaged, blocked the one thing
+  // (Left/Right) that actually changes its value until Back was pressed --
+  // Confirm effectively looked like it did nothing at best, or froze the
+  // control at worst.
+  if (el.tagName === 'SELECT') return;
+  // Typable fields (number/text inputs, textareas) no longer get real focus
+  // just from the ring landing on them -- Confirm is the explicit "accept,
+  // start interacting with this" gesture now. Back (or moving the ring
+  // elsewhere) ends it -- see controllerBack/controllerSetFocus and
+  // controllerEngageField/controllerDisengageField.
+  if (controllerIsFormField(el)) {
+    if (controllerInteractingEl !== el) controllerEngageField(el);
+    return;
+  }
   const isHandCard = !!el.closest('.hand.stack');
   const wasSelected = el.classList.contains('selected');
   const isPickerAddAction = el.id === 'pickerAuto' || !!el.closest('.picker-tile');
@@ -17497,6 +17773,14 @@ function controllerToggleTitleBar() {
   playSfx('cursorMove');
 }
 function controllerBack() {
+  // Cancelling out of a field explicitly engaged via Confirm (see
+  // controllerActivate) takes priority over everything else below -- Back's
+  // first job is always "stop interacting with this," not close a screen.
+  if (controllerInteractingEl) {
+    controllerDisengageField();
+    playSfx('cursorCancel');
+    return;
+  }
   // Mid-match, with a hand card selected, Back cancels that selection
   // instead of closing anything -- mirrors clicking the selected card again.
   if (typeof state !== 'undefined' && state && state.selected) {
@@ -17693,9 +17977,19 @@ let controllerElemRevealEl = null;
 // visual noise (it's sitting wherever the pad last left it, not wherever
 // the cursor is). Hide it via a body class as soon as real mouse movement
 // is seen, and bring it back the instant any controller input arrives.
-let controllerMouseActive = false;
+// Starting this true (with the class applied immediately below, before
+// anyone has touched anything) means the ring also stays hidden from the
+// very first frame -- nothing has "claimed" it as a mouse or a controller/
+// keyboard player yet, so it shouldn't just appear on whatever
+// controllerEnsureFocus() would otherwise auto-pick. The controllerPollLoop
+// mouse-reclaim guard (see there) already treats the first real controller/
+// keyboard press as "just reveal the ring" rather than acting on it, which
+// is exactly what turns this initial hidden state into "wait for an actual
+// input before ever showing focus" for keyboard/gamepad too, not just mouse.
+let controllerMouseActive = true;
+document.body.classList.add('controller-mouse-active');
 function controllerMarkMouseActive() {
-  if (!controllerSupportEnabled || controllerMouseActive) return;
+  if (controllerMouseActive) return;
   controllerMouseActive = true;
   document.body.classList.add('controller-mouse-active');
 }
@@ -17713,9 +18007,26 @@ document.addEventListener('mousedown', controllerMarkMouseActive);
 // the current screen/modal, reusing controllerBack()'s existing logic
 // instead of duplicating it. Both skip form fields so normal text-input
 // right-click (copy/paste) and middle-click paste keep working.
+// Only inputs where arrow keys mean "edit this value's text/native picker"
+// count as a real form field to hijack-avoid -- radio/checkbox/range inputs
+// don't involve typing, they're just more things our own focus ring already
+// drives via Confirm/Left/Right. Lumping them in here used to mean that the
+// instant controllerSetFocus() gave one of them real native DOM focus (done
+// for every INPUT/SELECT/TEXTAREA), a physical arrow key press would bail
+// out of our handler entirely and fall through to the browser's own native
+// behavior instead -- harmless for a range slider (native arrow-adjust
+// matches what controllerAdjustValue would have done anyway), but wrong for
+// a radio group, where the browser's native behavior both moves focus AND
+// selects the new option immediately, with no Confirm press needed at all.
+const CONTROLLER_TYPABLE_INPUT_TYPES = new Set([
+  'text', 'search', 'email', 'password', 'tel', 'url', 'number',
+  'date', 'datetime-local', 'month', 'week', 'time', 'color',
+]);
 function controllerIsFormField(target) {
   const tag = target && target.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !!(target && target.closest && target.closest('[contenteditable]'));
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (tag === 'INPUT') return CONTROLLER_TYPABLE_INPUT_TYPES.has((target.type || 'text').toLowerCase());
+  return !!(target && target.closest && target.closest('[contenteditable]'));
 }
 document.addEventListener('mousedown', e => {
   if (e.button !== 1 || controllerIsFormField(e.target)) return;
@@ -17748,20 +18059,23 @@ function controllerGamepadDirections(gp, map) {
   return dirs;
 }
 function controllerPollLoop() {
-  if (!controllerSupportEnabled) { controllerRafId = null; return; }
+  // Keyboard input arrives as its own keydown/keyup events (see keyboardHeld
+  // above), not something to poll for -- this loop runs every frame
+  // unconditionally (keyboard is always active, with no way to fully turn
+  // the focus/navigation system off) purely to drive the focus ring and the
+  // continuous-hold elemental reveal from whichever keys are currently held.
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  const gp = pads && Array.from(pads).find(p => p);
-  // Unlike the gamepad, keyboard input arrives as its own keydown/keyup
-  // events (see keyboardHeld above), not something to poll for -- so, unlike
-  // before keyboard support existed, this loop can no longer bail out early
-  // just because no gamepad happens to be connected. It still runs every
-  // frame purely to drive the focus ring and the continuous-hold elemental
-  // reveal from whichever keys are currently held.
+  const rawGp = pads && Array.from(pads).find(p => p);
+  // controllerGamepadEnabled (the Settings checkbox) only gates whether
+  // gamepad state actually drives actions below -- rebind capture still
+  // reads the raw pad directly regardless, so Configure Controller works
+  // even while the checkbox is unchecked.
+  const gp = controllerGamepadEnabled ? rawGp : null;
   controllerEnsureFocus();
   if (controllerRebindingAction) {
-    if (gp) {
-      for (let i = 0; i < gp.buttons.length; i++) {
-        const pressed = controllerButtonActive(gp, i);
+    if (rawGp) {
+      for (let i = 0; i < rawGp.buttons.length; i++) {
+        const pressed = controllerButtonActive(rawGp, i);
         if (pressed && !controllerRebindPrevPressed[i]) {
           const map = getControllerMap();
           map[controllerRebindingAction] = i;
@@ -17771,7 +18085,7 @@ function controllerPollLoop() {
           break;
         }
       }
-      controllerRebindPrevPressed = gp.buttons.map((b, i) => controllerButtonActive(gp, i));
+      controllerRebindPrevPressed = rawGp.buttons.map((b, i) => controllerButtonActive(rawGp, i));
     }
     controllerRafId = requestAnimationFrame(controllerPollLoop);
     return;
@@ -17785,6 +18099,36 @@ function controllerPollLoop() {
   const quickPressed = (gp && controllerButtonActive(gp, map.quick)) || keyboardHeld.quick;
   const tabPrevPressed = (gp && controllerButtonActive(gp, map.tabPrev)) || keyboardHeld.tabPrev;
   const tabNextPressed = (gp && controllerButtonActive(gp, map.tabNext)) || keyboardHeld.tabNext;
+  const dirs = gp ? controllerGamepadDirections(gp, map) : { up: false, down: false, left: false, right: false };
+  dirs.up = dirs.up || keyboardHeld.up;
+  dirs.down = dirs.down || keyboardHeld.down;
+  dirs.left = dirs.left || keyboardHeld.left;
+  dirs.right = dirs.right || keyboardHeld.right;
+  // The instant the mouse takes over, the ring goes invisible and just sits
+  // wherever it was last left (see controllerMarkMouseActive) -- quite
+  // possibly a board cell from earlier navigation, with nothing to do with
+  // whatever the mouse is doing now. Without this guard, the first stray
+  // Confirm/Back/etc. press after that -- Enter or Space fired for a reason
+  // that has nothing to do with us, a native "activate the button the mouse
+  // just clicked" keypress, anything -- would silently act on that stale
+  // spot, e.g. placing a card on the board the player never actually chose.
+  // So while the mouse is still the active input device, a controller/
+  // keyboard press only reclaims and re-shows the ring; it takes a second,
+  // separate press (once the ring is visibly back and trustworthy) to
+  // actually do anything.
+  if (controllerMouseActive && (confirmPressed || backPressed || startPressed || quickPressed
+    || tabPrevPressed || tabNextPressed || dirs.up || dirs.down || dirs.left || dirs.right)) {
+    controllerMarkControllerActive();
+    controllerPrevPressed.confirm = confirmPressed;
+    controllerPrevPressed.back = backPressed;
+    controllerPrevPressed.start = startPressed;
+    controllerPrevPressed.quick = quickPressed;
+    controllerPrevPressed.tabPrev = tabPrevPressed;
+    controllerPrevPressed.tabNext = tabNextPressed;
+    controllerMoveTimers = { up: 0, down: 0, left: 0, right: 0 };
+    controllerRafId = requestAnimationFrame(controllerPollLoop);
+    return;
+  }
   if (confirmPressed && !controllerPrevPressed.confirm) controllerActivate();
   if (backPressed && !controllerPrevPressed.back) controllerBack();
   if (startPressed && !controllerPrevPressed.start) controllerToggleTitleBar();
@@ -17813,15 +18157,9 @@ function controllerPollLoop() {
   controllerPrevPressed.quick = quickPressed;
   controllerPrevPressed.tabPrev = tabPrevPressed;
   controllerPrevPressed.tabNext = tabNextPressed;
-  const dirs = gp ? controllerGamepadDirections(gp, map) : { up: false, down: false, left: false, right: false };
-  dirs.up = dirs.up || keyboardHeld.up;
-  dirs.down = dirs.down || keyboardHeld.down;
-  dirs.left = dirs.left || keyboardHeld.left;
-  dirs.right = dirs.right || keyboardHeld.right;
-  if (confirmPressed || backPressed || startPressed || quickPressed || tabPrevPressed || tabNextPressed
-    || dirs.up || dirs.down || dirs.left || dirs.right) {
-    controllerMarkControllerActive();
-  }
+  // dirs was already computed above (needed there for the mouse-reclaim
+  // guard); re-marking controller-active here would be redundant since that
+  // guard already does it for every input that reaches this point.
   const now = performance.now();
   ['up', 'down', 'left', 'right'].forEach(dir => {
     if (!dirs[dir]) { controllerMoveTimers[dir] = 0; return; }
@@ -17841,6 +18179,11 @@ function startControllerSupport() {
   controllerMoveTimers = { up: 0, down: 0, left: 0, right: 0 };
   controllerRafId = requestAnimationFrame(controllerPollLoop);
 }
+// Not currently wired to anything -- the Settings checkbox only flips
+// controllerGamepadEnabled now (see initControllerConfigUi) since keyboard
+// input has no off switch and the poll loop always keeps running. Left in
+// place as a full teardown in case a future "disable everything" path
+// needs it.
 function stopControllerSupport() {
   if (controllerRafId) { cancelAnimationFrame(controllerRafId); controllerRafId = null; }
   if (controllerFocusedEl) { controllerFocusedEl.classList.remove('controller-focus'); controllerFocusedEl = null; }
@@ -17897,15 +18240,13 @@ function closeControllerConfigModal() {
 function initControllerConfigUi() {
   const enabledToggle = document.getElementById('settingsControllerEnabledToggle');
   if (enabledToggle) {
+    // This checkbox only gates the gamepad half of input now -- keyboard is
+    // always on, so it never starts/stops the poll loop itself, just flips
+    // whether controllerPollLoop pays attention to navigator.getGamepads().
     enabledToggle.addEventListener('change', e => {
       playSfx('cursorMove');
-      controllerSupportEnabled = e.target.checked;
+      controllerGamepadEnabled = e.target.checked;
       setControllerEnabled(e.target.checked);
-      if (e.target.checked) {
-        if (typeof startControllerSupport === 'function') startControllerSupport();
-      } else {
-        if (typeof stopControllerSupport === 'function') stopControllerSupport();
-      }
     });
   }
   // Deferred a tick: initControllerConfigUi() runs synchronously and early
@@ -17917,9 +18258,12 @@ function initControllerConfigUi() {
   // a temporal-dead-zone ReferenceError.
   setTimeout(() => {
     const enabled = getControllerEnabled();
-    controllerSupportEnabled = enabled;
+    controllerGamepadEnabled = enabled;
     if (enabledToggle) enabledToggle.checked = enabled;
-    if (enabled && typeof startControllerSupport === 'function') startControllerSupport();
+    // Always start the loop -- keyboard support doesn't have an off switch,
+    // so the focus/navigation system needs to be running regardless of
+    // whether gamepad reading itself is currently enabled.
+    if (typeof startControllerSupport === 'function') startControllerSupport();
   }, 0);
   const openBtn = document.getElementById('settingsConfigureControllerBtn');
   if (openBtn) openBtn.addEventListener('click', openControllerConfigModal);
@@ -17937,6 +18281,123 @@ function initControllerConfigUi() {
       setControllerMap({ ...CONTROLLER_DEFAULT_MAP });
       controllerRebindingAction = null;
       renderControllerConfigRows();
+      playSfx('cursorMove');
+    });
+  }
+}
+function renderKeyboardConfigRows() {
+  const body = document.getElementById('keyboardConfigBody');
+  if (!body) return;
+  const map = getKeyboardMap();
+  body.innerHTML = '';
+  KEYBOARD_ACTIONS.forEach(action => {
+    const row = document.createElement('div');
+    row.className = 'controller-config-row keyboard-config-row';
+    const label = document.createElement('span');
+    label.className = 'controller-config-label';
+    label.textContent = CONTROLLER_ACTION_LABELS[action];
+    row.appendChild(label);
+    const keysWrap = document.createElement('div');
+    keysWrap.className = 'keyboard-config-keys';
+    if (keyboardRebindAction === action) {
+      const capturing = document.createElement('span');
+      capturing.className = 'keyboard-config-capturing';
+      capturing.textContent = 'Press a key... (Esc to cancel)';
+      keysWrap.appendChild(capturing);
+    } else {
+      map[action].forEach(code => {
+        const chip = document.createElement('span');
+        chip.className = 'keyboard-config-chip';
+        chip.textContent = keyboardCodeLabel(code);
+        if (map[action].length > 1) {
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'keyboard-config-chip-remove';
+          removeBtn.setAttribute('aria-label', `Remove ${keyboardCodeLabel(code)}`);
+          removeBtn.textContent = '✕';
+          removeBtn.addEventListener('click', () => removeKeyboardBinding(action, code));
+          chip.appendChild(removeBtn);
+        }
+        keysWrap.appendChild(chip);
+      });
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'menu-btn-secondary keyboard-config-add-btn';
+      addBtn.textContent = '+ Add';
+      addBtn.addEventListener('click', () => {
+        playSfx('cursorMove');
+        keyboardRebindAction = action;
+        keyboardRebindMessage = '';
+        renderKeyboardConfigRows();
+      });
+      keysWrap.appendChild(addBtn);
+    }
+    row.appendChild(keysWrap);
+    body.appendChild(row);
+  });
+  const hint = document.getElementById('keyboardConfigHint');
+  if (hint) {
+    hint.textContent = keyboardRebindMessage
+      || "Click + Add, then press a key. Click a key's ✕ to remove it (each action needs at least one).";
+  }
+}
+function openKeyboardConfigModal() {
+  playSfx('cursorMove');
+  keyboardRebindAction = null;
+  keyboardRebindMessage = '';
+  renderKeyboardConfigRows();
+  document.getElementById('keyboardConfigModal').classList.add('show');
+}
+function closeKeyboardConfigModal() {
+  keyboardRebindAction = null;
+  document.getElementById('keyboardConfigModal').classList.remove('show');
+}
+function initKeyboardConfigUi() {
+  const enabledToggle = document.getElementById('settingsKeyboardEnabledToggle');
+  if (enabledToggle) {
+    // Mirrors the Controller Enabled checkbox's gamepad-only gating -- this
+    // just flips whether the keydown listener processes real keystrokes
+    // into actions at all (rebind capture in this same modal still works
+    // either way, same as gamepad rebind ignoring controllerGamepadEnabled).
+    enabledToggle.addEventListener('change', e => {
+      playSfx('cursorMove');
+      controllerKeyboardEnabled = e.target.checked;
+      setKeyboardEnabled(e.target.checked);
+      if (!e.target.checked) {
+        // Don't leave an action stuck "held" from a key that was physically
+        // down at the moment the checkbox got unchecked.
+        Object.keys(keyboardHeld).forEach(action => { keyboardHeld[action] = false; });
+      }
+    });
+  }
+  // Deferred a tick for the same temporal-dead-zone reason
+  // initControllerConfigUi()'s own deferred block is -- initKeyboardConfigUi()
+  // runs synchronously and early (as part of initMainMenu()), before
+  // KEYBOARD_ENABLED_STORAGE_KEY/getKeyboardEnabled (declared further down
+  // with the rest of the keyboard-support code) have been initialized yet.
+  setTimeout(() => {
+    const enabled = getKeyboardEnabled();
+    controllerKeyboardEnabled = enabled;
+    if (enabledToggle) enabledToggle.checked = enabled;
+  }, 0);
+  const openBtn = document.getElementById('settingsConfigureKeyboardBtn');
+  if (openBtn) openBtn.addEventListener('click', openKeyboardConfigModal);
+  const closeBtn = document.getElementById('keyboardConfigClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeKeyboardConfigModal(); });
+  const modal = document.getElementById('keyboardConfigModal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      if (e.target.id === 'keyboardConfigModal') { playSfx('cursorCancel'); closeKeyboardConfigModal(); }
+    });
+  }
+  const resetBtn = document.getElementById('keyboardConfigResetBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      setKeyboardMap(cloneKeyboardMap(KEYBOARD_DEFAULT_MAP));
+      refreshKeyboardMap();
+      keyboardRebindAction = null;
+      keyboardRebindMessage = '';
+      renderKeyboardConfigRows();
       playSfx('cursorMove');
     });
   }
