@@ -3515,20 +3515,30 @@
     width: 100%;
     max-width: 960px;
     box-sizing: border-box;
-    padding: 20px 28px;
+    padding: 16px 28px;
     background: var(--panel-bg, #1a2130);
     border: 1px solid var(--panel-border, #4a5568);
     border-radius: 14px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.6);
   }
-  #cpuSetupTitle { font-size: 26px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px; margin-bottom: 12px; text-align: center; }
+  #cpuSetupTitle { font-size: 26px; font-weight: bold; color: #ffffff; letter-spacing: 0.5px; margin-bottom: 8px; text-align: center; }
   #cpuSetupColumns { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items: start; }
   #cpuSetupColumnLeft, #cpuSetupColumnRight { display: flex; flex-direction: column; }
-  #cpuSetupSection { margin-bottom: 14px; }
-  #cpuSetupColumnRight #cpuSetupSection { margin-bottom: 8px; }
-  #cpuSetupSection h3 { margin: 0 0 8px; font-size: 15px; color: #a7afc2; letter-spacing: 0.5px; text-transform: uppercase; }
-  #cpuSetupStatus { min-height: 14px; font-size: 14px; color: #ffa64f; text-align: center; margin-bottom: 4px; }
-  #cpuSetupButtons { display: flex; gap: 14px; justify-content: center; margin-top: 2px; }
+  #cpuSetupSection { margin-bottom: 10px; }
+  #cpuSetupColumnRight #cpuSetupSection { margin-bottom: 6px; }
+  #cpuSetupColumnLeft #cpuSetupSection:last-child { margin-bottom: 0; }
+  #cpuSetupSection h3 { margin: 0 0 6px; font-size: 15px; color: #a7afc2; letter-spacing: 0.5px; text-transform: uppercase; }
+  #cpuSetupStatus { min-height: 0; font-size: 14px; color: #ffa64f; text-align: center; margin-bottom: 0; }
+  #cpuSetupStatus:empty { margin-bottom: 0; }
+  #cpuSetupStatus:not(:empty) { margin: 6px 0; }
+  /* A bit tighter than the shared .lobby-rule-row/.checkbox-grid defaults
+     (still used as-is elsewhere, e.g. Free Play/Ranked lobby setup) --
+     scoped to this screen only so the Vs CPU Setup panel doesn't run so
+     tall without changing spacing anywhere else. */
+  #cpuSetupBoard .lobby-rule-row { padding: 4px 0; }
+  #cpuSetupBoard .checkbox-grid .settings-row { margin: 2px 0; }
+  #cpuSetupBoard .checkbox-grid-header { margin: 6px 0 2px; }
+  #cpuSetupButtons { display: flex; gap: 14px; justify-content: center; margin-top: 8px; }
   @media (max-width: 720px) {
     #cpuSetupColumns { grid-template-columns: 1fr; }
   }
