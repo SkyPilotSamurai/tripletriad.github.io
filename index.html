@@ -12602,7 +12602,14 @@ function createCardElement(card, owner, cellIndex, hidden) {
       <div class="label">${card.name}</div>
     </div>
   `;
-  if (mod !== 0) attachHoldToRevealListeners(el);
+  if (mod !== 0) {
+    // Tagged so the middle-click/Quick-button "reveal every elemental card
+    // at once" feature (see setAllElementalCardsRevealed) can find every
+    // elemental-modified card on the board with a single querySelectorAll,
+    // without recomputing elementalModifier() again per card.
+    el.classList.add('elem-mod-card');
+    attachHoldToRevealListeners(el);
+  }
   return el;
 }
 function shrinkLabelIfWrapped(cardEl) {
@@ -12623,6 +12630,17 @@ function attachHoldToRevealListeners(el) {
   el.addEventListener('touchstart', showOriginal, { passive: true });
   el.addEventListener('touchend', hideOriginal);
   el.addEventListener('touchcancel', hideOriginal);
+}
+// Middle-click (PC) and the controller's Quick button both trigger this --
+// rather than holding one elemental card at a time to compare its stats,
+// this reveals every elemental-modified card currently on the board
+// simultaneously, same "showing-original" swap attachHoldToRevealListeners
+// does per-card. A no-op outside an Elemental match since nothing carries
+// the .elem-mod-card class then.
+function setAllElementalCardsRevealed(show) {
+  document.querySelectorAll('#board .card.elem-mod-card').forEach(el => {
+    el.classList.toggle('showing-original', show);
+  });
 }
 function canAct(owner) {
   if (state.gameOver) return false;
@@ -17471,6 +17489,11 @@ let controllerPrevPressed = {};
 let controllerMoveTimers = { up: 0, down: 0, left: 0, right: 0 };
 let controllerRebindingAction = null;
 let controllerRebindPrevPressed = [];
+// Tracks whichever single card the Confirm-hold elemental reveal (see
+// controllerPollLoop) currently has revealed, so it can be cleared the
+// instant focus moves off it or Confirm is released -- mirrors the
+// mouseleave/mouseup cleanup attachHoldToRevealListeners does on PC.
+let controllerElemRevealEl = null;
 // The moment the player touches the mouse, the controller focus ring is
 // visual noise (it's sitting wherever the pad last left it, not wherever
 // the cursor is). Hide it via a body class as soon as real mouse movement
@@ -17488,6 +17511,31 @@ function controllerMarkControllerActive() {
 }
 document.addEventListener('mousemove', controllerMarkMouseActive);
 document.addEventListener('mousedown', controllerMarkMouseActive);
+// Mouse-only equivalents of the controller's Quick and Back buttons.
+// Middle-click mirrors holding Quick mid-match: reveal every elemental
+// card's stat diff at once instead of holding one card at a time.
+// Right-click mirrors pressing Back: cancel the current selection or leave
+// the current screen/modal, reusing controllerBack()'s existing logic
+// instead of duplicating it. Both skip form fields so normal text-input
+// right-click (copy/paste) and middle-click paste keep working.
+function controllerIsFormField(target) {
+  const tag = target && target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !!(target && target.closest && target.closest('[contenteditable]'));
+}
+document.addEventListener('mousedown', e => {
+  if (e.button !== 1 || controllerIsFormField(e.target)) return;
+  e.preventDefault();
+  setAllElementalCardsRevealed(true);
+});
+document.addEventListener('mouseup', e => {
+  if (e.button === 1) setAllElementalCardsRevealed(false);
+});
+window.addEventListener('blur', () => setAllElementalCardsRevealed(false));
+document.addEventListener('contextmenu', e => {
+  if (controllerIsFormField(e.target)) return;
+  e.preventDefault();
+  controllerBack();
+});
 function controllerButtonActive(gp, index) {
   const btn = gp.buttons[index];
   return !!(btn && (btn.pressed || btn.value > 0.5));
@@ -17542,6 +17590,22 @@ function controllerPollLoop() {
   if (quickPressed && !controllerPrevPressed.quick) controllerQuickAction();
   if (tabPrevPressed && !controllerPrevPressed.tabPrev) controllerCycleTab(-1);
   if (tabNextPressed && !controllerPrevPressed.tabNext) controllerCycleTab(1);
+  // Elemental stat-diff reveal: holding Confirm on a focused elemental card
+  // mirrors a PC mouse hold on that one card; holding Quick mirrors a PC
+  // middle-click, revealing every elemental card on the board at once.
+  // Both are continuous holds, not single presses, so they're re-evaluated
+  // every frame here instead of on the press-edge like the actions above.
+  const confirmRevealTarget = (confirmPressed && controllerFocusedEl && controllerFocusedEl.classList.contains('elem-mod-card')) ? controllerFocusedEl : null;
+  if (controllerElemRevealEl && controllerElemRevealEl !== confirmRevealTarget) {
+    controllerElemRevealEl.classList.remove('showing-original');
+  }
+  if (confirmRevealTarget) confirmRevealTarget.classList.add('showing-original');
+  controllerElemRevealEl = confirmRevealTarget;
+  if (quickPressed) {
+    setAllElementalCardsRevealed(true);
+  } else if (controllerPrevPressed.quick) {
+    setAllElementalCardsRevealed(false);
+  }
   controllerPrevPressed.confirm = confirmPressed;
   controllerPrevPressed.back = backPressed;
   controllerPrevPressed.start = startPressed;
@@ -17580,6 +17644,10 @@ function stopControllerSupport() {
   controllerRebindingAction = null;
   controllerMouseActive = false;
   document.body.classList.remove('controller-mouse-active');
+  // Don't leave a card (or every elemental card) stuck showing its original
+  // stats if support gets disabled mid-hold.
+  if (controllerElemRevealEl) { controllerElemRevealEl.classList.remove('showing-original'); controllerElemRevealEl = null; }
+  setAllElementalCardsRevealed(false);
 }
 function renderControllerConfigRows() {
   const body = document.getElementById('controllerConfigBody');
