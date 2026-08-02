@@ -18062,6 +18062,18 @@ document.addEventListener('contextmenu', e => {
   e.preventDefault();
   controllerBack();
 });
+// Scrolling the mouse wheel while over a level/category tab row (Shop,
+// Card Picker, Card Index -- all share the same .picker-tab markup) cycles
+// tabs the same way tabPrev/tabNext already does, instead of doing nothing
+// since the tab row itself never scrolls. Scoped to just the tab bars
+// (rather than a page-wide listener) so scrolling anywhere else -- the
+// Settings modal, admin panels, anything with real scrollable content --
+// is completely unaffected.
+document.addEventListener('wheel', e => {
+  if (!e.target.closest || !e.target.closest('#pickerTabs, #shopTabs, #indexTabs')) return;
+  e.preventDefault();
+  controllerCycleTab(e.deltaY > 0 ? 1 : -1);
+}, { passive: false });
 function controllerButtonActive(gp, index) {
   const btn = gp.buttons[index];
   return !!(btn && (btn.pressed || btn.value > 0.5));
