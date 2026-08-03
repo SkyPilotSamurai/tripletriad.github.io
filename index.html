@@ -4792,6 +4792,8 @@
     </div>
     <div id="adminCpuWeightsLevelSection" class="hidden">
       <div id="adminCpuWeightsLevelSubtitle">Applies to every CPU type. Difficulty (1-5) is set per-NPC (or in Vs CPU/Practice setup) and drives how much risk-awareness and lookahead a move gets.</div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuTwoPlyToggle" checked> Enable 2-Ply Lookahead</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuThreePlyToggle" checked> Enable 3-Ply Lookahead</label></div>
       <div id="adminCpuWeightsLevelGrid"></div>
       <div id="adminCpuWeightsLevelButtons">
         <button class="menu-btn menu-btn-secondary" id="adminCpuWeightsLevelSaveDefaults" title="Snapshots the skill-level scaling values currently shown and makes them the new baseline that Reset returns to.">Save as New Default</button>
@@ -5517,6 +5519,18 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelWeightDefaults`).on('value', snap => {
 rtdb.ref(`${GAME_CONFIG_ROOT}/cpuLevelThresholdDefaults`).on('value', snap => {
   cpuLevelThresholdDefaults = snap.val() || {};
   if (typeof renderAdminCpuLevelGrid === 'function') renderAdminCpuLevelGrid();
+});
+let cpuTwoPlyEnabled = true;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuTwoPlyEnabled`).on('value', snap => {
+  cpuTwoPlyEnabled = snap.val() !== false;
+  const toggle = document.getElementById('adminCpuTwoPlyToggle');
+  if (toggle) toggle.checked = cpuTwoPlyEnabled;
+});
+let cpuThreePlyEnabled = true;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuThreePlyEnabled`).on('value', snap => {
+  cpuThreePlyEnabled = snap.val() !== false;
+  const toggle = document.getElementById('adminCpuThreePlyToggle');
+  if (toggle) toggle.checked = cpuThreePlyEnabled;
 });
 rtdb.ref(`${GAME_CONFIG_ROOT}/reverseBudget`).on('value', snap => {
   reverseBudgetOverrides = snap.val() || {};
@@ -11408,8 +11422,8 @@ function generateCandidateMoves(hand, openCells) {
   });
   return moves;
 }
-function cpuUsesTwoPly(level) { return level >= cpuLevelThreshold('twoPlyLevel'); }
-function cpuUsesThreePly(level) { return level >= cpuLevelThreshold('threePlyLevel'); }
+function cpuUsesTwoPly(level) { return cpuTwoPlyEnabled && level >= cpuLevelThreshold('twoPlyLevel'); }
+function cpuUsesThreePly(level) { return cpuThreePlyEnabled && level >= cpuLevelThreshold('threePlyLevel'); }
 function cpuPoolFraction(level) {
   return cpuLevelWeight('poolFraction', level);
 }
@@ -11437,6 +11451,9 @@ function cpuRiskAssessment(move, owner, level, boardAfter) {
     return { ...empty, opponentBestReply: worstCaseReplyCaptures(boardAfter, move.cellIndex, owner, level) };
   }
   if (cpuUsesThreePly(level)) return threePlyLookahead(boardAfter, move.card, owner);
+  if (!cpuTwoPlyEnabled) {
+    return { ...empty, opponentBestReply: worstCaseReplyCaptures(boardAfter, move.cellIndex, owner, level) };
+  }
   const { opponentBestReply, ownBestFollowUp } = twoPlyLookahead(boardAfter, move.card, owner, level);
   return { opponentBestReply, ownBestFollowUp, opponentBestCounterReply: 0 };
 }
@@ -15529,6 +15546,14 @@ function closeAdminEditLbModal() {
 document.getElementById('adminGilRewardsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/gilRewardsEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCpuTwoPlyToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/cpuTwoPlyEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCpuThreePlyToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/cpuThreePlyEnabled`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminCpuGilRewardsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
