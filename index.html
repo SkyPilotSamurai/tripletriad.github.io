@@ -18253,7 +18253,21 @@ function controllerPollLoop() {
   // unconditionally (keyboard is always active, with no way to fully turn
   // the focus/navigation system off) purely to drive the focus ring and the
   // continuous-hold elemental reveal from whichever keys are currently held.
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  // Unlike keyboard events, the Gamepad API keeps reporting live button/axis
+  // state even when the page/window has lost focus (alt-tabbed away, another
+  // app in front, etc.) -- browsers don't suppress it the way they do key
+  // events for a background tab. Without this check, bumping a stick or
+  // resting a thumb on a button while tabbed away would still drive the
+  // focus ring and fire actions in a window the player isn't even looking
+  // at. Reading the pad as absent whenever we're unfocused feeds "nothing
+  // pressed" through every downstream check below (including rebind
+  // capture), and since every piece of held/prev-pressed state is
+  // re-derived fresh from that each frame, it also self-clears within a
+  // single frame of losing focus -- no separate blur handler needed here,
+  // unlike keyboardHeld which needs one because real keydown/keyup events
+  // stop arriving entirely while unfocused.
+  const hasFocus = document.hasFocus();
+  const pads = hasFocus && navigator.getGamepads ? navigator.getGamepads() : [];
   const rawGp = pads && Array.from(pads).find(p => p);
   // controllerGamepadEnabled (the Settings checkbox) only gates whether
   // gamepad state actually drives actions below -- rebind capture still
