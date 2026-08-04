@@ -2428,6 +2428,7 @@
   .lobby-vote-icon.confirmed { color: #0f1420; background: #fff; }
   #lobbyStatus { font-size: 16px; color: #b7bfd2; margin-bottom: 14px; text-align: center; min-height: 18px; }
   #lobbyConfirm { width: 100%; padding: 13px; font-size: 16px; }
+  #lobbyBackToMenu { width: 100%; padding: 9px; font-size: 12px; margin-top: 8px; }
   #pickerHeader {
     display: flex;
     flex-direction: column;
@@ -4594,6 +4595,7 @@
     </div>
     <div id="lobbyStatus"></div>
     <button class="menu-btn" id="lobbyConfirm">Confirm</button>
+    <button class="menu-btn menu-btn-secondary" id="lobbyBackToMenu">Back to Menu</button>
   </div>
 </div>
 <div id="pickerScreen" class="hidden">
@@ -5910,6 +5912,7 @@ async function joinFreePlayGame() {
   setMenuStatus('Finding a game...');
   const name = currentDisplayName();
   saveDisplayName(name);
+  leaveCurrentScreenForOnlineMatch();
   setBoardInfoHidden(true);
   state.mode = 'online';
   state.roomRoot = ROOMS_ROOT;
@@ -5997,6 +6000,7 @@ async function startRankedMatchmaking() {
   }
   setMenuStatus('Finding a ranked match...');
   const rankedName = (currentUserProfile && currentUserProfile.displayName) || currentUser.email || 'Player';
+  leaveCurrentScreenForOnlineMatch();
   setBoardInfoHidden(true);
   state.mode = 'online';
   state.roomRoot = RANKED_ROOMS_ROOT;
@@ -6331,9 +6335,7 @@ function beginMatchmakingMatchedRoom(otherId, mode) {
     openAccountModal('signin');
     return;
   }
-  if (state.mode === 'online' && state.roomId) {
-    leaveOnlineRoomOrSpectate();
-  }
+  leaveCurrentScreenForOnlineMatch();
   tryStartMusicIfEnabled();
   const root = mode === 'ranked' ? RANKED_ROOMS_ROOT : ROOMS_ROOT;
   const roomId = matchmakingPairRoomId(localPlayerId, otherId, mode);
@@ -6367,6 +6369,27 @@ async function joinSpecificRoom(roomId, playerName, root = ROOMS_ROOT) {
   const roomRef = rtdb.ref(`${root}/${roomId}`);
   await roomRef.transaction(current => {
     if (current === null) {
+      return root === RANKED_ROOMS_ROOT ? emptyRankedRoomState() : emptyRoomState();
+    }
+    // Matchmaking pairing (beginMatchmakingMatchedRoom) computes a
+    // deterministic roomId from the two players' ids + mode, so rematching
+    // the same two people later reuses this exact room object instead of a
+    // fresh one. If neither of us is actually seated in it right now and the
+    // last match here has wrapped up (gameOver, or it never got past the
+    // rules lobby / dealing), reset it to a clean slate before either seat
+    // gets claimed. Otherwise one player can silently inherit stale
+    // rulesFinalized/_dealt/gameOver state from the previous match while the
+    // other reads it a moment later and sees something different -- e.g. one
+    // lands back on the rules-voting screen and the other doesn't, and they
+    // never actually get pulled into the same match.
+    const seats = current.seats || {};
+    const presence = current.presence || {};
+    const iAmSeated = (seats.p1 && seats.p1.playerId === localPlayerId) || (seats.p2 && seats.p2.playerId === localPlayerId);
+    const p1Live = !!seats.p1 && presence.p1 !== false;
+    const p2Live = !!seats.p2 && presence.p2 !== false;
+    const anyoneActuallyPresent = p1Live || p2Live;
+    const previousMatchWrappedUp = !!current.gameOver || !current._dealt;
+    if (!iAmSeated && !anyoneActuallyPresent && previousMatchWrappedUp) {
       return root === RANKED_ROOMS_ROOT ? emptyRankedRoomState() : emptyRoomState();
     }
     return current;
@@ -9295,6 +9318,38 @@ function startOnlineRoom(roomId, seat, root = ROOMS_ROOT) {
   roomRef.once('value').then(attachLiveHandling).catch(() => attachLiveHandling(null));
   setTimeout(() => attachLiveHandling(null), 2500);
 }
+const LOBBY_DISCONNECT_GRACE_MS = 8000;
+const lobbyDisconnectTimers = {};
+function clearLobbyDisconnectTimer(roomId) {
+  if (lobbyDisconnectTimers[roomId]) {
+    clearTimeout(lobbyDisconnectTimers[roomId]);
+    delete lobbyDisconnectTimers[roomId];
+  }
+}
+// If the opponent disconnects while we're still on the rules-voting lobby
+// screen (both seats filled, but not dealt in yet), there's nothing to
+// salvage -- no score, no cards played -- so instead of leaving the
+// remaining player stuck staring at the rules screen forever, wait out a
+// short grace period (in case it's just a network blip reconnecting) and
+// then automatically drop back into matchmaking search for the same mode.
+function watchLobbyDisconnect(room, roomId, mySeat, root) {
+  if (room._dealt || room.rulesFinalized) {
+    clearLobbyDisconnectTimer(roomId);
+    return;
+  }
+  const presence = room.presence || {};
+  if (presence[mySeat] !== true) { clearLobbyDisconnectTimer(roomId); return; }
+  const opponentSeat = mySeat === 'p1' ? 'p2' : 'p1';
+  const opponentDisconnected = !!(room.seats && room.seats[opponentSeat]) && presence[opponentSeat] === false;
+  if (!opponentDisconnected) { clearLobbyDisconnectTimer(roomId); return; }
+  if (lobbyDisconnectTimers[roomId]) return;
+  lobbyDisconnectTimers[roomId] = setTimeout(() => {
+    delete lobbyDisconnectTimers[roomId];
+    if (state.roomId !== roomId) return;
+    setMenuStatus('The other player disconnected. Searching for a new match...');
+    if (root === RANKED_ROOMS_ROOT) startRankedMatchmaking(); else joinFreePlayGame();
+  }, LOBBY_DISCONNECT_GRACE_MS);
+}
 const DISCONNECT_FORFEIT_GRACE_MS = 20000;
 const disconnectForfeitTimers = {};
 function clearDisconnectForfeitTimer(roomId) {
@@ -9438,6 +9493,7 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
   const bothVotesIn = !!(room.ruleVotes && room.ruleVotes.p1 && room.ruleVotes.p2);
   if (!room._dealt && bothSeatsFilled && !room.rulesFinalized) {
     updateLobbyScreen(room, roomId, seat, roomRef);
+    watchLobbyDisconnect(room, roomId, seat, state.roomRoot);
     if (seat === 'p1' && bothVotesIn) {
       let mergedRules = mergeRuleVotes(room.ruleVotes, room.rules);
       if (mergedRules.roulette) mergedRules = rollRouletteRules(mergedRules);
@@ -9451,6 +9507,7 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
     return;
   }
   hideLobbyScreen();
+  clearLobbyDisconnectTimer(roomId);
   if (room.rules) state.rules = room.rules;
   if (!room._dealt && bothSeatsFilled && !myPickIn && !pickPending) {
     if (state.rules.random) {
@@ -10086,6 +10143,38 @@ function campaignClearRuntimeState() {
   if (state.pickerStockSource === 'campaign') state.pickerStockSource = 'unlimited';
   campaignViewingLocationId = null;
   campaignIntroContext = null;
+}
+// A matchmaking nudge/challenge can be accepted -- or a "Join their search"
+// button clicked -- while the player is sitting on almost any screen:
+// Campaign Home/Locations/NPC select, the card picker, shop, tutorial list,
+// card index, or CPU setup. None of those count as "busy" for
+// matchmakingCurrentStatus(), so a challenge can land while browsing any of
+// them. showGameScreen() only ever toggles #mainMenu/#gameScreen -- it has
+// no idea what other screen might be showing -- so without this, whichever
+// of those screens was up stayed visible (and, for Campaign, its music/state
+// kept running) underneath the online match that was supposed to be
+// starting. Call this before showGameScreen() in every path that can jump
+// straight into an online match so we always leave a clean slate first.
+function leaveCurrentScreenForOnlineMatch() {
+  if (state.mode === 'online' && state.roomId) {
+    leaveOnlineRoomOrSpectate();
+  }
+  const secondaryScreenIds = [
+    'campaignHomeScreen', 'campaignLocationsScreen', 'campaignNpcScreen', 'campaignBattleIntroScreen',
+    'pickerScreen', 'shopScreen', 'tutorialListScreen', 'indexScreen', 'cpuSetupScreen',
+  ];
+  const anyCampaignScreenVisible = ['campaignHomeScreen', 'campaignLocationsScreen', 'campaignNpcScreen', 'campaignBattleIntroScreen']
+    .some(id => {
+      const el = document.getElementById(id);
+      return el && !el.classList.contains('hidden');
+    });
+  if (anyCampaignScreenVisible || state.campaignLocationId || state.campaignNpcId) {
+    campaignClearRuntimeState();
+  }
+  secondaryScreenIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
 }
 async function openCampaignHome() {
   if (!currentUser) {
@@ -10905,6 +10994,7 @@ function leaveOnlineRoomOrSpectate() {
   if (state.roomId) {
     clearDisconnectForfeitTimer(state.roomId);
     clearTradeRevealTimer(state.roomId);
+    clearLobbyDisconnectTimer(state.roomId);
   }
   roomSession++;
   stopTurnTimer();
@@ -14590,6 +14680,11 @@ document.getElementById('gameBackToMenu').addEventListener('click', () => {
   showMenuScreen();
 });
 document.getElementById('spinnerBackToMenu').addEventListener('click', () => {
+  playSfx('cursorCancel');
+  leaveOnlineRoomOrSpectate();
+  showMenuScreen();
+});
+document.getElementById('lobbyBackToMenu').addEventListener('click', () => {
   playSfx('cursorCancel');
   leaveOnlineRoomOrSpectate();
   showMenuScreen();
