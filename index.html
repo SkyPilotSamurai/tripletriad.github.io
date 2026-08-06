@@ -4796,6 +4796,7 @@
       <div id="adminCpuWeightsLevelSubtitle">Applies to every CPU type. Difficulty (1-5) is set per-NPC (or in Vs CPU/Practice setup) and drives how much risk-awareness and lookahead a move gets.</div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuTwoPlyToggle" checked> Enable 2-Ply Lookahead</label></div>
       <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuThreePlyToggle" checked> Enable 3-Ply Lookahead</label></div>
+      <div class="settings-row checkbox-row"><label><input type="checkbox" id="adminCpuStillComboToggle" checked title="Same/Plus/Up Miss Rate and Awkward Plus always roll, regardless of this toggle. This only decides what happens to a move once it's missed: ON = the CPU still checks whether that cell was worth playing for OTHER reasons (captures, position) and may still play there anyway, with the combo flipping 'by accident'. OFF = a missed move is dropped entirely -- the CPU doesn't reconsider it, it just looks elsewhere."> Still Combo (a missed move can still get played for other reasons)</label></div>
       <div id="adminCpuWeightsLevelGrid"></div>
       <div id="adminCpuWeightsLevelButtons">
         <button class="menu-btn menu-btn-secondary" id="adminCpuWeightsLevelSaveDefaults" title="Snapshots the skill-level scaling values currently shown and makes them the new baseline that Reset returns to.">Save as New Default</button>
@@ -5533,6 +5534,12 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/cpuThreePlyEnabled`).on('value', snap => {
   cpuThreePlyEnabled = snap.val() !== false;
   const toggle = document.getElementById('adminCpuThreePlyToggle');
   if (toggle) toggle.checked = cpuThreePlyEnabled;
+});
+let cpuStillComboEnabled = true;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuStillComboEnabled`).on('value', snap => {
+  cpuStillComboEnabled = snap.val() !== false;
+  const toggle = document.getElementById('adminCpuStillComboToggle');
+  if (toggle) toggle.checked = cpuStillComboEnabled;
 });
 rtdb.ref(`${GAME_CONFIG_ROOT}/reverseBudget`).on('value', snap => {
   reverseBudgetOverrides = snap.val() || {};
@@ -11360,13 +11367,22 @@ function evaluateMove(board, index, card, owner) {
   });
   let comboTriggered = false;
   const comboFlips = new Set();
+  // Per-rule flip breakdown + Plus "awkwardness" gap, used only by the CPU's
+  // own-move miss-chance scoring (cpuCreditedComboFlipCount). Purely additive:
+  // toFlip/comboTriggered/comboFlipCount below are computed exactly as before,
+  // so every existing caller (lookahead, board simulation, opponent-threat
+  // modeling) is unaffected.
+  const sameFlips = new Set();
+  const plusFlips = new Set();
+  const upFlips = new Set();
+  let plusMaxGap = 0;
   if (state.rules.same) {
     const sameMatches = neighbors.filter(n => card[n.mySide] === n.cell.card[n.theirSide]);
     const sameWallMatchCount = state.rules.sameWall
       ? getWallSides(index).filter(side => card[side] === WALL_RANK).length
       : 0;
     if (sameMatches.length + sameWallMatchCount >= 2) {
-      sameMatches.forEach(n => { if (n.cell.owner === opponent) { toFlip.add(n.index); comboFlips.add(n.index); comboTriggered = true; } });
+      sameMatches.forEach(n => { if (n.cell.owner === opponent) { toFlip.add(n.index); comboFlips.add(n.index); sameFlips.add(n.index); comboTriggered = true; } });
     }
   }
   if (state.rules.plus) {
@@ -11376,20 +11392,83 @@ function evaluateMove(board, index, card, owner) {
       (groups[sum] = groups[sum] || []).push(n);
     });
     Object.values(groups).forEach(group => {
-      if (group.length >= 2) group.forEach(n => { if (n.cell.owner === opponent) { toFlip.add(n.index); comboFlips.add(n.index); comboTriggered = true; } });
+      if (group.length >= 2) {
+        // "Awkwardness" of this Plus: the largest gap between the two side
+        // values making up any one matching pair in the group (e.g. top=5
+        // meeting neighborBottom=3 has a gap of 2). A Plus built from two
+        // close numbers (5+3 / 4+4) reads as obvious; one built from a wide
+        // gap (9+... / 1+...) is easier for a lower-skill CPU to miss.
+        const groupGap = Math.max(...group.map(n => Math.abs(card[n.mySide] - n.cell.card[n.theirSide])));
+        group.forEach(n => {
+          if (n.cell.owner === opponent) {
+            toFlip.add(n.index); comboFlips.add(n.index); plusFlips.add(n.index); comboTriggered = true;
+            if (groupGap > plusMaxGap) plusMaxGap = groupGap;
+          }
+        });
+      }
     });
   }
   if (state.rules.up) {
     const upMatches = neighbors.filter(n => n.cell.card[n.theirSide] === card[n.mySide] + 1);
-    if (upMatches.length >= 2) upMatches.forEach(n => { if (n.cell.owner === opponent) { toFlip.add(n.index); comboFlips.add(n.index); comboTriggered = true; } });
+    if (upMatches.length >= 2) upMatches.forEach(n => { if (n.cell.owner === opponent) { toFlip.add(n.index); comboFlips.add(n.index); upFlips.add(n.index); comboTriggered = true; } });
   }
-  return { flips: toFlip, comboTriggered, comboFlipCount: comboFlips.size };
+  return { flips: toFlip, comboTriggered, comboFlipCount: comboFlips.size, sameFlips, plusFlips, upFlips, plusMaxGap };
 }
 function evaluateHypotheticalCaptures(board, index, card, owner) {
   return evaluateMove(board, index, card, owner).flips.size;
 }
 function cpuComboRiskWeight(level) {
   return cpuLevelWeight('comboRiskWeight', level);
+}
+// Chance the CPU fails to notice its OWN Same/Plus/Up move as a deliberate,
+// bonus-worthy play at this skill level. Always driven by the Miss Rate
+// sliders -- the "Still Combo" toggle does NOT gate this roll, it only
+// changes what happens to a move once it's been missed (see
+// cpuComboEvalForMove below). "gap" is the Plus awkwardness value from
+// evaluateMove's plusMaxGap, ignored for same/up.
+function cpuComboMissChance(rule, level, gap) {
+  const rateKey = rule === 'same' ? 'sameMissRate' : rule === 'plus' ? 'plusMissRate' : 'upMissRate';
+  let chance = cpuLevelWeight(rateKey, level);
+  if (rule === 'plus' && typeof gap === 'number' && gap > 0) {
+    chance += gap * cpuLevelWeight('awkwardPlusFactor', level);
+  }
+  return Math.max(0, Math.min(1, chance));
+}
+// Rolls the miss chance independently per rule (a move can trigger Same and
+// Plus at once, on the same or different neighbors) and returns how many
+// distinct cells still get credited as a recognized combo for scoring
+// purposes. This never touches the actual flips/captures -- those are
+// mechanical and happen regardless of whether they get credited here.
+function cpuCreditedComboFlipCount(evalResult, level) {
+  const { sameFlips, plusFlips, upFlips, plusMaxGap } = evalResult;
+  const credited = new Set();
+  if (sameFlips.size && Math.random() >= cpuComboMissChance('same', level)) {
+    sameFlips.forEach(i => credited.add(i));
+  }
+  if (plusFlips.size && Math.random() >= cpuComboMissChance('plus', level, plusMaxGap)) {
+    plusFlips.forEach(i => credited.add(i));
+  }
+  if (upFlips.size && Math.random() >= cpuComboMissChance('up', level)) {
+    upFlips.forEach(i => credited.add(i));
+  }
+  return credited.size;
+}
+// Computes the CPU's own-move combo evaluation exactly once per candidate
+// (evaluateMove + the miss-chance roll), so the same outcome is reused both
+// for the "Still Combo" filtering decision in chooseCpuMove and for the
+// excitement/combo bonus inside whichever behavior scorer runs on this move.
+// Rolling twice independently would let a move get filtered out as "missed"
+// but then still get credited (or vice versa) purely from bad luck.
+function cpuComboEvalForMove(move, owner, level) {
+  const evalResult = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const creditedComboFlipCount = cpuCreditedComboFlipCount(evalResult, level);
+  return { evalResult, creditedComboFlipCount };
+}
+// Behavior scorers read the combo roll chooseCpuMove already made (move._combo)
+// so they agree with the "Still Combo" filtering decision. Falls back to
+// rolling fresh if a scorer is ever called on a move that skipped that step.
+function moveComboEval(move, owner, level) {
+  return move._combo || cpuComboEvalForMove(move, owner, level);
 }
 function comboDiscountedThreat(board, index, card, owner, level) {
   const { flips, comboFlipCount } = evaluateMove(board, index, card, owner);
@@ -11554,56 +11633,56 @@ function cpuRiskAssessment(move, owner, level, boardAfter) {
 // the default when no override is set.
 const CPU_WEIGHT_DEFS = {
   normal: [
-    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.5 },
-    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
-    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 8, min: 0, max: 30, step: 0.5 },
-    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
-    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 4, min: 0, max: 20, step: 0.5 },
+    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.01 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.01 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 8, min: 0, max: 30, step: 0.01 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.01 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 4, min: 0, max: 20, step: 0.01 },
   ],
   safe: [
-    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.5 },
-    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
-    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 15, min: 0, max: 40, step: 0.5 },
-    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 3, min: 0, max: 20, step: 0.5 },
-    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 7, min: 0, max: 30, step: 0.5 },
+    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.01 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.01 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 15, min: 0, max: 40, step: 0.01 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 3, min: 0, max: 20, step: 0.01 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 7, min: 0, max: 30, step: 0.01 },
   ],
   risky: [
-    { key: 'captureWeight', label: 'Capture Value', default: 14, min: 0, max: 30, step: 0.5 },
-    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
-    { key: 'overkillPenaltyPerLevel', label: 'Overkill Penalty (per card level)', default: 0.6, min: 0, max: 5, step: 0.1 },
-    { key: 'openingReservePenalty', label: 'Opening-Move Reserve Penalty', default: 20, min: 0, max: 50, step: 1 },
-    { key: 'exposureWeightNoPayoff', label: 'Exposure Penalty (no-capture move)', default: 12, min: 0, max: 40, step: 0.5 },
-    { key: 'exposureWeightPayoff', label: 'Exposure Penalty (capturing move)', default: 3, min: 0, max: 20, step: 0.5 },
-    { key: 'counterWeightNoPayoff', label: 'Counter-Reply Penalty (no-capture move)', default: 6, min: 0, max: 30, step: 0.5 },
-    { key: 'counterWeightPayoff', label: 'Counter-Reply Penalty (capturing move)', default: 1.5, min: 0, max: 15, step: 0.25 },
-    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 5, min: 0, max: 20, step: 0.5 },
+    { key: 'captureWeight', label: 'Capture Value', default: 14, min: 0, max: 30, step: 0.01 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.01 },
+    { key: 'overkillPenaltyPerLevel', label: 'Overkill Penalty (per card level)', default: 0.6, min: 0, max: 5, step: 0.01 },
+    { key: 'openingReservePenalty', label: 'Opening-Move Reserve Penalty', default: 20, min: 0, max: 50, step: 0.01 },
+    { key: 'exposureWeightNoPayoff', label: 'Exposure Penalty (no-capture move)', default: 12, min: 0, max: 40, step: 0.01 },
+    { key: 'exposureWeightPayoff', label: 'Exposure Penalty (capturing move)', default: 3, min: 0, max: 20, step: 0.01 },
+    { key: 'counterWeightNoPayoff', label: 'Counter-Reply Penalty (no-capture move)', default: 6, min: 0, max: 30, step: 0.01 },
+    { key: 'counterWeightPayoff', label: 'Counter-Reply Penalty (capturing move)', default: 1.5, min: 0, max: 15, step: 0.01 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 5, min: 0, max: 20, step: 0.01 },
   ],
   elemental: [
-    { key: 'captureWeight', label: 'Capture Value', default: 9, min: 0, max: 30, step: 0.5 },
-    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
-    { key: 'matchBonus', label: 'Elemental Tile Match Bonus', default: 12, min: 0, max: 40, step: 1 },
-    { key: 'buffBonus', label: 'Elemental Buff-Enabled Capture Bonus', default: 18, min: 0, max: 40, step: 1 },
-    { key: 'tileAvailablePenalty', label: 'Wasted-Element-Match Penalty', default: 6, min: 0, max: 30, step: 0.5 },
-    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 7, min: 0, max: 30, step: 0.5 },
-    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
-    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 3.5, min: 0, max: 20, step: 0.5 },
+    { key: 'captureWeight', label: 'Capture Value', default: 9, min: 0, max: 30, step: 0.01 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.01 },
+    { key: 'matchBonus', label: 'Elemental Tile Match Bonus', default: 12, min: 0, max: 40, step: 0.01 },
+    { key: 'buffBonus', label: 'Elemental Buff-Enabled Capture Bonus', default: 18, min: 0, max: 40, step: 0.01 },
+    { key: 'tileAvailablePenalty', label: 'Wasted-Element-Match Penalty', default: 6, min: 0, max: 30, step: 0.01 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 7, min: 0, max: 30, step: 0.01 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.01 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 3.5, min: 0, max: 20, step: 0.01 },
   ],
   combo: [
-    { key: 'captureWeight', label: 'Capture Value', default: 6, min: 0, max: 30, step: 0.5 },
-    { key: 'comboBonus', label: 'Combo-Chain Trigger Bonus', default: 20, min: 0, max: 50, step: 1 },
-    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 6, min: 0, max: 30, step: 0.5 },
-    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
-    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 3, min: 0, max: 20, step: 0.5 },
+    { key: 'captureWeight', label: 'Capture Value', default: 6, min: 0, max: 30, step: 0.01 },
+    { key: 'comboBonus', label: 'Combo-Chain Trigger Bonus', default: 20, min: 0, max: 50, step: 0.01 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 6, min: 0, max: 30, step: 0.01 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.01 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 3, min: 0, max: 20, step: 0.01 },
   ],
   reflipper: [
-    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.5 },
-    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.5 },
-    { key: 'reclaimBonusPerCard', label: 'Reclaim-Own-Card Bonus', default: 22, min: 0, max: 50, step: 1 },
-    { key: 'planBonusBase', label: 'Bait Plan Bonus (base)', default: 10, min: 0, max: 40, step: 1 },
-    { key: 'planBonusPerFlip', label: 'Bait Plan Bonus (per recaptured card)', default: 6, min: 0, max: 30, step: 0.5 },
-    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 8, min: 0, max: 30, step: 0.5 },
-    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.5 },
-    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 4, min: 0, max: 20, step: 0.5 },
+    { key: 'captureWeight', label: 'Capture Value', default: 10, min: 0, max: 30, step: 0.01 },
+    { key: 'excitementPerFlip', label: 'Same/Plus/Up Bonus (per card)', default: 7, min: 0, max: 30, step: 0.01 },
+    { key: 'reclaimBonusPerCard', label: 'Reclaim-Own-Card Bonus', default: 22, min: 0, max: 50, step: 0.01 },
+    { key: 'planBonusBase', label: 'Bait Plan Bonus (base)', default: 10, min: 0, max: 40, step: 0.01 },
+    { key: 'planBonusPerFlip', label: 'Bait Plan Bonus (per recaptured card)', default: 6, min: 0, max: 30, step: 0.01 },
+    { key: 'opponentReplyWeight', label: 'Opponent Reply Risk Penalty', default: 8, min: 0, max: 30, step: 0.01 },
+    { key: 'ownFollowUpWeight', label: 'Own Follow-Up Bonus', default: 4, min: 0, max: 20, step: 0.01 },
+    { key: 'opponentCounterWeight', label: 'Opponent Counter-Reply Penalty', default: 4, min: 0, max: 20, step: 0.01 },
   ],
 };
 const CPU_BEHAVIOR_LABELS = {
@@ -11641,20 +11720,44 @@ const CPU_LEVEL_WEIGHT_DEFS = {
   riskWeightMultiplier: {
     label: 'Risk Weight Multiplier',
     hint: 'How hard captures/risk-avoidance/lookahead terms get weighted once risk-awareness is on. 0 = ignore risk entirely, 1 = full weight.',
-    min: 0, max: 3, step: 0.05,
+    min: 0, max: 3, step: 0.01,
     defaults: { 1: 0, 2: 0, 3: 0.65, 4: 1, 5: 1.35 },
   },
   poolFraction: {
     label: 'Move Randomness (Pool Fraction)',
     hint: 'Instead of always playing the single best-scored move, picks randomly from the top X% of scored moves. 0 = always best move, 1 = fully random.',
-    min: 0, max: 1, step: 0.05,
+    min: 0, max: 1, step: 0.01,
     defaults: { 1: 0.5, 2: 0.5, 3: 0.2, 4: 0.1, 5: 0 },
   },
   comboRiskWeight: {
     label: 'Opponent Same/Plus Threat Discount',
     hint: 'When judging how dangerous an opponent reply is, how much to discount a threat that only works via Same/Plus/Up (0 = ignore that threat, 1 = treat it exactly like a normal capture).',
-    min: 0, max: 1, step: 0.05,
+    min: 0, max: 1, step: 0.01,
     defaults: { 1: 0.6, 2: 0.6, 3: 0.2, 4: 0.4, 5: 0.6 },
+  },
+  sameMissRate: {
+    label: 'Same Miss Rate',
+    hint: 'Chance the CPU doesn\'t credit its own Same move as a deliberate play when scoring where to go. The capture still happens if placed there (see "Still Combo" toggle) -- this just makes the CPU less likely to seek it out. 0 = always recognizes it, 1 = never does.',
+    min: 0, max: 1, step: 0.01,
+    defaults: { 1: 0.35, 2: 0.25, 3: 0.15, 4: 0.05, 5: 0 },
+  },
+  plusMissRate: {
+    label: 'Plus Miss Rate',
+    hint: 'Same idea as Same Miss Rate, but for its own Plus moves. Plus is harder to spot than Same (it\'s pure arithmetic, not a direct number match), so this usually wants to sit a bit higher than Same Miss Rate at low skill. Stacks with Awkward Plus below.',
+    min: 0, max: 1, step: 0.01,
+    defaults: { 1: 0.45, 2: 0.3, 3: 0.18, 4: 0.06, 5: 0 },
+  },
+  upMissRate: {
+    label: 'Up Miss Rate',
+    hint: 'Same idea as Same Miss Rate, but for its own Up moves.',
+    min: 0, max: 1, step: 0.01,
+    defaults: { 1: 0.3, 2: 0.2, 3: 0.1, 4: 0.03, 5: 0 },
+  },
+  awkwardPlusFactor: {
+    label: 'Awkward Plus Factor',
+    hint: 'Extra miss chance added on top of Plus Miss Rate for each point of gap between the two numbers in a matching pair (e.g. top=9 meeting neighborBottom=1 has a gap of 8). Wide-gap Plus combos look more like a coincidence and less like an obvious pattern, so lower-skill CPUs are more likely to overlook them. 0 = gap size never matters.',
+    min: 0, max: 0.5, step: 0.01,
+    defaults: { 1: 0.05, 2: 0.04, 3: 0.02, 4: 0.01, 5: 0 },
   },
   pointVarianceMin: {
     label: 'Campaign Point Budget Variance - Min',
@@ -11750,9 +11853,9 @@ function applyReversePointBudget(skillLevel, budget) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 function cpuScoreNormal(move, owner, level) {
-  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
-  const captures = flips.size;
-  const excitementBonus = comboFlipCount * cpuWeight('normal', 'excitementPerFlip');
+  const { evalResult, creditedComboFlipCount } = moveComboEval(move, owner, level);
+  const captures = evalResult.flips.size;
+  const excitementBonus = creditedComboFlipCount * cpuWeight('normal', 'excitementPerFlip');
   const captureWeight = cpuWeight('normal', 'captureWeight');
   if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
@@ -11764,9 +11867,9 @@ function cpuScoreNormal(move, owner, level) {
     - opponentBestCounterReply * cpuWeight('normal', 'opponentCounterWeight') * riskWeight;
 }
 function cpuScoreSafe(move, owner, level) {
-  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
-  const captures = flips.size;
-  const excitementBonus = comboFlipCount * cpuWeight('safe', 'excitementPerFlip');
+  const { evalResult, creditedComboFlipCount } = moveComboEval(move, owner, level);
+  const captures = evalResult.flips.size;
+  const excitementBonus = creditedComboFlipCount * cpuWeight('safe', 'excitementPerFlip');
   const captureWeight = cpuWeight('safe', 'captureWeight');
   if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
@@ -11778,9 +11881,9 @@ function cpuScoreSafe(move, owner, level) {
     - opponentBestCounterReply * cpuWeight('safe', 'opponentCounterWeight') * riskWeight;
 }
 function cpuScoreRisky(move, owner, level) {
-  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
-  const captures = flips.size;
-  const excitementBonus = comboFlipCount * cpuWeight('risky', 'excitementPerFlip');
+  const { evalResult, creditedComboFlipCount } = moveComboEval(move, owner, level);
+  const captures = evalResult.flips.size;
+  const excitementBonus = creditedComboFlipCount * cpuWeight('risky', 'excitementPerFlip');
   const captureWeight = cpuWeight('risky', 'captureWeight');
   const noPayoff = captures === 0;
   const overkillPenalty = move.card.level * cpuWeight('risky', 'overkillPenaltyPerLevel');
@@ -11811,10 +11914,11 @@ function elementalMatchBonus(cellIndex, card) {
   return card.element === tileElem ? 1 : 0;
 }
 function cpuScoreElementalFiend(move, owner, level) {
-  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
+  const { evalResult, creditedComboFlipCount } = moveComboEval(move, owner, level);
+  const { flips } = evalResult;
   const captures = flips.size;
   const isMatch = elementalMatchBonus(move.cellIndex, move.card) > 0;
-  let elementalBonus = comboFlipCount * cpuWeight('elemental', 'excitementPerFlip');
+  let elementalBonus = creditedComboFlipCount * cpuWeight('elemental', 'excitementPerFlip');
   if (isMatch) {
     elementalBonus += cpuWeight('elemental', 'matchBonus');
     const { flips: flipsWithoutBuff } = evaluateMove(
@@ -11841,9 +11945,9 @@ function cpuScoreElementalFiend(move, owner, level) {
     - opponentBestCounterReply * cpuWeight('elemental', 'opponentCounterWeight') * riskWeight;
 }
 function cpuScoreComboStarter(move, owner, level) {
-  const { flips, comboTriggered } = evaluateMove(state.board, move.cellIndex, move.card, owner);
-  const captures = flips.size;
-  const comboBonus = comboTriggered ? cpuWeight('combo', 'comboBonus') : 0;
+  const { evalResult, creditedComboFlipCount } = moveComboEval(move, owner, level);
+  const captures = evalResult.flips.size;
+  const comboBonus = creditedComboFlipCount > 0 ? cpuWeight('combo', 'comboBonus') : 0;
   const captureWeight = cpuWeight('combo', 'captureWeight');
   if (!cpuUsesRiskCheck(level)) return captures * captureWeight + comboBonus;
   const boardAfter = simulateBoardAfterMove(state.board, move.cellIndex, move.card, owner);
@@ -11940,10 +12044,10 @@ function cpuScoreReflipper(move, owner, level) {
       }
     }
   }
-  const { flips, comboFlipCount } = evaluateMove(state.board, move.cellIndex, move.card, owner);
-  const captures = flips.size;
+  const { evalResult, creditedComboFlipCount } = moveComboEval(move, owner, level);
+  const captures = evalResult.flips.size;
   const captureWeight = cpuWeight('reflipper', 'captureWeight');
-  const excitementBonus = comboFlipCount * cpuWeight('reflipper', 'excitementPerFlip');
+  const excitementBonus = creditedComboFlipCount * cpuWeight('reflipper', 'excitementPerFlip');
   const planBonus = bestPlan ? bestPlan.bonus : 0;
   if (!cpuUsesRiskCheck(level)) return captures * captureWeight + excitementBonus + planBonus + reclaimBonus;
   const { opponentBestReply, ownBestFollowUp, opponentBestCounterReply } = cpuRiskAssessment(move, owner, level, boardAfterOwnMove);
@@ -11994,6 +12098,19 @@ function chooseCpuMove() {
   const scorer = CPU_BEHAVIOR_SCORERS[behavior] || cpuScoreNormal;
   let moves = generateCandidateMoves(hand, openCells);
   if (allowedIdx != null) moves = moves.filter(m => m.idx === allowedIdx);
+  // Roll each candidate's Same/Plus/Up recognition once up front (see
+  // cpuComboEvalForMove) so the outcome is shared between the "Still Combo"
+  // filter below and the scorer's own excitement/combo bonus.
+  moves = moves.map(move => ({ ...move, _combo: cpuComboEvalForMove(move, owner, level) }));
+  if (!cpuStillComboEnabled) {
+    // Still Combo OFF: a move whose combo aspect wasn't fully recognized
+    // gets dropped from consideration entirely -- the CPU doesn't stop to
+    // ask "would I still want this cell anyway?", it just looks elsewhere.
+    const fullyRecognized = moves.filter(m => m._combo.creditedComboFlipCount === m._combo.evalResult.comboFlipCount);
+    if (fullyRecognized.length > 0) moves = fullyRecognized;
+    // If literally every legal move got rejected this way, fall through
+    // with the original full list so the CPU always has somewhere to play.
+  }
   const scored = moves.map(move => ({ ...move, score: scorer(move, owner, level) }));
   const picked = pickFromScored(scored, level);
   return picked ? { idx: picked.idx, cellIndex: picked.cellIndex } : null;
@@ -15649,6 +15766,10 @@ document.getElementById('adminCpuTwoPlyToggle').addEventListener('change', e => 
 document.getElementById('adminCpuThreePlyToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/cpuThreePlyEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCpuStillComboToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/cpuStillComboEnabled`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminCpuGilRewardsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
