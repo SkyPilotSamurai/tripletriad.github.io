@@ -7478,6 +7478,13 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
       screen.classList.add('hidden');
       recordRecentCardIds(owner, handOrder);
       const picked = handOrder.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
+      // Tag the exact object instance the player locked, not just its id --
+      // picked's order matches handOrder 1:1, so closedSingleSlot indexes
+      // both the same way. Without this, a hand with a duplicate card whose
+      // player picked a LATER copy to hide would silently hide the FIRST
+      // copy instead once tagClosedSingleHandCards falls back to id-matching
+      // (see that function's comment for why instance tagging matters here).
+      if (closedSingleSlot !== null && picked[closedSingleSlot]) picked[closedSingleSlot]._closedSingle = true;
       picked.closedSingleCardId = closedSingleSlot !== null ? handOrder[closedSingleSlot] : null;
       resolve(picked);
     }
@@ -8004,11 +8011,18 @@ function assignRandomClosedSingleCardId(hand) {
 // in the hand. Called once per match setup (initGame, tutorial demos) right
 // after state.hands/state.closedSingleCardId are both finalized; .find()
 // only ever tags the first match, so at most one instance per side is ever
-// flagged.
+// flagged -- UNLESS a card was already instance-tagged earlier (e.g.
+// assignRandomClosedSingleCardId, used for CPU/Campaign hands, tags one
+// random instance directly before initGame even runs). Without the
+// "already tagged" guard below, this function's id-based .find() would
+// then tag a SECOND (possibly different) copy on top of that, leaving two
+// duplicate cards hidden instead of one. So: only fall back to id-matching
+// when no instance in the hand is tagged yet.
 function tagClosedSingleHandCards() {
   ['p1', 'p2'].forEach(owner => {
     const hand = state.hands && state.hands[owner];
     if (!Array.isArray(hand)) return;
+    if (hand.some(c => c && c._closedSingle)) return;
     const hiddenId = state.closedSingleCardId && state.closedSingleCardId[owner];
     if (hiddenId == null) return;
     const card = hand.find(c => c && c.id === hiddenId);
