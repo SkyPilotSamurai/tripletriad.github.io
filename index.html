@@ -8614,7 +8614,7 @@ function openCampaignBattleIntro(locationId, npcId) {
     const defeated = !!(currentCampaignSave && currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[npc.id]);
     if (defeated && npc.rewardCardId && !npcState.rareCardLost) {
       const rewardCard = CARD_DB.find(c => c.id === npc.rewardCardId);
-      if (rewardCard) messages.push(`Still has the ${rewardCard.name} card in their possession.`);
+      if (rewardCard) messages.push(`Has ${rewardCard.name} card in their possession.`);
     }
     if (messages.length) {
       noteEl.innerHTML = messages.join('<br>');
