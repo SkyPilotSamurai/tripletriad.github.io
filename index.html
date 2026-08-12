@@ -8612,7 +8612,7 @@ function openCampaignBattleIntro(locationId, npcId) {
     // unclaimed (campaignMarkNpcRareCardLost flips rareCardLost once the
     // player has won it in a trade, same as wonCardIds getting cleared).
     const defeated = !!(currentCampaignSave && currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[npc.id]);
-    if (defeated && npc.rewardCardId && !npcState.rareCardLost) {
+    if (defeated && npc.rewardCardId && !npcState.rareCardLost && isOneOfAKindCardId(npc.rewardCardId)) {
       const rewardCard = CARD_DB.find(c => c.id === npc.rewardCardId);
       if (rewardCard) messages.push(`Has ${rewardCard.name} card in their possession.`);
     }
