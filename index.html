@@ -810,6 +810,93 @@
     padding: 4px;
   }
   #adminCpuWeightsClose:hover { color: #eee; }
+  #boosterInfoModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 310;
+  }
+  #boosterInfoModal.show { display: flex; }
+  #boosterInfoPanel {
+    position: relative;
+    background: var(--panel-bg, #1a2130);
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 12px;
+    padding: 12px 20px 14px;
+    width: 460px;
+    max-width: 92vw;
+    max-height: 77vh;
+    overflow-y: auto;
+    margin-top: 20vh;
+    color: #e6e6e6;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  #boosterInfoPanel h2 { margin: 0 0 2px; color: #fff; font-size: 22px; text-align: center; }
+  #boosterInfoSubtitle { font-size: 12px; color: #8a92a6; text-align: center; margin: -4px 0 2px; }
+  #boosterInfoClose {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #boosterInfoClose:hover { color: #eee; }
+  #boosterInfoLegend {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+  .booster-info-legend-item { display: flex; align-items: center; gap: 5px; }
+  .booster-info-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .booster-info-swatch.owned { background: #ffffff; }
+  .booster-info-swatch.seen { background: #8a92a3; }
+  .booster-info-swatch.unseen { background: #4a5568; }
+  #boosterInfoRareSection, #boosterInfoCommonSection { width: 100%; }
+  #boosterInfoRareSection.hidden { display: none; }
+  .booster-info-section-label {
+    font-size: 13px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #ffa64f;
+    border-bottom: 1px solid var(--panel-border, #4a5568);
+    padding-bottom: 4px;
+    margin: 6px 0 6px;
+  }
+  .booster-info-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+  }
+  .booster-info-list li {
+    font-size: 14px;
+    padding: 3px 0;
+  }
+  .booster-info-card-name.owned { color: #ffffff; }
+  .booster-info-card-name.seen { color: #8a92a3; }
+  .booster-info-card-name.unseen { color: #4a5568; }
   #adminCpuWeightsPanel .settings-row { width: 100%; }
   #adminCpuWeightsPanel .settings-row select {
     background: #1c2333;
@@ -3067,6 +3154,20 @@
   }
   #shopSellBtn:hover:not(:disabled) { transform: translateY(-1px); background: var(--btn-bg-hover, #3a4658); }
   #shopSellBtn:disabled { opacity: 0.45; cursor: default; transform: none; }
+  #shopInfoBtn {
+    background: var(--btn-bg, #2d3748);
+    color: #eee;
+    border: 1px solid var(--panel-border, #4a5568);
+    border-radius: 9px;
+    padding: 10px 26px;
+    font-size: 16px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.1s ease, background 0.15s ease, opacity 0.15s ease;
+  }
+  #shopInfoBtn:hover { transform: translateY(-1px); background: var(--btn-bg-hover, #3a4658); }
+  #shopInfoBtn.hidden { display: none; }
   #tutorialListScreen {
     position: fixed;
     inset: 0;
@@ -4964,6 +5065,7 @@
           <div id="shopBuySlotPrice"></div>
           <div id="shopSlotBtnRow">
             <button id="shopBuyBtn" disabled>Buy</button>
+            <button id="shopInfoBtn" class="hidden">Info</button>
             <button id="shopSellBtn" disabled>Sell</button>
           </div>
         </div>
@@ -4981,6 +5083,26 @@
       <div id="boosterOpenLabel"></div>
       <div id="boosterOpenDuplicateNote" class="hidden"></div>
       <button id="boosterOpenNextBtn">Open Pack</button>
+    </div>
+  </div>
+</div>
+<div id="boosterInfoModal">
+  <div id="boosterInfoPanel">
+    <button id="boosterInfoClose" aria-label="Close">✕</button>
+    <h2 id="boosterInfoTitle"></h2>
+    <div id="boosterInfoSubtitle">Booster Pack Info</div>
+    <div id="boosterInfoLegend">
+      <span class="booster-info-legend-item"><span class="booster-info-swatch owned"></span>Owned</span>
+      <span class="booster-info-legend-item"><span class="booster-info-swatch seen"></span>Seen</span>
+      <span class="booster-info-legend-item"><span class="booster-info-swatch unseen"></span>Unknown</span>
+    </div>
+    <div id="boosterInfoCommonSection">
+      <div class="booster-info-section-label">Cards</div>
+      <ul id="boosterInfoCommonList" class="booster-info-list"></ul>
+    </div>
+    <div id="boosterInfoRareSection" class="hidden">
+      <div class="booster-info-section-label">Rare Cards</div>
+      <ul id="boosterInfoRareList" class="booster-info-list"></ul>
     </div>
   </div>
 </div>
@@ -8474,13 +8596,28 @@ function openCampaignBattleIntro(locationId, npcId) {
     : `Point Max: ${campaignPointBudgetCeilingForNpc(npc)}`;
   const noteEl = document.getElementById('campaignIntroNote');
   if (noteEl) {
-    const wonCards = campaignNpcState(npc.id).wonCardIds
+    const messages = [];
+    const npcState = campaignNpcState(npc.id);
+    const wonCards = npcState.wonCardIds
       .map(id => CARD_DB.find(c => c.id === id)).filter(Boolean);
     if (wonCards.length) {
       const names = wonCards.map(c => c.name).join(', ');
-      noteEl.textContent = wonCards.length === 1
+      messages.push(wonCards.length === 1
         ? `Reminder: they still have your ${names} card.`
-        : `Reminder: they still have your cards - ${names}.`;
+        : `Reminder: they still have your cards - ${names}.`);
+    }
+    // Hint at the NPC's own one-of-a-kind reward card -- but only once the
+    // player has actually beaten them at least once (before that, its
+    // existence/identity is still a surprise), and only while it's still
+    // unclaimed (campaignMarkNpcRareCardLost flips rareCardLost once the
+    // player has won it in a trade, same as wonCardIds getting cleared).
+    const defeated = !!(currentCampaignSave && currentCampaignSave.defeatedNpcs && currentCampaignSave.defeatedNpcs[npc.id]);
+    if (defeated && npc.rewardCardId && !npcState.rareCardLost) {
+      const rewardCard = CARD_DB.find(c => c.id === npc.rewardCardId);
+      if (rewardCard) messages.push(`Still has the ${rewardCard.name} card in their possession.`);
+    }
+    if (messages.length) {
+      noteEl.innerHTML = messages.join('<br>');
       noteEl.classList.remove('hidden');
     } else {
       noteEl.textContent = '';
@@ -9579,6 +9716,10 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
     const p1Hand = suddenDeathHandIdsFromRoom(room.board, room.hands, 'p1');
     const p2Hand = suddenDeathHandIdsFromRoom(room.board, room.hands, 'p2');
     if (p1Hand.length === PICKER_HAND_SIZE && p2Hand.length === PICKER_HAND_SIZE) {
+      // suddenDeathHandIds is intentionally left untouched here -- it should
+      // keep pointing at the FIRST round's picks for the whole chain (see the
+      // capture logic in the deal block below), not get cleared/reset on
+      // every redistributed Sudden Death round.
       roomRef.update({
         board: toRoomBoard(Array(9).fill(null)),
         boardElements: toRoomBoard(Array(9).fill(null)),
@@ -9587,7 +9728,6 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
         picks: { p1: p1Hand, p2: p2Hand },
         closedSingleCardId: { p1: null, p2: null },
         sameRematchActive: false,
-        suddenDeathHandIds: null,
         _dealt: false,
       });
       return;
@@ -9660,7 +9800,18 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
     state.hands = handsBeforeDeal;
     const firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
     const dealId = state.roomId + '_deal_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-    roomRef.update({ hands: dealt, boardElements: toRoomBoard(boardElements), turn: firstPlayer, firstPlayer, turnStartedAt: firebase.database.ServerValue.TIMESTAMP, dealId, _dealt: true, lastPicks: room.picks, lastClosedSingleCardId: room.closedSingleCardId || null, moveHistory: null });
+    const dealUpdate = { hands: dealt, boardElements: toRoomBoard(boardElements), turn: firstPlayer, firstPlayer, turnStartedAt: firebase.database.ServerValue.TIMESTAMP, dealId, _dealt: true, lastPicks: room.picks, lastClosedSingleCardId: room.closedSingleCardId || null, moveHistory: null };
+    // Snapshot the picks for the FIRST deal of a Sudden Death match (or chain)
+    // so that once the chain finally resolves, "Same Rules/Points" rematch
+    // prefill can offer the hands the players actually picked -- not whatever
+    // ended up redistributed by the last Sudden Death round. Only capture when
+    // suddenDeathHandIds isn't already set: the SD auto-restart path (above)
+    // deliberately leaves it alone across chained rounds, so a null here means
+    // this really is round one, not a redistribution continuing the chain.
+    if (room.rules && room.rules.suddenDeath && !room.suddenDeathHandIds) {
+      dealUpdate.suddenDeathHandIds = { p1: room.picks.p1, p2: room.picks.p2 };
+    }
+    roomRef.update(dealUpdate);
     return;
   }
   applyRoomSnapshot(room);
@@ -15517,6 +15668,7 @@ function initMainMenu() {
   initAdminEditLbUi();
   initAdminNpcEditorUi();
   initAdminCpuWeightsUi();
+  initBoosterInfoUi();
   initAdminRewardGilUi();
   initAdminMiscUi();
   initControllerConfigUi();
@@ -19056,6 +19208,63 @@ function selectShopBooster(packId) {
   shopSelectedBoosterId = packId;
   refreshShopBuySlot();
 }
+// A card's status in the Info modal is tri-state: owned (currently have at
+// least 1), seen (encountered before but don't currently have one -- e.g.
+// lost it, or saw an NPC play it), or unseen (never encountered, name stays
+// a mystery). Mirrors the same owned/seen resolution the Card Index screen
+// already uses (see activeIndexProfile's callers) so the two screens never
+// disagree about what counts as "seen": in campaign mode, owning a card
+// counts as having seen it even if the seenCardIds flag was never set
+// separately (campaign collection changes don't always route through
+// markCampaignCardSeen).
+function boosterInfoCardStatus(cardId) {
+  const profile = activeShopCollection();
+  const owned = collectionStockOf(profile, cardId) > 0;
+  if (owned) return 'owned';
+  const seenFlag = !!(profile && profile.seenCardIds && profile.seenCardIds[cardId]);
+  return seenFlag ? 'seen' : 'unseen';
+}
+function buildBoosterInfoListItem(cardId) {
+  const card = CARD_DB.find(c => c.id === cardId);
+  const li = document.createElement('li');
+  const nameEl = document.createElement('span');
+  if (!card) return li;
+  const status = boosterInfoCardStatus(cardId);
+  nameEl.className = `booster-info-card-name ${status}`;
+  nameEl.textContent = status === 'unseen' ? '????' : card.name;
+  li.appendChild(nameEl);
+  return li;
+}
+function openBoosterInfoModal(packId) {
+  const pack = BOOSTER_PACKS.find(p => p.id === packId);
+  if (!pack) return;
+  playSfx('cursorMove');
+  document.getElementById('boosterInfoTitle').textContent = pack.name;
+  const rareIds = pack.cardIds.filter(isOneOfAKindCardId);
+  const commonIds = pack.cardIds.filter(id => !isOneOfAKindCardId(id));
+  const rareSection = document.getElementById('boosterInfoRareSection');
+  const rareList = document.getElementById('boosterInfoRareList');
+  rareList.innerHTML = '';
+  rareIds.forEach(id => rareList.appendChild(buildBoosterInfoListItem(id)));
+  rareSection.classList.toggle('hidden', rareIds.length === 0);
+  const commonList = document.getElementById('boosterInfoCommonList');
+  commonList.innerHTML = '';
+  commonIds.forEach(id => commonList.appendChild(buildBoosterInfoListItem(id)));
+  document.getElementById('boosterInfoModal').classList.add('show');
+}
+function closeBoosterInfoModal() {
+  document.getElementById('boosterInfoModal').classList.remove('show');
+}
+function initBoosterInfoUi() {
+  const closeBtn = document.getElementById('boosterInfoClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => { playSfx('cursorCancel'); closeBoosterInfoModal(); });
+  const modal = document.getElementById('boosterInfoModal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      if (e.target.id === 'boosterInfoModal') { playSfx('cursorCancel'); closeBoosterInfoModal(); }
+    });
+  }
+}
 const ONE_OF_A_KIND_CARD_IDS = new Set([48]);
 function isShopPurchaseLimited(card) {
   return (card.level >= 8 && card.level <= 10) || ONE_OF_A_KIND_CARD_IDS.has(card.id);
@@ -19097,6 +19306,7 @@ function refreshShopBuySlot() {
   const priceEl = document.getElementById('shopBuySlotPrice');
   const buyBtn = document.getElementById('shopBuyBtn');
   const sellBtn = document.getElementById('shopSellBtn');
+  const infoBtn = document.getElementById('shopInfoBtn');
   slot.classList.toggle('shop-buy-slot-compact', shopCampaignMode);
   if (shopSelectedBoosterId != null) {
     const pack = BOOSTER_PACKS.find(p => p.id === shopSelectedBoosterId);
@@ -19111,11 +19321,13 @@ function refreshShopBuySlot() {
     priceEl.classList.toggle('shop-price-unaffordable', !canAfford);
     buyBtn.disabled = !canAfford;
     buyBtn.textContent = 'Buy Pack';
+    infoBtn.classList.remove('hidden');
     sellBtn.classList.add('hidden');
     sellBtn.disabled = true;
     sellBtn.textContent = 'Sell';
     return;
   }
+  infoBtn.classList.add('hidden');
   if (shopSelectedCardId == null) {
     slot.classList.remove('shop-buy-slot-filled');
     cardWrap.innerHTML = '';
@@ -19341,6 +19553,9 @@ document.getElementById('shopBuyBtn').addEventListener('click', () => {
   completeShopPurchase();
 });
 document.getElementById('shopSellBtn').addEventListener('click', completeShopSale);
+document.getElementById('shopInfoBtn').addEventListener('click', () => {
+  if (shopSelectedBoosterId != null) openBoosterInfoModal(shopSelectedBoosterId);
+});
 document.getElementById('shopStoreToggleBtn').addEventListener('click', () => {
   if (!currentCampaignSave) return;
   playSfx('cursorMove');
