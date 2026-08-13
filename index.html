@@ -13904,7 +13904,7 @@ function renderCampaignTradeOverlay(ts) {
     ts.pool.forEach(p => {
       const card = CARD_DB.find(c => c.id === p.cardId);
       if (!card) return;
-      markCardSeen(card.id);
+      markCampaignCardSeen(card.id);
       const el = createCardElement({ ...card }, ts.winner, null, false);
       el.addEventListener('click', () => {
         playSfx('cardPlace');
@@ -13942,7 +13942,7 @@ function renderCampaignTradeOverlay(ts) {
   }
   const picked = ts.picked[idx];
   const card = CARD_DB.find(c => c.id === picked.cardId);
-  if (iAmWinner) markCardSeen(picked.cardId);
+  if (iAmWinner) markCampaignCardSeen(picked.cardId);
   cardStage.innerHTML = '';
   labelStage.className = '';
   labelStage.textContent = '';
