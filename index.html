@@ -5941,7 +5941,7 @@ function buildCardPriceCache() {
   }
   return cache;
 }
-const CARD_PRICE_OVERRIDE = { 111: 9100 };
+const CARD_PRICE_OVERRIDE = { 111: 9100, 48: 1250 };
 function cardPrice(cardId) {
   if (CARD_PRICE_OVERRIDE[cardId] != null) return CARD_PRICE_OVERRIDE[cardId];
   if (!_cardPriceCache) _cardPriceCache = buildCardPriceCache();
