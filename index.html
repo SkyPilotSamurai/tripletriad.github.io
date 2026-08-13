@@ -1115,6 +1115,7 @@
   }
   #adminMiscClose:hover { color: #eee; }
   #adminMiscBody { width: 100%; display: flex; flex-direction: column; gap: 2px; }
+  .admin-inline-status { font-size: 12px; color: #8a92a6; margin-top: 2px; min-height: 14px; }
   .settings-section { margin-bottom: 12px; }
   .settings-section h3 {
     color: #fff;
@@ -4985,6 +4986,11 @@
         <label>Reverse Rule - Point Budget Override (By Skill Level)</label>
         <div id="adminMiscReverseBudgetGrid"></div>
       </div>
+      <div class="settings-row admin-region-bias-row" title="Wipes the Ranked 'seen' card list (used for the grey/white/???? card-name coloring in booster Info and the Card Index) for every account. Useful for old accounts whose Ranked seen list was polluted by cards seen in Campaign or Free Play before that was fixed -- this can't be undone.">
+        <label>Ranked Seen Cards</label>
+        <button type="button" id="adminClearRankedSeenBtn" class="menu-btn-secondary">Clear Ranked Seen Cards (All Accounts)</button>
+        <div id="adminClearRankedSeenStatus" class="admin-inline-status"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -7321,7 +7327,11 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
     function buildBinderTile(card) {
       const wrap = document.createElement('div');
       wrap.className = 'picker-tile';
+      // Owned always counts as seen (see refreshIndexOwnedTotal/buildIndexTile) --
+      // without this, a card sitting right there in your own binder with
+      // stock > 0 could still render as the hidden-card logo.
       const isUnseenRanked = state.pickerStockSource === 'ranked'
+        && collectionStockOf(currentUserProfile, card.id) === 0
         && !(currentUserProfile && currentUserProfile.seenCardIds && currentUserProfile.seenCardIds[card.id]);
       const cardEl = createCardElement(card, owner, undefined, isUnseenRanked);
       wrap.appendChild(cardEl);
@@ -17279,6 +17289,35 @@ function openAdminMiscModal() {
 function closeAdminMiscModal() {
   document.getElementById('adminMiscModal').classList.remove('show');
 }
+// Bulk-clears every account's Ranked "seen" card list (currentUserProfile's
+// top-level seenCardIds, distinct from campaign's own seenCardIds) -- meant
+// as a one-time cleanup for accounts whose Ranked seen list got polluted by
+// Campaign/Free Play trade reveals before that was fixed (see
+// renderCampaignTradeOverlay). Can't selectively remove just the polluted
+// entries since seenCardIds doesn't record where each flag came from, so
+// this wipes the whole list for everyone -- legitimately-seen Ranked cards
+// will just get re-marked the next time a player sees them in a real match.
+async function adminClearAllRankedSeenCards() {
+  const btn = document.getElementById('adminClearRankedSeenBtn');
+  const statusEl = document.getElementById('adminClearRankedSeenStatus');
+  if (!btn || !statusEl) return;
+  const ok = window.confirm("Clear the Ranked seen-card list for EVERY account? This can't be undone -- players will need to re-see any cards in real Ranked matches for them to show up again.");
+  if (!ok) return;
+  btn.disabled = true;
+  statusEl.textContent = 'Clearing...';
+  try {
+    const snap = await rtdb.ref(USERS_ROOT).once('value');
+    const users = snap.val() || {};
+    const uids = Object.keys(users);
+    await Promise.all(uids.map(uid => rtdb.ref(`${USERS_ROOT}/${uid}/seenCardIds`).set(null).catch(() => {})));
+    if (currentUser && currentUserProfile) currentUserProfile.seenCardIds = {};
+    statusEl.textContent = `Cleared for ${uids.length} account${uids.length === 1 ? '' : 's'}.`;
+  } catch (err) {
+    statusEl.textContent = (err && err.message) ? err.message : 'Failed to clear.';
+  } finally {
+    btn.disabled = false;
+  }
+}
 function initAdminMiscUi() {
   const adminBtn = document.getElementById('menuAdminMisc');
   if (adminBtn) adminBtn.addEventListener('click', openAdminMiscModal);
@@ -17290,6 +17329,8 @@ function initAdminMiscUi() {
       if (e.target.id === 'adminMiscModal') { playSfx('cursorCancel'); closeAdminMiscModal(); }
     });
   }
+  const clearSeenBtn = document.getElementById('adminClearRankedSeenBtn');
+  if (clearSeenBtn) clearSeenBtn.addEventListener('click', () => { playSfx('cursorMove'); adminClearAllRankedSeenCards(); });
 }
 // ---- Controller Support --------------------------------------------------
 // Generic gamepad navigation layered on top of the existing click-driven UI.
@@ -19684,7 +19725,11 @@ function refreshIndexOwnedTotal() {
     CARD_DB.forEach(card => {
       const hasSeenFlag = !!(profile.seenCardIds && profile.seenCardIds[card.id]);
       const owned = collectionStockOf(profile, card.id) > 0;
-      if (indexCampaignMode ? (hasSeenFlag || owned) : hasSeenFlag) uniqueSeen++;
+      // Owning a card always counts as having seen it, in Ranked same as
+      // Campaign -- otherwise cards you've earned/bought but never happened
+      // to get a separate seenCardIds write for (e.g. shop purchases) would
+      // wrongly show as unseen. See boosterInfoCardStatus for the same rule.
+      if (hasSeenFlag || owned) uniqueSeen++;
     });
   }
   totalEl.textContent =
@@ -19733,7 +19778,9 @@ function buildIndexTile(card) {
   const profile = activeIndexProfile();
   const owned = collectionStockOf(profile, card.id);
   const hasSeenFlag = !!(profile && profile.seenCardIds && profile.seenCardIds[card.id]);
-  const isUnseen = indexCampaignMode ? (!hasSeenFlag && owned === 0) : !hasSeenFlag;
+  // Owned always counts as seen (see refreshIndexOwnedTotal) -- applies in
+  // Ranked same as Campaign, not just Campaign.
+  const isUnseen = !hasSeenFlag && owned === 0;
   const cardEl = createCardElement(card, 'p1', undefined, isUnseen);
   wrap.appendChild(cardEl);
   const countEl = document.createElement('div');
