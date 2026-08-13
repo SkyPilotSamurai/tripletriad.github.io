@@ -4986,6 +4986,13 @@
         <label>Reverse Rule - Point Budget Override (By Skill Level)</label>
         <div id="adminMiscReverseBudgetGrid"></div>
       </div>
+      <div class="settings-row checkbox-row" title="Campaign NPCs normally build their hand by spending as much budget as possible on the first few cards, which often leaves just enough for a level 1 on the last slot or two -- a couple of maxed-out cards plus a pile of level 1s. This softens that skew toward a more even spread of levels across the hand, without removing high/low variety entirely -- see the slider below to control how strongly it applies. Only affects Campaign NPCs built from a point budget (not the Random rule, which already ignores points).">
+        <label><input type="checkbox" id="adminCampaignHandBalanceToggle"> Balanced NPC Hands (Campaign)</label>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="How strongly to soften the high/low skew when Balanced NPC Hands is on. 0% = no change from the default lopsided behavior. 100% = each card slot gets an even share of the remaining budget (still varies by highest-affordable-card-in-range and regional bias, just centered rather than skewed).">
+        <label for="adminCampaignHandBalanceSlider">Hand Balance Strength: <span id="adminCampaignHandBalanceValue">50%</span></label>
+        <input type="range" id="adminCampaignHandBalanceSlider" min="0" max="100" step="1" value="50">
+      </div>
       <div class="settings-row admin-region-bias-row" title="Wipes the Ranked 'seen' card list (used for the grey/white/???? card-name coloring in booster Info and the Card Index) for every account. Useful for old accounts whose Ranked seen list was polluted by cards seen in Campaign or Free Play before that was fixed -- this can't be undone.">
         <label>Ranked Seen Cards</label>
         <button type="button" id="adminClearRankedSeenBtn" class="menu-btn-secondary">Clear Ranked Seen Cards (All Accounts)</button>
@@ -5681,6 +5688,21 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/regionCardBiasPercent`).on('value', snap => {
   const label = document.getElementById('adminRegionCardBiasValue');
   if (slider && document.activeElement !== slider) slider.value = campaignRegionCardBiasPercent;
   if (label) label.textContent = `${campaignRegionCardBiasPercent}%`;
+});
+let campaignHandBalanceEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceEnabled`).on('value', snap => {
+  campaignHandBalanceEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminCampaignHandBalanceToggle');
+  if (toggle) toggle.checked = campaignHandBalanceEnabled;
+});
+let campaignHandBalancePercent = 50;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  campaignHandBalancePercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 50;
+  const slider = document.getElementById('adminCampaignHandBalanceSlider');
+  const label = document.getElementById('adminCampaignHandBalanceValue');
+  if (slider && document.activeElement !== slider) slider.value = campaignHandBalancePercent;
+  if (label) label.textContent = `${campaignHandBalancePercent}%`;
 });
 let boosterDuplicateWeightPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).on('value', snap => {
@@ -8464,7 +8486,22 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
   for (let i = 0; i < otherSlots; i++) {
     const slotsRemaining = otherSlots - i;
     const reserveForOtherSlots = (slotsRemaining - 1) * minLevelInPool;
-    const perSlotCap = Math.max(minLevelInPool, otherBudget - spent - reserveForOtherSlots);
+    const greedyCap = Math.max(minLevelInPool, otherBudget - spent - reserveForOtherSlots);
+    // Balanced Hands (Misc admin toggle + slider): the greedy cap above lets
+    // the first slot(s) eat almost the whole remaining budget, which is what
+    // produces the "couple of maxed-out cards then a pile of level 1s"
+    // pattern -- reserveForOtherSlots only holds back the bare minimum
+    // (minLevelInPool) per remaining slot, not a fair share. Blending toward
+    // an even per-slot share softens that skew -- higher balance = less
+    // extreme high/low spread -- without flattening it into a single level,
+    // since the card actually chosen is still whichever's highest AFFORDABLE
+    // within this slot's cap (plus regional bias/tie-break randomness).
+    let perSlotCap = greedyCap;
+    if (campaignHandBalanceEnabled && campaignHandBalancePercent > 0 && slotsRemaining > 1) {
+      const evenCap = Math.max(minLevelInPool, Math.floor((otherBudget - spent) / slotsRemaining));
+      const balanceAmount = Math.min(100, campaignHandBalancePercent) / 100;
+      perSlotCap = Math.round(greedyCap + (evenCap - greedyCap) * balanceAmount);
+    }
     const candidates = pool.filter(c => c.level <= perSlotCap);
     let biasedCandidates = candidates;
     if (regionCardIds.length && Math.random() * 100 < regionBiasPercent) {
@@ -15946,6 +15983,20 @@ document.getElementById('adminCpuThreePlyToggle').addEventListener('change', e =
 document.getElementById('adminCpuStillComboToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/cpuStillComboEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCampaignHandBalanceToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCampaignHandBalanceSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminCampaignHandBalanceValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminCampaignHandBalanceSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).set(v).catch(() => {});
 });
 document.getElementById('adminCpuGilRewardsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
