@@ -4993,6 +4993,13 @@
         <label for="adminCampaignHandBalanceSlider">Hand Balance Strength: <span id="adminCampaignHandBalanceValue">50%</span></label>
         <input type="range" id="adminCampaignHandBalanceSlider" min="0" max="100" step="1" value="50">
       </div>
+      <div class="settings-row checkbox-row" title="The Auto button in the card picker (any human player, any mode) already targets an even level per slot with weighted randomness rather than the NPC's pure greedy-highest approach, but a lucky/unlucky roll can still occasionally skew a slot toward the top of its budget cap. This tightens that cap toward an even per-slot share the same way Balanced NPC Hands does, for a more consistent Auto-fill hand. Only affects budgeted picks (point-limited rooms/matches) -- unlimited-budget picks are unaffected.">
+        <label><input type="checkbox" id="adminPickerHandBalanceToggle"> Balanced Auto Hand (Player Picker)</label>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="How strongly to tighten the per-slot budget cap when Balanced Auto Hand is on. 0% = no change from default. 100% = each remaining slot's cap is an even share of the remaining budget.">
+        <label for="adminPickerHandBalanceSlider">Auto Hand Balance Strength: <span id="adminPickerHandBalanceValue">50%</span></label>
+        <input type="range" id="adminPickerHandBalanceSlider" min="0" max="100" step="1" value="50">
+      </div>
       <div class="settings-row admin-region-bias-row" title="Wipes the Ranked 'seen' card list (used for the grey/white/???? card-name coloring in booster Info and the Card Index) for every account. Useful for old accounts whose Ranked seen list was polluted by cards seen in Campaign or Free Play before that was fixed -- this can't be undone.">
         <label>Ranked Seen Cards</label>
         <button type="button" id="adminClearRankedSeenBtn" class="menu-btn-secondary">Clear Ranked Seen Cards (All Accounts)</button>
@@ -5703,6 +5710,21 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).on('value', snap => {
   const label = document.getElementById('adminCampaignHandBalanceValue');
   if (slider && document.activeElement !== slider) slider.value = campaignHandBalancePercent;
   if (label) label.textContent = `${campaignHandBalancePercent}%`;
+});
+let pickerHandBalanceEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalanceEnabled`).on('value', snap => {
+  pickerHandBalanceEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminPickerHandBalanceToggle');
+  if (toggle) toggle.checked = pickerHandBalanceEnabled;
+});
+let pickerHandBalancePercent = 50;
+rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalancePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  pickerHandBalancePercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 50;
+  const slider = document.getElementById('adminPickerHandBalanceSlider');
+  const label = document.getElementById('adminPickerHandBalanceValue');
+  if (slider && document.activeElement !== slider) slider.value = pickerHandBalancePercent;
+  if (label) label.textContent = `${pickerHandBalancePercent}%`;
 });
 let boosterDuplicateWeightPercent = 0;
 rtdb.ref(`${GAME_CONFIG_ROOT}/boosterDuplicateWeightPercent`).on('value', snap => {
@@ -7192,7 +7214,18 @@ function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeak
         }, 0)
       : 0;
     const reserveForOtherSlots = hasBudget ? Math.max(0, slotsRemaining - 1) : 0;
-    const perSlotCap = hasBudget ? Math.max(0, pointBudget - spent - reserveForOtherSlots) : Infinity;
+    const greedyCap = hasBudget ? Math.max(0, pointBudget - spent - reserveForOtherSlots) : Infinity;
+    // Balanced Auto Hand (Misc admin toggle + slider): this already targets
+    // an even level per slot via weighted randomness below, but a lucky/
+    // unlucky roll can still land near the top of a wide-open cap. Tightening
+    // the cap toward an even per-slot share (same blend as Balanced NPC
+    // Hands) keeps outlier picks from happening in the first place.
+    let perSlotCap = greedyCap;
+    if (hasBudget && pickerHandBalanceEnabled && pickerHandBalancePercent > 0 && slotsRemaining > 1) {
+      const evenCap = Math.max(1, Math.floor((pointBudget - spent) / slotsRemaining));
+      const balanceAmount = Math.min(100, pickerHandBalancePercent) / 100;
+      perSlotCap = Math.round(greedyCap + (evenCap - greedyCap) * balanceAmount);
+    }
     const baseFilter = c => {
       const remainingStock = cardStock(c.id) - (counts.get(c.id) || 0);
       if (remainingStock <= 0) return false;
@@ -15997,6 +16030,20 @@ document.getElementById('adminCampaignHandBalanceSlider').addEventListener('chan
   playSfx('cursorMove');
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).set(v).catch(() => {});
+});
+document.getElementById('adminPickerHandBalanceToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalanceEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminPickerHandBalanceSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminPickerHandBalanceValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminPickerHandBalanceSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalancePercent`).set(v).catch(() => {});
 });
 document.getElementById('adminCpuGilRewardsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
