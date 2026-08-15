@@ -5005,6 +5005,11 @@
         <button type="button" id="adminClearRankedSeenBtn" class="menu-btn-secondary">Clear Ranked Seen Cards (All Accounts)</button>
         <div id="adminClearRankedSeenStatus" class="admin-inline-status"></div>
       </div>
+      <div class="settings-row admin-region-bias-row" title="Writes every Campaign NPC edit currently stored in Firebase (campaignAdmin) back into this page's own source, so the NPC data in index.html matches what players actually see. Downloads two files: a timestamped backup of the page as it is right now, then a patched index.html to drop into the repo. Nothing on the server or in the database is changed -- the overrides stay in Firebase and keep working exactly as before, they just stop being the only copy.">
+        <label>Campaign NPC Overrides</label>
+        <button type="button" id="adminBakeNpcOverridesBtn" class="menu-btn-secondary">Bake NPC Overrides into index.html</button>
+        <div id="adminBakeNpcOverridesStatus" class="admin-inline-status"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -6668,6 +6673,13 @@ function campaignEmptyRules(overrides) {
     reverse: false, chaos: false, order: false, swap: false, roulette: false,
   }, overrides || {});
 }
+// ==== BAKE:CAMPAIGN_NPC_QUOTES:START ====
+// Everything between this marker and the matching :END marker is regenerated
+// wholesale by the "Bake NPC Overrides into index.html" button in Admin > Misc.
+// Hand-edits in here survive fine until the next bake, but a bake overwrites
+// them with whatever the live game has in memory (these file defaults with the
+// Firebase campaignAdmin overrides already merged on top). Edit freely -- just
+// re-bake afterwards, or make the change through the NPC editor instead.
 const CAMPAIGN_NPC_QUOTES = {
   'trepie': "How 'bout a quick game of cards?",
   'trepie-friend': "Cards? Yeah sure, I'll play.",
@@ -6746,9 +6758,16 @@ const CAMPAIGN_NPC_QUOTES = {
   'queen-of-cards': "You wish to challenge me?",
   'chocobo-forest-man': "You don't believe me either, huh? Fine - let's play. Winner gets to laugh at the other one.",
 };
+// ==== BAKE:CAMPAIGN_NPC_QUOTES:END ====
 function campaignNpcQuote(npc) {
   return CAMPAIGN_NPC_QUOTES[npc.id] || 'Want to play a card game?';
 }
+// ==== BAKE:CAMPAIGN_LOCATIONS:START ====
+// Regenerated wholesale by the "Bake NPC Overrides into index.html" button in
+// Admin > Misc -- same rules as the quotes block above. Note the bake emits
+// every NPC field it finds, so admin-only fields (cardPool, doubleUpPercent,
+// regionBiasPercent, oneOfAKindPlayChancePercent, sortOrder) will start
+// appearing here once you set them, and NPCs deleted via the editor drop out.
 const CAMPAIGN_LOCATIONS = [
   {
     id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.png',
@@ -6996,6 +7015,7 @@ const CAMPAIGN_LOCATIONS = [
     ],
   },
 ];
+// ==== BAKE:CAMPAIGN_LOCATIONS:END ====
 function campaignAllNpcs() {
   return CAMPAIGN_LOCATIONS.flatMap(loc => loc.npcs.map(npc => ({ ...npc, locationId: loc.id })));
 }
@@ -17416,6 +17436,182 @@ async function adminClearAllRankedSeenCards() {
     btn.disabled = false;
   }
 }
+// ---- Bake Campaign NPC Overrides into index.html -------------------------
+// The NPC editor writes to Firebase (campaignAdmin/npcOverrides + customNpcs)
+// and loadCampaignAdminOverrides() merges those on top of the hardcoded
+// CAMPAIGN_LOCATIONS at boot. That works, but it means the source file drifts
+// further from the real game with every edit, and anyone reading index.html is
+// reading stale data. This regenerates the two NPC data blocks from what the
+// game currently has in memory and hands back a patched copy of this page.
+//
+// A page can't write to its own file on disk, so this downloads instead: first
+// a timestamped backup of the source exactly as it is right now, then the
+// patched index.html to drop into the repo. Firebase is deliberately left
+// untouched -- once the patched file is deployed the overrides just re-apply on
+// top of matching defaults, which is a no-op, so there's no window where the
+// game breaks if the deploy is delayed or rolled back. Clear the campaignAdmin
+// node by hand later if you want the file to be the only copy.
+//
+// Note the first bake reformats the whole block (regenerated quoting/spacing
+// won't match the hand-written original). Every bake after that is stable --
+// same input, byte-identical output.
+function bakeMarker(block, edge) {
+  // Assembled at runtime rather than written as a literal: if the full marker
+  // text appeared in this function's own source, the indexOf() searches below
+  // could match here instead of at the real data block.
+  return '// ==== ' + 'BAKE:' + block + ':' + edge + ' ====';
+}
+function bakeStr(v) {
+  // JSON.stringify emits a correctly-escaped double-quoted string that is also
+  // a valid JS string literal. U+2028/9 are legal in JSON but are line
+  // terminators in JS source, so they need escaping on top.
+  return JSON.stringify(String(v)).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+function bakeKeyName(k) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k) ? k : bakeStr(k);
+}
+function bakeValueLiteral(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'string') return bakeStr(v);
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (Array.isArray(v)) return '[' + v.map(bakeValueLiteral).join(', ') + ']';
+  return '{ ' + Object.keys(v).map(k => bakeKeyName(k) + ': ' + bakeValueLiteral(v[k])).join(', ') + ' }';
+}
+function bakeRulesLiteral(rules) {
+  // Emit only the flags that are on, wrapped in campaignEmptyRules() exactly
+  // like the hand-written data, so the defaults stay in one place.
+  const on = Object.keys(rules || {}).filter(k => rules[k]);
+  if (!on.length) return 'campaignEmptyRules()';
+  return 'campaignEmptyRules({ ' + on.map(k => bakeKeyName(k) + ': true').join(', ') + ' })';
+}
+// Fields written in this order when present; anything else found on an NPC is
+// appended afterwards so a field added to the editor later still round-trips
+// instead of being silently dropped.
+const BAKE_NPC_FIELD_ORDER = ['rewardCardId', 'cardPool', 'doubleUpPercent', 'regionBiasPercent',
+  'oneOfAKindPlayChancePercent', 'sortOrder', 'minUnlockedLocations', 'requiresDefeatedNpcIds', 'finalBoss'];
+// _adminCustom is dropped on purpose. It routes editor saves to
+// campaignAdmin/customNpcs, and loadCampaignAdminOverrides() skips a customNpcs
+// entry whose id already exists in the file -- so keeping the flag on a
+// baked-in NPC would make every future edit to it silently vanish on reload.
+// Without it the NPC is an ordinary file NPC and edits go to npcOverrides.
+const BAKE_NPC_CORE_KEYS = ['id', 'name', 'desc', 'rules', 'cpuDifficulty', 'cpuBehavior', '_adminCustom'];
+function bakeExtraKeys(obj, coreKeys, ordered) {
+  const extras = (ordered || []).filter(k => obj[k] !== undefined && obj[k] !== null);
+  Object.keys(obj).forEach(k => {
+    if (coreKeys.indexOf(k) !== -1) return;
+    if ((ordered || []).indexOf(k) !== -1) return;
+    if (obj[k] === undefined || obj[k] === null) return;
+    extras.push(k);
+  });
+  return extras;
+}
+function bakeNpcLiteral(npc) {
+  const parts = ['rules: ' + bakeRulesLiteral(npc.rules),
+    'cpuDifficulty: ' + (Number(npc.cpuDifficulty) || 1),
+    'cpuBehavior: ' + bakeStr(npc.cpuBehavior || 'normal')];
+  bakeExtraKeys(npc, BAKE_NPC_CORE_KEYS, BAKE_NPC_FIELD_ORDER)
+    .forEach(k => parts.push(bakeKeyName(k) + ': ' + bakeValueLiteral(npc[k])));
+  return '      { id: ' + bakeStr(npc.id) + ', name: ' + bakeStr(npc.name) + ', desc: ' + bakeStr(npc.desc || '') + ',\n' +
+    '        ' + parts.join(', ') + ' },';
+}
+const BAKE_LOC_CORE_KEYS = ['id', 'name', 'image', 'desc', 'npcs'];
+function bakeLocationLiteral(loc) {
+  const head = ['id: ' + bakeStr(loc.id), 'name: ' + bakeStr(loc.name),
+    'image: ' + (loc.image ? bakeStr(loc.image) : 'null')];
+  bakeExtraKeys(loc, BAKE_LOC_CORE_KEYS, [])
+    .forEach(k => head.push(bakeKeyName(k) + ': ' + bakeValueLiteral(loc[k])));
+  const lines = ['  {', '    ' + head.join(', ') + ',', '    desc: ' + bakeStr(loc.desc || '') + ',', '    npcs: ['];
+  (loc.npcs || []).forEach(n => lines.push(bakeNpcLiteral(n)));
+  lines.push('    ],', '  },');
+  return lines.join('\n');
+}
+function bakeQuotesBlock() {
+  const body = Object.keys(CAMPAIGN_NPC_QUOTES)
+    .map(id => '  ' + bakeStr(id) + ': ' + bakeStr(CAMPAIGN_NPC_QUOTES[id]) + ',').join('\n');
+  return 'const ' + 'CAMPAIGN_NPC_QUOTES' + ' = {\n' + body + '\n};';
+}
+function bakeLocationsBlock() {
+  return 'const ' + 'CAMPAIGN_LOCATIONS' + ' = [\n' + CAMPAIGN_LOCATIONS.map(bakeLocationLiteral).join('\n') + '\n];';
+}
+function bakeReplaceBlock(src, block, declPrefix, body) {
+  const startMark = bakeMarker(block, 'START');
+  const endMark = bakeMarker(block, 'END');
+  const s = src.indexOf(startMark);
+  if (s === -1) throw new Error('Missing the ' + block + ' START marker in the page source.');
+  const e = src.indexOf(endMark, s);
+  if (e === -1) throw new Error('Missing the ' + block + ' END marker in the page source.');
+  // Replace from the declaration itself, not from the marker, so the
+  // explanatory comment banner under the START marker is preserved.
+  const d = src.indexOf(declPrefix, s);
+  if (d === -1 || d > e) throw new Error('Could not find "' + declPrefix + '" inside the ' + block + ' block.');
+  return src.slice(0, d) + body + '\n' + src.slice(e);
+}
+function bakeTriggerDownload(filename, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/html' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+function bakeTimestamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + '-' + p(d.getMinutes());
+}
+async function adminBakeNpcOverridesIntoIndex() {
+  const btn = document.getElementById('adminBakeNpcOverridesBtn');
+  const statusEl = document.getElementById('adminBakeNpcOverridesStatus');
+  if (!btn || !statusEl) return;
+  btn.disabled = true;
+  statusEl.textContent = 'Reading this page’s source...';
+  try {
+    const srcUrl = window.location.href.split('#')[0].split('?')[0];
+    let res;
+    try {
+      res = await fetch(srcUrl, { cache: 'no-store' });
+    } catch (netErr) {
+      throw new Error('Could not read this page’s own source. If you opened index.html straight from disk (file://), serve the folder over http instead -- browsers block a file:// page from fetching itself.');
+    }
+    if (!res.ok) throw new Error('Reading this page returned HTTP ' + res.status + '.');
+    const original = await res.text();
+    if (original.indexOf(bakeMarker('CAMPAIGN_LOCATIONS', 'START')) === -1) {
+      throw new Error('The deployed index.html has no bake markers -- it is older than the build running here. Deploy the marked-up file first, then bake.');
+    }
+    // Re-read the database rather than trusting this tab's merge: another
+    // admin may have edited an NPC since this tab loaded. Re-running the
+    // loader is idempotent (same fields reapplied, already-added customs
+    // skipped, already-removed deletions no-op).
+    statusEl.textContent = 'Re-reading NPC overrides from the database...';
+    await loadCampaignAdminOverrides();
+    const admin = (await rtdb.ref(CAMPAIGN_ADMIN_ROOT).once('value')).val() || {};
+    const overrides = admin.npcOverrides || {};
+    const customNpcs = admin.customNpcs || {};
+    const overrideIds = Object.keys(overrides);
+    const deletedCount = overrideIds.filter(id => overrides[id] && overrides[id].deleted).length;
+    const editedCount = overrideIds.length - deletedCount;
+    const customCount = Object.keys(customNpcs).length;
+    statusEl.textContent = 'Building patched file...';
+    let patched = bakeReplaceBlock(original, 'CAMPAIGN_NPC_QUOTES', 'const ' + 'CAMPAIGN_NPC_QUOTES' + ' = {', bakeQuotesBlock());
+    patched = bakeReplaceBlock(patched, 'CAMPAIGN_LOCATIONS', 'const ' + 'CAMPAIGN_LOCATIONS' + ' = [', bakeLocationsBlock());
+    const stamp = bakeTimestamp();
+    bakeTriggerDownload('index.backup-' + stamp + '.html', original);
+    // Small gap so the backup lands first; some browsers prompt once to allow
+    // multiple downloads from a page, which is expected here.
+    await new Promise(r => setTimeout(r, 900));
+    bakeTriggerDownload('index.html', patched);
+    const npcTotal = CAMPAIGN_LOCATIONS.reduce((n, l) => n + (l.npcs ? l.npcs.length : 0), 0);
+    const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+    statusEl.textContent = 'Baked ' + plural(editedCount, 'edit') + ', ' + plural(customCount, 'custom NPC') + ', ' +
+      plural(deletedCount, 'deletion') + ' -- ' + plural(npcTotal, 'NPC') + ' written. Downloaded the backup and the patched index.html; swap the patched one into the repo. Firebase was not touched.';
+  } catch (err) {
+    statusEl.textContent = (err && err.message) ? err.message : 'Failed to bake.';
+  } finally {
+    btn.disabled = false;
+  }
+}
 function initAdminMiscUi() {
   const adminBtn = document.getElementById('menuAdminMisc');
   if (adminBtn) adminBtn.addEventListener('click', openAdminMiscModal);
@@ -17429,6 +17625,8 @@ function initAdminMiscUi() {
   }
   const clearSeenBtn = document.getElementById('adminClearRankedSeenBtn');
   if (clearSeenBtn) clearSeenBtn.addEventListener('click', () => { playSfx('cursorMove'); adminClearAllRankedSeenCards(); });
+  const bakeBtn = document.getElementById('adminBakeNpcOverridesBtn');
+  if (bakeBtn) bakeBtn.addEventListener('click', () => { playSfx('cursorMove'); adminBakeNpcOverridesIntoIndex(); });
 }
 // ---- Controller Support --------------------------------------------------
 // Generic gamepad navigation layered on top of the existing click-driven UI.
