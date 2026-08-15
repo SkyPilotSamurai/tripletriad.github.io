@@ -4993,6 +4993,10 @@
         <label for="adminCampaignHandBalanceSlider">Hand Balance Strength: <span id="adminCampaignHandBalanceValue">50%</span></label>
         <input type="range" id="adminCampaignHandBalanceSlider" min="0" max="100" step="1" value="50">
       </div>
+      <div class="settings-row admin-region-bias-row" title="Overrides Hand Balance Strength for NPCs of a single skill level. Each box starts at whatever the slider above is set to -- change one and only NPCs of that cpuDifficulty use it, so you can give low-level NPCs even hands and let level 5 bosses keep the lopsided ace-plus-junk spread, or the other way round. Blank a box (or click Reset) to hand that level back to the slider. Requires Balanced NPC Hands to be ticked.">
+        <label>Hand Balance Strength (By Skill Level)</label>
+        <div id="adminMiscHandBalanceGrid"></div>
+      </div>
       <div class="settings-row checkbox-row" title="The Auto button in the card picker (any human player, any mode) already targets an even level per slot with weighted randomness rather than the NPC's pure greedy-highest approach, but a lucky/unlucky roll can still occasionally skew a slot toward the top of its budget cap. This tightens that cap toward an even per-slot share the same way Balanced NPC Hands does, for a more consistent Auto-fill hand. Only affects budgeted picks (point-limited rooms/matches) -- unlimited-budget picks are unaffected.">
         <label><input type="checkbox" id="adminPickerHandBalanceToggle"> Balanced Auto Hand (Player Picker)</label>
       </div>
@@ -5715,7 +5719,22 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).on('value', snap => {
   const label = document.getElementById('adminCampaignHandBalanceValue');
   if (slider && document.activeElement !== slider) slider.value = campaignHandBalancePercent;
   if (label) label.textContent = `${campaignHandBalancePercent}%`;
+  renderAdminMiscHandBalanceGrid();
 });
+// Per-skill-level Hand Balance. The slider above stays the baseline for every
+// level; anything set here overrides it for NPCs of that cpuDifficulty only,
+// so a level 1 cadet can play near-even hands while a level 5 boss keeps the
+// lopsided ace-plus-junk spread (or the reverse). An unset level just uses
+// the slider, which is why nothing changes until a box is actually touched.
+let campaignHandBalanceByLevel = {};
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceByLevel`).on('value', snap => {
+  campaignHandBalanceByLevel = snap.val() || {};
+  renderAdminMiscHandBalanceGrid();
+});
+function campaignHandBalancePercentForLevel(skillLevel) {
+  const v = Number(campaignHandBalanceByLevel && campaignHandBalanceByLevel[skillLevel]);
+  return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : campaignHandBalancePercent;
+}
 let pickerHandBalanceEnabled = false;
 rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalanceEnabled`).on('value', snap => {
   pickerHandBalanceEnabled = snap.val() === true;
@@ -8512,8 +8531,25 @@ function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards
     const outCard = result[outIdx];
     const spentWithoutOut = totalSpent() - outCard.level;
     const budgetForSwap = otherBudget - spentWithoutOut;
-    const candidates = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
-    if (candidates.length === 0) break;
+    const affordable = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
+    if (affordable.length === 0) break;
+    // This loop runs up to minElemental times (3 for an 'elemental' NPC) and
+    // every pass independently grabs the highest-level affordable elemental
+    // card -- which is nearly always the SAME card. Unfiltered, that built
+    // 3x Tri-Point hands for CC Master King 100% of the time, completely
+    // bypassing Double Up. Prefer cards the hand isn't already holding;
+    // duplicates stay reachable, but only through the NPC's own Double Up
+    // chance, exactly like the main hand-building loop below.
+    const alreadyHeld = new Set(
+      result.filter((c, i) => i !== outIdx).map(c => c.id)
+        .concat((rareCards || []).map(c => c.id))
+    );
+    const fresh = affordable.filter(c => !alreadyHeld.has(c.id));
+    let candidates = fresh;
+    if (!fresh.length) {
+      if (Math.random() * 100 >= (npc.doubleUpPercent || 0)) break;
+      candidates = affordable;
+    }
     const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
     const best = candidates.filter(c => c.level === highestLevel);
     const inCard = best[Math.floor(Math.random() * best.length)];
@@ -8549,10 +8585,13 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
     // extreme high/low spread -- without flattening it into a single level,
     // since the card actually chosen is still whichever's highest AFFORDABLE
     // within this slot's cap (plus regional bias/tie-break randomness).
+    // Strength is looked up per NPC skill level (Misc > Hand Balance By Skill
+    // Level), falling back to the single slider for any level left unset.
     let perSlotCap = greedyCap;
-    if (campaignHandBalanceEnabled && campaignHandBalancePercent > 0 && slotsRemaining > 1) {
+    const handBalancePercent = campaignHandBalancePercentForLevel(npc && npc.cpuDifficulty);
+    if (campaignHandBalanceEnabled && handBalancePercent > 0 && slotsRemaining > 1) {
       const evenCap = Math.max(minLevelInPool, Math.floor((otherBudget - spent) / slotsRemaining));
-      const balanceAmount = Math.min(100, campaignHandBalancePercent) / 100;
+      const balanceAmount = Math.min(100, handBalancePercent) / 100;
       perSlotCap = Math.round(greedyCap + (evenCap - greedyCap) * balanceAmount);
     }
     const candidates = pool.filter(c => c.level <= perSlotCap);
@@ -8566,7 +8605,14 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
       const unusedCandidates = biasedCandidates.filter(c => !usageCounts.get(c.id));
       const usedCandidates = biasedCandidates.filter(c => usageCounts.get(c.id));
       const wantsDouble = usedCandidates.length > 0 && Math.random() * 100 < (npc.doubleUpPercent || 0);
-      const pickFrom = wantsDouble ? biasedCandidates : (unusedCandidates.length ? unusedCandidates : biasedCandidates);
+      // Region bias can narrow a slot to a handful of cards (Winhill and
+      // Fisherman's Horizon list two each), which used to force a duplicate
+      // the moment they were spent. Drop the bias for this slot and retry
+      // against the full affordable set before resorting to a repeat.
+      const unusedUnbiased = unusedCandidates.length
+        ? unusedCandidates
+        : candidates.filter(c => !usageCounts.get(c.id));
+      const pickFrom = wantsDouble ? biasedCandidates : (unusedUnbiased.length ? unusedUnbiased : biasedCandidates);
       const highestLevel = pickFrom.reduce((max, c) => Math.max(max, c.level), 0);
       const best = pickFrom.filter(c => c.level === highestLevel);
       card = best[Math.floor(Math.random() * best.length)];
@@ -8603,8 +8649,18 @@ function buildCampaignNpcRandomHand(npc, forcedRareCardIds) {
   const rareCards = (forcedRareCardIds || []).map(id => CARD_DB.find(c => c.id === id)).filter(Boolean);
   const otherSlots = Math.max(0, PICKER_HAND_SIZE - rareCards.length);
   const others = [];
+  // Uniform random *with replacement* duplicated a card in ~28% of hands even
+  // at 0% Double Up. Draw from what the hand isn't holding yet, and only fall
+  // back to the whole pool when Double Up says so (or the pool is genuinely
+  // too small to fill five distinct slots).
+  const usedIds = new Set(rareCards.map(c => c.id));
   for (let i = 0; i < otherSlots; i++) {
-    others.push({ ...pool[Math.floor(Math.random() * pool.length)] });
+    const fresh = pool.filter(c => !usedIds.has(c.id));
+    const wantsDouble = Math.random() * 100 < (npc.doubleUpPercent || 0);
+    const pickFrom = (fresh.length && !wantsDouble) ? fresh : pool;
+    const card = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+    usedIds.add(card.id);
+    others.push({ ...card });
   }
   const hand = others.slice();
   rareCards.forEach(rareCard => {
@@ -16045,6 +16101,12 @@ document.getElementById('adminCampaignHandBalanceSlider').addEventListener('inpu
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   const label = document.getElementById('adminCampaignHandBalanceValue');
   if (label) label.textContent = `${v}%`;
+  // Keep the per-level boxes' greyed placeholders showing the value any
+  // un-overridden level would actually use while the slider is being dragged.
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscHandBalance_${level}`);
+    if (input) input.placeholder = String(v);
+  }
 });
 document.getElementById('adminCampaignHandBalanceSlider').addEventListener('change', e => {
   playSfx('cursorMove');
@@ -17337,6 +17399,87 @@ function writeReverseBudget(metric, level, value) {
     rtdb.ref(`${GAME_CONFIG_ROOT}/reverseBudget/${metric}/${level}`).set(value).catch(() => {});
   }, 350);
 }
+function writeCampaignHandBalanceForLevel(level, value) {
+  clearTimeout(adminMiscWriteTimers['handBalance_' + level]);
+  adminMiscWriteTimers['handBalance_' + level] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceByLevel/${level}`).set(value).catch(() => {});
+  }, 350);
+}
+// Per-skill-level override row for Hand Balance Strength. Same
+// column-per-level layout and CSS classes as the grid below it. An empty box
+// means "no override" -- that level falls back to the single slider, and the
+// box shows the slider's current value greyed rather than a hard 0, so it
+// always reads as the value actually in effect.
+function renderAdminMiscHandBalanceGrid() {
+  const grid = document.getElementById('adminMiscHandBalanceGrid');
+  if (!grid) return;
+  if (grid.dataset.built !== 'true') {
+    grid.innerHTML = '';
+    grid.dataset.built = 'true';
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-cpu-level-metric';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'admin-cpu-level-metric-hint';
+    hintEl.textContent = '0% = fully lopsided (a couple of maxed cards then level 1 filler), 100% = an even share of the budget per slot. Empty = use the slider above.';
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'admin-cpu-level-inputs';
+    for (let level = 1; level <= 5; level++) {
+      const group = document.createElement('div');
+      group.className = 'admin-cpu-level-input-group';
+      const span = document.createElement('span');
+      span.textContent = `Lv${level}`;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.max = '100';
+      input.step = '1';
+      input.id = `adminMiscHandBalance_${level}`;
+      input.addEventListener('input', () => {
+        if (input.value.trim() === '') {
+          input.classList.remove('overridden');
+          writeCampaignHandBalanceForLevel(level, null);
+          return;
+        }
+        const raw = Math.round(Number(input.value));
+        if (!Number.isFinite(raw)) return;
+        input.classList.add('overridden');
+        writeCampaignHandBalanceForLevel(level, Math.max(0, Math.min(100, raw)));
+      });
+      group.appendChild(span);
+      group.appendChild(input);
+      inputsRow.appendChild(group);
+    }
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'menu-btn-secondary';
+    resetBtn.textContent = 'Reset All To Slider';
+    resetBtn.addEventListener('click', () => {
+      playSfx('cursorMove');
+      for (let level = 1; level <= 5; level++) {
+        clearTimeout(adminMiscWriteTimers['handBalance_' + level]);
+        const input = document.getElementById(`adminMiscHandBalance_${level}`);
+        if (input) { input.value = ''; input.classList.remove('overridden'); }
+      }
+      rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceByLevel`).set(null).catch(() => {});
+    });
+    wrap.appendChild(hintEl);
+    wrap.appendChild(inputsRow);
+    wrap.appendChild(resetBtn);
+    grid.appendChild(wrap);
+  }
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscHandBalance_${level}`);
+    if (!input || document.activeElement === input) continue;
+    const raw = Number(campaignHandBalanceByLevel && campaignHandBalanceByLevel[level]);
+    const hasOverride = Number.isFinite(raw);
+    input.value = hasOverride ? String(Math.max(0, Math.min(100, raw))) : '';
+    input.placeholder = String(campaignHandBalancePercent);
+    input.classList.toggle('overridden', hasOverride);
+    input.title = hasOverride
+      ? `Level ${level} NPCs use ${Math.max(0, Math.min(100, raw))}% (slider default: ${campaignHandBalancePercent}%)`
+      : `Level ${level} NPCs use the slider default: ${campaignHandBalancePercent}%`;
+  }
+}
 // Same row-per-metric, column-per-skill-level layout as CPU AI Weights' "By
 // Skill Level" grid (reuses its CSS classes), just built once directly into
 // the Misc modal instead of a separate tab.
@@ -17403,6 +17546,7 @@ function openAdminMiscModal() {
   playSfx('cursorMove');
   document.getElementById('adminMiscModal').classList.add('show');
   renderAdminMiscReverseBudgetGrid();
+  renderAdminMiscHandBalanceGrid();
 }
 function closeAdminMiscModal() {
   document.getElementById('adminMiscModal').classList.remove('show');
