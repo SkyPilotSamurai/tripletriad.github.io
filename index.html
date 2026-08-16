@@ -2922,7 +2922,8 @@
   #pickerConfirm:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.15); }
   #pickerConfirm:disabled { opacity: 0.45; cursor: default; }
   #pickerConfirm.picker-confirm-p2 { background: var(--p2-color-a, #ff4fa3); }
-  #pickerAuto {
+  #pickerAuto,
+  #pickerAutoRareBtn {
     background: var(--btn-bg, #2d3748);
     color: #eee;
     border: 1px solid var(--panel-border, #4a5568);
@@ -2934,8 +2935,14 @@
     cursor: pointer;
     transition: transform 0.1s ease, background 0.15s ease;
   }
-  #pickerAuto:hover:not(:disabled) { transform: translateY(-1px); background: var(--btn-bg-hover, #3a4658); }
-  #pickerAuto:disabled { opacity: 0.45; cursor: default; transform: none; }
+  #pickerAuto:hover:not(:disabled),
+  #pickerAutoRareBtn:hover:not(:disabled) { transform: translateY(-1px); background: var(--btn-bg-hover, #3a4658); }
+  #pickerAuto:disabled,
+  #pickerAutoRareBtn:disabled { opacity: 0.45; cursor: default; transform: none; }
+  /* Reserve room for the widest state ("Off") so toggling never resizes the
+     button and shoves Auto / Confirm Hand sideways. em-based so it still
+     tracks the mobile font scaling. */
+  #pickerAutoRareState { display: inline-block; min-width: 2.2em; text-align: left; }
   #shopScreen {
     position: fixed;
     inset: 0;
@@ -3926,7 +3933,8 @@
     font-size: calc(16px * var(--mobile-btn-scale, 1.5));
     padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(22px * var(--mobile-btn-scale, 1.5));
   }
-  body.mobile-mode #pickerAuto {
+  body.mobile-mode #pickerAuto,
+  body.mobile-mode #pickerAutoRareBtn {
     font-size: calc(16px * var(--mobile-btn-scale, 1.5));
     padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(26px * var(--mobile-btn-scale, 1.5));
   }
@@ -3965,7 +3973,8 @@
   body.mobile-mode .menu-btn:hover { transform: none; box-shadow: none; }
   body.mobile-mode .menu-btn-secondary:hover { transform: none; box-shadow: none; }
   body.mobile-mode #pickerConfirm:hover:not(:disabled) { transform: none; filter: none; }
-  body.mobile-mode #pickerAuto:hover:not(:disabled) { transform: none; }
+  body.mobile-mode #pickerAuto:hover:not(:disabled),
+  body.mobile-mode #pickerAutoRareBtn:hover:not(:disabled) { transform: none; }
   body.mobile-mode #boosterOpenCardWrap .booster-pack-card:hover { transform: none; }
   body.mobile-mode #boosterOpenNextBtn:hover { transform: none; }
   body.mobile-mode #shopBuyBtn:hover:not(:disabled) { transform: none; }
@@ -4746,6 +4755,7 @@
     <div id="pickerStatus"></div>
     <div id="pickerFooterButtons">
       <button class="menu-btn menu-btn-secondary hidden" id="pickerBackToMenu">Back to Menu</button>
+      <button id="pickerAutoRareBtn">Auto Rare: <span id="pickerAutoRareState">Off</span></button>
       <button id="pickerAuto" class="menu-btn-secondary">Auto</button>
       <button id="pickerConfirm" disabled>Confirm Hand</button>
     </div>
@@ -5011,6 +5021,19 @@
           <div class="admin-cpu-level-input-group">
             <span>Elemental Rule CPU</span>
             <input type="number" id="adminCpuElementalMinRule" min="1" max="5" step="1" value="1">
+          </div>
+        </div>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Hard ceiling on how many elemental cards a CPU hand may hold while the Elemental board rule is active. Applies to Campaign NPCs and VS CPU opponents. 5 = no cap. Unlike the Minimum, which only tops a short hand up, this trims a hand that drew too many on its own -- useful when a narrowed Card Pool is heavily elemental. It removes the lowest-level elemental card and swaps in the best affordable plain card. Forced rare cards are never trimmed. If a cap is set below the matching Minimum, the cap wins.">
+        <label>Elemental Maximum (Campaign + VS CPU)</label>
+        <div id="adminMiscElementalMaxRow" class="admin-cpu-level-inputs">
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Fiend CPU</span>
+            <input type="number" id="adminCpuElementalMaxFiend" min="1" max="5" step="1" value="5">
+          </div>
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Rule CPU</span>
+            <input type="number" id="adminCpuElementalMaxRule" min="1" max="5" step="1" value="5">
           </div>
         </div>
       </div>
@@ -5795,20 +5818,48 @@ function campaignElementDupeBlocked(element) {
 const ELEMENTAL_MIN_DEFAULTS = { fiend: 3, rule: 1 };
 let cpuElementalMinFiend = ELEMENTAL_MIN_DEFAULTS.fiend;
 rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMinFiend`).on('value', snap => {
-  const v = Number(snap.val());
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
   cpuElementalMinFiend = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MIN_DEFAULTS.fiend;
   const input = document.getElementById('adminCpuElementalMinFiend');
   if (input && document.activeElement !== input) input.value = String(cpuElementalMinFiend);
 });
 let cpuElementalMinRule = ELEMENTAL_MIN_DEFAULTS.rule;
 rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMinRule`).on('value', snap => {
-  const v = Number(snap.val());
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
   cpuElementalMinRule = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MIN_DEFAULTS.rule;
   const input = document.getElementById('adminCpuElementalMinRule');
   if (input && document.activeElement !== input) input.value = String(cpuElementalMinRule);
 });
 function cpuElementalMinimumFor(behavior) {
   return behavior === 'elemental' ? cpuElementalMinFiend : cpuElementalMinRule;
+}
+// Elemental Maximum. Hard ceiling on how many elemental cards a CPU/NPC hand
+// may hold while the Elemental rule is active. The minimum only ever tops a
+// hand up; nothing stopped a card pool that is heavily elemental (a narrowed
+// Card Pool especially) from handing the NPC four or five on its own. Default
+// 5 = no effective cap, so nothing changes until it's set. If a cap is set
+// below the matching minimum the cap wins -- trimming runs after topping up.
+const ELEMENTAL_MAX_DEFAULTS = { fiend: 5, rule: 5 };
+let cpuElementalMaxFiend = ELEMENTAL_MAX_DEFAULTS.fiend;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMaxFiend`).on('value', snap => {
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  cpuElementalMaxFiend = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MAX_DEFAULTS.fiend;
+  const input = document.getElementById('adminCpuElementalMaxFiend');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMaxFiend);
+});
+let cpuElementalMaxRule = ELEMENTAL_MAX_DEFAULTS.rule;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMaxRule`).on('value', snap => {
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  cpuElementalMaxRule = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MAX_DEFAULTS.rule;
+  const input = document.getElementById('adminCpuElementalMaxRule');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMaxRule);
+});
+function cpuElementalMaximumFor(behavior) {
+  return behavior === 'elemental' ? cpuElementalMaxFiend : cpuElementalMaxRule;
 }
 // Element Variety. A soft dial rolled once per hand slot: on a hit, that slot
 // refuses an element the hand already holds. 100% = every slot enforces it, so
@@ -7348,7 +7399,11 @@ function cardStock(cardId) {
   }
   return 9;
 }
-function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeakest) {
+// "Auto Rare" (card picker footer). Off means the Auto button won't spend your
+// one-of-a-kind cards. Remembered for the session so it doesn't reset between
+// matches. Manual clicks in the grid are unaffected -- this only gates Auto.
+let pickerAutoRareEnabled = false;
+function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeakest, excludeOneOfAKind) {
   const hasBudget = pointBudget != null;
   const hasFloor = minLevel != null && minLevel > 1;
   const added = [];
@@ -7383,6 +7438,11 @@ function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeak
     };
     let candidates = hasFloor ? CARD_DB.filter(c => baseFilter(c) && c.level >= minLevel) : CARD_DB.filter(baseFilter);
     if (hasFloor && candidates.length === 0) candidates = CARD_DB.filter(baseFilter);
+    // Absolute: with Auto Rare off, a one-of-a-kind card is never auto-picked,
+    // even if that leaves the slot empty for you to fill by hand.
+    if (excludeOneOfAKind) {
+      candidates = candidates.filter(c => !isOneOfAKindCardId(c.id));
+    }
     if (candidates.length === 0) break;
     const isUnused = c => (counts.get(c.id) || 0) === 0;
     let card;
@@ -7583,7 +7643,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
       refreshUi();
     }
     function autoFillHand() {
-      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
+      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse, !pickerAutoRareEnabled);
       if (added.length) {
         added.forEach(id => handOrder.push(id));
         playSfx('cardPlace');
@@ -7782,7 +7842,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
     }
     function forceCompleteAndConfirm() {
       const preFillSlots = handOrder.length;
-      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
+      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse, !pickerAutoRareEnabled);
       added.forEach(id => handOrder.push(id));
       while (handOrder.length < PICKER_HAND_SIZE) {
         if (handOrder.length === 0) break;
@@ -7796,7 +7856,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
         const removedId = handOrder[removeIdx];
         handOrder.splice(removeIdx, 1);
         counts.set(removedId, Math.max(0, (counts.get(removedId) || 0) - 1));
-        const retryAdded = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
+        const retryAdded = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse, !pickerAutoRareEnabled);
         retryAdded.forEach(id => handOrder.push(id));
       }
       if (state.rules.closedSingle && closedSingleSlot === null && handOrder.length === PICKER_HAND_SIZE) {
@@ -7888,6 +7948,21 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
       playSfx('cursorCancel');
       backOutOfPicker();
     });
+    const autoRareBtn = document.getElementById('pickerAutoRareBtn');
+    if (autoRareBtn) {
+      const freshAutoRareBtn = autoRareBtn.cloneNode(true);
+      autoRareBtn.replaceWith(freshAutoRareBtn);
+      const autoRareStateEl = freshAutoRareBtn.querySelector('#pickerAutoRareState');
+      const paintAutoRare = () => {
+        if (autoRareStateEl) autoRareStateEl.textContent = pickerAutoRareEnabled ? 'On' : 'Off';
+      };
+      paintAutoRare();
+      freshAutoRareBtn.addEventListener('click', () => {
+        playSfx('cursorMove');
+        pickerAutoRareEnabled = !pickerAutoRareEnabled;
+        paintAutoRare();
+      });
+    }
     const autoBtn = document.getElementById('pickerAuto');
     const freshAutoBtn = autoBtn.cloneNode(true);
     autoBtn.replaceWith(freshAutoBtn);
@@ -8216,6 +8291,13 @@ function initGame(hands) {
   state.hands = hands || dealHands();
   tagHandOwnership(state.hands);
   if (state.rules.swap) applySwapRule(state.hands);
+  // Snapshot of the five cards each side opened with. Sudden Death calls
+  // initGame() again with re-dealt hands, so it saves and restores this around
+  // that call -- see maybeTriggerPracticeSuddenDeath.
+  state.matchOriginalHandIds = {
+    p1: state.hands.p1.map(c => c.id),
+    p2: state.hands.p2.map(c => c.id),
+  };
   tagClosedSingleHandCards();
   state.forcedCardId = { p1: null, p2: null };
   state.forcedCardTurnKey = { p1: null, p2: null };
@@ -8269,9 +8351,16 @@ function maybeTriggerPracticeSuddenDeath() {
   // no gil, no NPC marked defeated, nothing.
   const campaignLocationId = state.campaignLocationId;
   const campaignNpcId = state.campaignNpcId;
+  // Sudden Death re-deals both sides from whatever they own at the tie, so
+  // each hand now contains cards captured from the opponent. The end-of-match
+  // trade must still offer the loser's ORIGINAL five, not that mixture --
+  // otherwise the winner gets offered their own cards back. Keep the snapshot
+  // from the first round instead of letting initGame() overwrite it.
+  const matchOriginalHandIds = state.matchOriginalHandIds;
   initGame({ p1: p1Hand, p2: p2Hand });
   state.campaignLocationId = campaignLocationId;
   state.campaignNpcId = campaignNpcId;
+  if (matchOriginalHandIds) state.matchOriginalHandIds = matchOriginalHandIds;
   return true;
 }
 let lastPracticeHands = null;
@@ -8474,6 +8563,33 @@ function ensureElementalCardsInHand(ids, pointBudget) {
     result[outIdx] = inCard.id;
     elementalCount++;
   }
+  // --- hard cap, mirroring ensureCampaignElementalOthers ---
+  const MAX_ELEMENTAL = cpuElementalMaximumFor(state.cpuBehavior);
+  while (elementalCount > MAX_ELEMENTAL) {
+    const elementalIdxs = result.map((id, i) => i).filter(i => isElemental(i));
+    if (elementalIdxs.length === 0) break;
+    const outIdx = elementalIdxs[Math.floor(Math.random() * elementalIdxs.length)];
+    const outCard = cardOf(outIdx);
+    const spentWithoutOut = totalSpent() - (outCard ? outCard.level : 0);
+    const budgetForSwap = hasBudget ? pointBudget - spentWithoutOut : Infinity;
+    const heldIds = new Set(result.filter((id, i) => i !== outIdx));
+    const candidates = CARD_DB.filter(c => {
+      if (c.element) return false;
+      if (heldIds.has(c.id)) return false;
+      const remainingStock = cardStock(c.id) - (counts.get(c.id) || 0);
+      if (remainingStock <= 0) return false;
+      if ((counts.get(c.id) || 0) >= PICKER_MAX_COPIES) return false;
+      return c.level <= budgetForSwap;
+    });
+    if (candidates.length === 0) break;
+    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
+    const best = candidates.filter(c => c.level === highestLevel);
+    const inCard = best[Math.floor(Math.random() * best.length)];
+    counts.set(outCard.id, (counts.get(outCard.id) || 0) - 1);
+    counts.set(inCard.id, (counts.get(inCard.id) || 0) + 1);
+    result[outIdx] = inCard.id;
+    elementalCount--;
+  }
   return result;
 }
 function buildMaxPointsHand(pointBudget) {
@@ -8651,58 +8767,71 @@ function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards
   // rule is actually active this match -- otherwise element never matters and
   // this was just picking a worse card for no reason.
   if (!state.rules.elemental) return others;
-  const minElemental = cpuElementalMinimumFor(npc.cpuBehavior);
+  // A FLOOR, not an exact count: top up when the hand is short, never remove
+  // elemental cards the main loop drew on its own.
+  const targetElemental = cpuElementalMinimumFor(npc.cpuBehavior);
   const rareElementalCount = (rareCards || []).reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
   let elementalCount = rareElementalCount + others.reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
-  if (elementalCount >= minElemental) return others;
-  const elementalPool = pool.filter(c => c.element);
-  if (!elementalPool.length) return others;
   const result = others.slice();
   const totalSpent = () => result.reduce((sum, c) => sum + c.level, 0);
-  while (elementalCount < minElemental) {
+  const heldIdsExcept = outIdx => new Set(
+    result.filter((c, i) => i !== outIdx).map(c => c.id).concat((rareCards || []).map(c => c.id))
+  );
+  const heldElementsExcept = outIdx => {
+    const m = new Map();
+    result.forEach((c, i) => { if (i !== outIdx && c.element) m.set(c.element, (m.get(c.element) || 0) + 1); });
+    (rareCards || []).forEach(c => { if (c.element) m.set(c.element, (m.get(c.element) || 0) + 1); });
+    return m;
+  };
+  const swapIn = (outIdx, candidates) => {
+    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
+    const best = candidates.filter(c => c.level === highestLevel);
+    result[outIdx] = { ...best[Math.floor(Math.random() * best.length)] };
+  };
+  // --- top up toward the target ---
+  const elementalPool = pool.filter(c => c.element);
+  while (elementalCount < targetElemental && elementalPool.length) {
     const nonElementalIdxs = result.map((c, i) => i).filter(i => !result[i].element);
     if (nonElementalIdxs.length === 0) break;
     const outIdx = nonElementalIdxs.reduce((best, i) => (result[i].level < result[best].level ? i : best), nonElementalIdxs[0]);
     const outCard = result[outIdx];
-    const spentWithoutOut = totalSpent() - outCard.level;
-    const budgetForSwap = otherBudget - spentWithoutOut;
+    const budgetForSwap = otherBudget - (totalSpent() - outCard.level);
     const affordable = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
     if (affordable.length === 0) break;
-    // This loop runs up to minElemental times (3 for an 'elemental' NPC) and
-    // every pass independently grabs the highest-level affordable elemental
-    // card -- which is nearly always the SAME card. Unfiltered, that built
-    // 3x Tri-Point hands for CC Master King 100% of the time, completely
-    // bypassing Double Up. Prefer cards the hand isn't already holding;
-    // duplicates stay reachable, but only through the NPC's own Double Up
-    // chance, exactly like the main hand-building loop below.
-    const alreadyHeld = new Set(
-      result.filter((c, i) => i !== outIdx).map(c => c.id)
-        .concat((rareCards || []).map(c => c.id))
-    );
+    // Prefer cards the hand isn't already holding; a repeat only through the
+    // NPC's own Double Up chance (see the duplicate-card fix).
+    const alreadyHeld = heldIdsExcept(outIdx);
     const fresh = affordable.filter(c => !alreadyHeld.has(c.id));
     let candidates = fresh;
     if (!fresh.length) {
       if (Math.random() * 100 >= (npc.doubleUpPercent || 0)) break;
       candidates = affordable;
     }
-    // No Duplicate Elements: this top-up is the most likely place to double an
-    // element, since it deliberately reaches for elemental cards several times
-    // in a row. Skip elements already represented unless that leaves nothing.
-    const heldElements = new Map();
-    result.forEach((c, i) => {
-      if (i !== outIdx && c.element) heldElements.set(c.element, (heldElements.get(c.element) || 0) + 1);
-    });
-    (rareCards || []).forEach(c => {
-      if (c.element) heldElements.set(c.element, (heldElements.get(c.element) || 0) + 1);
-    });
+    const heldElements = heldElementsExcept(outIdx);
     const varietyRoll = campaignRollElementVariety(npc);
     const elementOk = candidates.filter(c => campaignElementAllowed(c, heldElements, varietyRoll));
     if (elementOk.length) candidates = elementOk;
-    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
-    const best = candidates.filter(c => c.level === highestLevel);
-    const inCard = best[Math.floor(Math.random() * best.length)];
-    result[outIdx] = { ...inCard };
+    swapIn(outIdx, candidates);
     elementalCount++;
+  }
+  // --- hard cap: trim the surplus back out ---
+  // Runs after the top-up, so a cap set below the minimum wins. Removes a
+  // RANDOM elemental card and swaps in the best affordable plain card, so the
+  // trim doesn't always strip the same (weakest) element every match. Forced
+  // rare cards are never trimmed.
+  const maxElemental = cpuElementalMaximumFor(npc.cpuBehavior);
+  const plainPool = pool.filter(c => !c.element);
+  while (elementalCount > maxElemental && plainPool.length) {
+    const elementalIdxs = result.map((c, i) => i).filter(i => !!result[i].element);
+    if (elementalIdxs.length === 0) break;
+    const outIdx = elementalIdxs[Math.floor(Math.random() * elementalIdxs.length)];
+    const outCard = result[outIdx];
+    const budgetForSwap = otherBudget - (totalSpent() - outCard.level);
+    const alreadyHeld = heldIdsExcept(outIdx);
+    const candidates = plainPool.filter(c => c.level <= budgetForSwap && !alreadyHeld.has(c.id));
+    if (candidates.length === 0) break;
+    swapIn(outIdx, candidates);
+    elementalCount--;
   }
   return result;
 }
@@ -8874,9 +9003,12 @@ async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBu
     budget: npcBudget,
     elementalRuleActive: !!state.rules.elemental,
     elementalMinUsed: cpuElementalMinimumFor(npc.cpuBehavior),
+    elementalMaxUsed: cpuElementalMaximumFor(npc.cpuBehavior),
     settings: {
       cpuElementalMinFiend,
       cpuElementalMinRule,
+      cpuElementalMaxFiend,
+      cpuElementalMaxRule,
       elementVarietyGlobal: campaignElementVarietyPercent,
       elementVarietyForThisNpc: campaignEffectiveElementVarietyPercent(npc),
       noDupeElementsEnabled: campaignNoDupeElementsEnabled,
@@ -9910,7 +10042,8 @@ async function executeDisconnectForfeit(roomId, roomRef, losingSeat, winningSeat
   const board = fromRoomBoard(room.board);
   const roomHands = fromRoomHands(room.hands);
   const loserHand = roomHands[losingSeat] || [];
-  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand);
+  const loserOriginalIds = room.suddenDeathHandIds ? room.suddenDeathHandIds[losingSeat] : null;
+  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand, loserOriginalIds);
   if (tradeState.picked && tradeState.picked.length) {
     tradeState.picked = await annotateTradePicksWithDuplicates(winningUid, tradeState.picked, tradeState.winner);
   }
@@ -12759,19 +12892,32 @@ function totalScore(owner) {
 }
 const TRADE_RULES = ['one', 'diff', 'direct', 'all'];
 const TRADE_RULE_LABELS = { one: 'One', diff: 'Diff', direct: 'Direct', all: 'All' };
-function buildInitialTradeState(rule, board, p1Score, p2Score, loserHand) {
+function buildInitialTradeState(rule, board, p1Score, p2Score, loserHand, originalHandIds) {
   if (p1Score === p2Score) return { done: true, rule, pool: [], picked: [], revealIndex: 0, takeCount: 0 };
   const winner = p1Score > p2Score ? 'p1' : 'p2';
   const loser = winner === 'p1' ? 'p2' : 'p1';
   if (rule === 'direct') {
     return { rule, winner, loser, pool: [], takeCount: 0, picked: [], revealIndex: 0, done: true };
   }
-  const loserPlayedCards = board
-    .map((cell, idx) => ({ cell, idx }))
-    .filter(({ cell }) => cell && cell.card && cell._placedBy === loser);
-  const boardPool = loserPlayedCards.map(({ cell, idx }) => ({ cardId: cell.card.id, poolKey: `${loser}-${idx}`, originalOwner: cell.card._originalOwner || loser }));
-  const handPool = (Array.isArray(loserHand) ? loserHand : []).map((card, i) => ({ cardId: card.id, poolKey: `${loser}-hand-${i}`, originalOwner: card._originalOwner || loser }));
-  const pool = [...boardPool, ...handPool];
+  // Sudden Death re-deals both sides from whatever they own at the tie, so by
+  // the end the loser's board+hand is a mixture that includes cards captured
+  // from the winner -- scanning it would offer the winner their own cards back.
+  // Rooms record the opening picks in suddenDeathHandIds and never overwrite
+  // them, so prefer those. Only populated for rooms running the Sudden Death
+  // rule; every other room falls through to the original scan unchanged.
+  let pool;
+  if (Array.isArray(originalHandIds) && originalHandIds.length) {
+    pool = originalHandIds.map((cardId, i) => ({
+      cardId, poolKey: `${loser}-orig-${i}`, originalOwner: loser,
+    }));
+  } else {
+    const loserPlayedCards = board
+      .map((cell, idx) => ({ cell, idx }))
+      .filter(({ cell }) => cell && cell.card && cell._placedBy === loser);
+    const boardPool = loserPlayedCards.map(({ cell, idx }) => ({ cardId: cell.card.id, poolKey: `${loser}-${idx}`, originalOwner: cell.card._originalOwner || loser }));
+    const handPool = (Array.isArray(loserHand) ? loserHand : []).map((card, i) => ({ cardId: card.id, poolKey: `${loser}-hand-${i}`, originalOwner: card._originalOwner || loser }));
+    pool = [...boardPool, ...handPool];
+  }
   let takeCount;
   if (rule === 'one') takeCount = 1;
   else if (rule === 'diff') takeCount = Math.abs(p1Score - p2Score);
@@ -12927,7 +13073,8 @@ async function resolveRankedMatchIfNeededInner(room, roomId, roomRef) {
   const roomHands = fromRoomHands(room.hands);
   const loserSeat = p1Score === p2Score ? null : (p1Score > p2Score ? 'p2' : 'p1');
   const loserHand = loserSeat ? roomHands[loserSeat] : [];
-  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand);
+  const loserOriginalIds = (loserSeat && room.suddenDeathHandIds) ? room.suddenDeathHandIds[loserSeat] : null;
+  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand, loserOriginalIds);
   if (tradeState.picked && tradeState.picked.length) {
     const winnerUid = room.seatUids && tradeState.winner && room.seatUids[tradeState.winner];
     tradeState.picked = await annotateTradePicksWithDuplicates(winnerUid, tradeState.picked, tradeState.winner);
@@ -13133,6 +13280,15 @@ async function campaignMarkNpcDefeated(uid, locationId, npcId) {
   return next.id;
 }
 function campaignBuildBoardHandPool(seat, board, hand) {
+  // Prefer the match-start snapshot. Scanning the board for cards this seat
+  // placed plus whatever is left in hand gives the right answer in a normal
+  // match, but after Sudden Death it returns the post-tie mixture.
+  const snapshot = state.matchOriginalHandIds && state.matchOriginalHandIds[seat];
+  if (Array.isArray(snapshot) && snapshot.length) {
+    return snapshot.map((cardId, i) => ({
+      cardId, poolKey: `${seat}-orig-${i}`, originalOwner: seat,
+    }));
+  }
   const boardCards = (board || [])
     .map((cell, idx) => ({ cell, idx }))
     .filter(({ cell }) => cell && cell.card && cell._placedBy === seat);
@@ -16299,7 +16455,8 @@ document.getElementById('adminCampaignHandBalanceSlider').addEventListener('chan
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).set(v).catch(() => {});
 });
-[['adminCpuElementalMinFiend', 'cpuElementalMinFiend'], ['adminCpuElementalMinRule', 'cpuElementalMinRule']].forEach(([inputId, key]) => {
+[['adminCpuElementalMinFiend', 'cpuElementalMinFiend'], ['adminCpuElementalMinRule', 'cpuElementalMinRule'],
+ ['adminCpuElementalMaxFiend', 'cpuElementalMaxFiend'], ['adminCpuElementalMaxRule', 'cpuElementalMaxRule']].forEach(([inputId, key]) => {
   const input = document.getElementById(inputId);
   if (!input) return;
   const commit = () => {
