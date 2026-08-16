@@ -5001,6 +5001,19 @@
         <label>Hand Balance Strength (By Skill Level)</label>
         <div id="adminMiscHandBalanceGrid"></div>
       </div>
+      <div class="settings-row admin-region-bias-row" title="The fewest elemental cards a CPU hand is topped up to while the Elemental board rule is active. Applies to both Campaign NPCs and VS CPU opponents. Elemental Fiend covers any opponent whose AI behavior is Elemental Fiend; Elemental Rule covers every other behavior. This is a floor only -- a hand that naturally drew more keeps them. Takes effect on the next match.">
+        <label>Elemental Minimum (Campaign + VS CPU)</label>
+        <div id="adminMiscElementalMinRow" class="admin-cpu-level-inputs">
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Fiend CPU</span>
+            <input type="number" id="adminCpuElementalMinFiend" min="1" max="5" step="1" value="3">
+          </div>
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Rule CPU</span>
+            <input type="number" id="adminCpuElementalMinRule" min="1" max="5" step="1" value="1">
+          </div>
+        </div>
+      </div>
       <div class="settings-row admin-region-bias-row" title="How hard Campaign NPC hands push for a spread of different elements. Rolled once per card slot: on a hit, that slot won't take an element the hand already holds. 100% = every slot enforces it, so the hand comes out all-unique wherever the card pool allows. 0% = no push at all, elements repeat freely. This never allows the SAME CARD twice -- that stays governed by the NPC's Double Up chance. Overridable per NPC in Edit Campaign NPCs.">
         <label for="adminCampaignElementVarietySlider">Element Variety (Campaign NPCs): <span id="adminCampaignElementVarietyValue">50%</span></label>
         <input type="range" id="adminCampaignElementVarietySlider" min="0" max="100" step="1" value="50">
@@ -5771,6 +5784,31 @@ function campaignElementDupeBlocked(element) {
   if (!campaignNoDupeElementsEnabled || !element) return false;
   const v = campaignNoDupeElementsByElement ? campaignNoDupeElementsByElement[element] : undefined;
   return v === undefined || v === null ? true : v === true;
+}
+// Elemental Minimum. How many elemental cards a CPU/NPC hand is topped up to
+// when the Elemental board rule is active. Two separate floors: Elemental
+// Fiend CPUs (cpuBehavior 'elemental') get their own, higher one, everyone
+// else uses the plain Elemental Rule floor. Both apply to Campaign AND VS CPU
+// -- before this these were three hardcoded numbers that disagreed with each
+// other (campaign used 3 for fiends and 1 for the rest, VS CPU used 2 for
+// fiends and skipped the rest entirely). Range 1-5.
+const ELEMENTAL_MIN_DEFAULTS = { fiend: 3, rule: 1 };
+let cpuElementalMinFiend = ELEMENTAL_MIN_DEFAULTS.fiend;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMinFiend`).on('value', snap => {
+  const v = Number(snap.val());
+  cpuElementalMinFiend = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MIN_DEFAULTS.fiend;
+  const input = document.getElementById('adminCpuElementalMinFiend');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMinFiend);
+});
+let cpuElementalMinRule = ELEMENTAL_MIN_DEFAULTS.rule;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMinRule`).on('value', snap => {
+  const v = Number(snap.val());
+  cpuElementalMinRule = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MIN_DEFAULTS.rule;
+  const input = document.getElementById('adminCpuElementalMinRule');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMinRule);
+});
+function cpuElementalMinimumFor(behavior) {
+  return behavior === 'elemental' ? cpuElementalMinFiend : cpuElementalMinRule;
 }
 // Element Variety. A soft dial rolled once per hand slot: on a hit, that slot
 // refuses an element the hand already holds. 100% = every slot enforces it, so
@@ -8023,7 +8061,14 @@ function elementalModifier(cellIndex, card) {
   return state.elementalMode === 'buff' ? 0 : -1;
 }
 function rank(cellIndex, card, side) {
-  return card[side] + elementalModifier(cellIndex, card);
+  // Clamp to 1-10, matching what the card face actually draws (see the
+  // `effective` helper in the card renderer, which uses the same bounds).
+  // Without this an A on its matching element became an internal 11 while
+  // still rendering as a bare "A" -- so a buffed A beat an unbuffed A and the
+  // board showed "A flipped A" with no visible reason. A 1 nerfed to 0 had the
+  // mirror problem under Reverse. Elemental buffs now do nothing to a side
+  // already at the cap, which is the tradeoff for the display never lying.
+  return Math.max(1, Math.min(10, card[side] + elementalModifier(cellIndex, card)));
 }
 function capturesBeats(attackerIndex, attackerCard, attackerSide, defenderIndex, defenderCard, defenderSide) {
   if (state.rules.fallenAce && attackerCard[attackerSide] === 1 && defenderCard[defenderSide] === 10) return true;
@@ -8372,7 +8417,11 @@ function buildMaxPointsHandIds(pointBudget) {
   return picked;
 }
 function ensureElementalCardsInHand(ids, pointBudget) {
-  const MIN_ELEMENTAL = 2;
+  // Gated on the Elemental board rule, matching ensureCampaignElementalOthers.
+  // Previously this ran even with the rule off, which forced elemental cards
+  // into VS CPU hands in matches where element could never matter.
+  if (!state.rules.elemental) return ids;
+  const MIN_ELEMENTAL = cpuElementalMinimumFor(state.cpuBehavior);
   let elementalCount = ids.reduce((sum, id) => {
     const c = CARD_DB.find(cc => cc.id === id);
     return sum + (c && c.element ? 1 : 0);
@@ -8429,17 +8478,13 @@ function ensureElementalCardsInHand(ids, pointBudget) {
 }
 function buildMaxPointsHand(pointBudget) {
   let ids = buildMaxPointsHandIds(pointBudget);
-  if (state.cpuBehavior === 'elemental') {
-    ids = ensureElementalCardsInHand(ids, pointBudget);
-  }
+  ids = ensureElementalCardsInHand(ids, pointBudget);
   return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
 }
 function buildCpuP2Hand(pointBudget) {
   if (state.rules.random) {
     let ids = buildRandomHandIds(null, new Map(), []);
-    if (state.cpuBehavior === 'elemental') {
-      ids = ensureElementalCardsInHand(ids, null);
-    }
+    ids = ensureElementalCardsInHand(ids, null);
     return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
   }
   return buildMaxPointsHand(applyReversePointBudget(state.cpuDifficulty, pointBudget));
@@ -8606,7 +8651,7 @@ function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards
   // rule is actually active this match -- otherwise element never matters and
   // this was just picking a worse card for no reason.
   if (!state.rules.elemental) return others;
-  const minElemental = npc.cpuBehavior === 'elemental' ? 3 : 1;
+  const minElemental = cpuElementalMinimumFor(npc.cpuBehavior);
   const rareElementalCount = (rareCards || []).reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
   let elementalCount = rareElementalCount + others.reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
   if (elementalCount >= minElemental) return others;
@@ -8818,6 +8863,34 @@ async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBu
   const p2Hand = randomIgnoresPoints
     ? buildCampaignNpcRandomHand(npc, forcedRareCardIds)
     : buildCampaignNpcHand(npc, npcBudget, forcedRareCardIds);
+  // Diagnostic: prints the settings that were actually in effect and the hand
+  // they produced. Open DevTools (F12) > Console and filter for "[npc hand]".
+  // Safe to delete this block once the elemental-count question is settled.
+  console.log('[npc hand]', {
+    npc: npc.name,
+    behavior: npc.cpuBehavior,
+    difficulty: npc.cpuDifficulty,
+    path: randomIgnoresPoints ? 'buildCampaignNpcRandomHand (Random ignores points)' : 'buildCampaignNpcHand',
+    budget: npcBudget,
+    elementalRuleActive: !!state.rules.elemental,
+    elementalMinUsed: cpuElementalMinimumFor(npc.cpuBehavior),
+    settings: {
+      cpuElementalMinFiend,
+      cpuElementalMinRule,
+      elementVarietyGlobal: campaignElementVarietyPercent,
+      elementVarietyForThisNpc: campaignEffectiveElementVarietyPercent(npc),
+      noDupeElementsEnabled: campaignNoDupeElementsEnabled,
+    },
+    npcOverrides: {
+      cardPoolSize: Array.isArray(npc.cardPool) ? npc.cardPool.length : 'default pool',
+      elementVarietyPercent: npc.elementVarietyPercent != null ? npc.elementVarietyPercent : '(inherits)',
+      doubleUpPercent: npc.doubleUpPercent || 0,
+    },
+    forcedRareCardIds: forcedRareCardIds || [],
+    hand: p2Hand.map(c => `${c.name} L${c.level} ${c.element || '-'}`),
+    elementalCount: p2Hand.filter(c => c.element).length,
+    distinctElements: [...new Set(p2Hand.filter(c => c.element).map(c => c.element))],
+  });
   state.closedSingleCardId = {
     p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
     p2: state.rules.closedSingle ? assignRandomClosedSingleCardId(p2Hand) : null,
@@ -16225,6 +16298,18 @@ document.getElementById('adminCampaignHandBalanceSlider').addEventListener('chan
   playSfx('cursorMove');
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).set(v).catch(() => {});
+});
+[['adminCpuElementalMinFiend', 'cpuElementalMinFiend'], ['adminCpuElementalMinRule', 'cpuElementalMinRule']].forEach(([inputId, key]) => {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const commit = () => {
+    const v = Math.max(1, Math.min(5, Math.round(Number(input.value))));
+    if (!Number.isFinite(v)) return;
+    input.value = String(v);
+    rtdb.ref(`${GAME_CONFIG_ROOT}/${key}`).set(v).catch(() => {});
+  };
+  input.addEventListener('change', () => { playSfx('cursorMove'); commit(); });
+  input.addEventListener('blur', commit);
 });
 document.getElementById('adminCampaignElementVarietySlider').addEventListener('input', e => {
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
