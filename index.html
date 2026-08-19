@@ -675,7 +675,7 @@
     cursor: pointer;
   }
   .admin-npc-editor-checkbox-label input[type="checkbox"] { width: auto; cursor: pointer; }
-  #adminNpcEditorRegionBiasPercent:disabled { opacity: 0.45; cursor: not-allowed; }
+  #adminNpcEditorRegionBiasPercent:disabled, #adminNpcEditorElementVarietyPercent:disabled { opacity: 0.45; cursor: not-allowed; }
   .admin-npc-editor-pool-header {
     display: flex;
     justify-content: space-between;
@@ -2922,7 +2922,8 @@
   #pickerConfirm:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.15); }
   #pickerConfirm:disabled { opacity: 0.45; cursor: default; }
   #pickerConfirm.picker-confirm-p2 { background: var(--p2-color-a, #ff4fa3); }
-  #pickerAuto {
+  #pickerAuto,
+  #pickerAutoRareBtn {
     background: var(--btn-bg, #2d3748);
     color: #eee;
     border: 1px solid var(--panel-border, #4a5568);
@@ -2934,8 +2935,14 @@
     cursor: pointer;
     transition: transform 0.1s ease, background 0.15s ease;
   }
-  #pickerAuto:hover:not(:disabled) { transform: translateY(-1px); background: var(--btn-bg-hover, #3a4658); }
-  #pickerAuto:disabled { opacity: 0.45; cursor: default; transform: none; }
+  #pickerAuto:hover:not(:disabled),
+  #pickerAutoRareBtn:hover:not(:disabled) { transform: translateY(-1px); background: var(--btn-bg-hover, #3a4658); }
+  #pickerAuto:disabled,
+  #pickerAutoRareBtn:disabled { opacity: 0.45; cursor: default; transform: none; }
+  /* Reserve room for the widest state ("Off") so toggling never resizes the
+     button and shoves Auto / Confirm Hand sideways. em-based so it still
+     tracks the mobile font scaling. */
+  #pickerAutoRareState { display: inline-block; min-width: 2.2em; text-align: left; }
   #shopScreen {
     position: fixed;
     inset: 0;
@@ -3926,7 +3933,8 @@
     font-size: calc(16px * var(--mobile-btn-scale, 1.5));
     padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(22px * var(--mobile-btn-scale, 1.5));
   }
-  body.mobile-mode #pickerAuto {
+  body.mobile-mode #pickerAuto,
+  body.mobile-mode #pickerAutoRareBtn {
     font-size: calc(16px * var(--mobile-btn-scale, 1.5));
     padding: calc(14px * var(--mobile-btn-scale, 1.5)) calc(26px * var(--mobile-btn-scale, 1.5));
   }
@@ -3965,7 +3973,8 @@
   body.mobile-mode .menu-btn:hover { transform: none; box-shadow: none; }
   body.mobile-mode .menu-btn-secondary:hover { transform: none; box-shadow: none; }
   body.mobile-mode #pickerConfirm:hover:not(:disabled) { transform: none; filter: none; }
-  body.mobile-mode #pickerAuto:hover:not(:disabled) { transform: none; }
+  body.mobile-mode #pickerAuto:hover:not(:disabled),
+  body.mobile-mode #pickerAutoRareBtn:hover:not(:disabled) { transform: none; }
   body.mobile-mode #boosterOpenCardWrap .booster-pack-card:hover { transform: none; }
   body.mobile-mode #boosterOpenNextBtn:hover { transform: none; }
   body.mobile-mode #shopBuyBtn:hover:not(:disabled) { transform: none; }
@@ -4337,8 +4346,8 @@
       <div class="settings-row">
         <label>Elemental Stats
           <select id="elementalStatsSelect">
-            <option value="plusOne" selected>+- Number Only</option>
-            <option value="adjust">Adjusted Stats</option>
+            <option value="adjust" selected>Adjust Numbers</option>
+            <option value="plusOne">Just +1 Number</option>
           </select>
         </label>
       </div>
@@ -4746,6 +4755,7 @@
     <div id="pickerStatus"></div>
     <div id="pickerFooterButtons">
       <button class="menu-btn menu-btn-secondary hidden" id="pickerBackToMenu">Back to Menu</button>
+      <button id="pickerAutoRareBtn">Auto Rare: <span id="pickerAutoRareState">Off</span></button>
       <button id="pickerAuto" class="menu-btn-secondary">Auto</button>
       <button id="pickerConfirm" disabled>Confirm Hand</button>
     </div>
@@ -4839,6 +4849,10 @@
         <div class="admin-npc-editor-field" title="Overrides the global One-of-a-Kind Play Chance % (Admin Settings) for this NPC only. Leave unchecked to keep using the global default.">
           <label class="admin-npc-editor-checkbox-label"><input type="checkbox" id="adminNpcEditorOneOfAKindPlayOverride"> Override One-of-a-Kind Play Chance %</label>
           <input type="number" id="adminNpcEditorOneOfAKindPlayPercent" min="0" max="100" step="1" value="100" disabled>
+        </div>
+        <div class="admin-npc-editor-field" title="Overrides Element Variety for this NPC only. 100% = their hand is all-unique elements wherever the pool allows, 0% = elements repeat freely. Leave unticked to follow the global Misc setting.">
+          <label class="admin-npc-editor-checkbox-label"><input type="checkbox" id="adminNpcEditorElementVarietyOverride"> Override Element Variety %</label>
+          <input type="number" id="adminNpcEditorElementVarietyPercent" min="0" max="100" step="1" value="50" disabled>
         </div>
         <div class="admin-npc-editor-field">
           Rules
@@ -4945,6 +4959,13 @@
       <div class="settings-row checkbox-row" title="When the Random rule is active in Campaign, both sides draw fully at random from whatever they have access to, ignoring the match's point total entirely. Only affects Campaign -- Ranked/Free Play's Random rule already ignores points.">
         <label><input type="checkbox" id="adminCampaignRandomIgnoresPointsToggle"> Random Rule Ignores Points (Campaign)</label>
       </div>
+      <div class="settings-row admin-region-bias-row" title="Lowest card level a Campaign NPC's Random-rule hand may draw, per NPC skill level. Also drives the 'Random Cards: Level N+' label on the challenge screen. 1 = no floor (Random Cards: All). Only applies while the Random rule is active. Note the NPC's card pool normally stops at level 7, so a floor above that falls back to the full pool.">
+        <label>Random Rule - Card Level Floor (By Skill Level)</label>
+        <div id="adminMiscRandomFloorGrid"></div>
+      </div>
+      <div class="settings-row checkbox-row" title="Campaign only. While the Random rule is active, no hand may open with more than one one-of-a-kind card (level 8-10 and PuPu). Applies to the NPC and to your own randomly-dealt hand. The NPC's reward card counts toward the limit. If nothing else is playable for a slot it will still use a rare rather than deal an incomplete hand.">
+        <label><input type="checkbox" id="adminCampaignRandomOneRareToggle" checked> Random: One Rare Card Max (Campaign)</label>
+      </div>
       <div class="settings-row checkbox-row" title="Widens the Main Menu, Tutorial, Campaign Locations, and NPC Select/Challenge panels, and increases text size across menus and buttons site-wide. Applies live to every player -- no per-player override.">
         <label><input type="checkbox" id="adminMobileModeToggle"> Mobile Mode</label>
       </div>
@@ -4993,6 +5014,47 @@
         <label for="adminCampaignHandBalanceSlider">Hand Balance Strength: <span id="adminCampaignHandBalanceValue">50%</span></label>
         <input type="range" id="adminCampaignHandBalanceSlider" min="0" max="100" step="1" value="50">
       </div>
+      <div class="settings-row admin-region-bias-row" title="Overrides Hand Balance Strength for NPCs of a single skill level. Each box starts at whatever the slider above is set to -- change one and only NPCs of that cpuDifficulty use it, so you can give low-level NPCs even hands and let level 5 bosses keep the lopsided ace-plus-junk spread, or the other way round. Blank a box (or click Reset) to hand that level back to the slider. Requires Balanced NPC Hands to be ticked.">
+        <label>Hand Balance Strength (By Skill Level)</label>
+        <div id="adminMiscHandBalanceGrid"></div>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="The fewest elemental cards a CPU hand is topped up to while the Elemental board rule is active. Applies to both Campaign NPCs and VS CPU opponents. Elemental Fiend covers any opponent whose AI behavior is Elemental Fiend; Elemental Rule covers every other behavior. This is a floor only -- a hand that naturally drew more keeps them. Takes effect on the next match.">
+        <label>Elemental Minimum (Campaign + VS CPU)</label>
+        <div id="adminMiscElementalMinRow" class="admin-cpu-level-inputs">
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Fiend CPU</span>
+            <input type="number" id="adminCpuElementalMinFiend" min="1" max="5" step="1" value="3">
+          </div>
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Rule CPU</span>
+            <input type="number" id="adminCpuElementalMinRule" min="1" max="5" step="1" value="1">
+          </div>
+        </div>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Hard ceiling on how many elemental cards a CPU hand may hold while the Elemental board rule is active. Applies to Campaign NPCs and VS CPU opponents. 5 = no cap. Unlike the Minimum, which only tops a short hand up, this trims a hand that drew too many on its own -- useful when a narrowed Card Pool is heavily elemental. It removes the lowest-level elemental card and swaps in the best affordable plain card. Forced rare cards are never trimmed. If a cap is set below the matching Minimum, the cap wins.">
+        <label>Elemental Maximum (Campaign + VS CPU)</label>
+        <div id="adminMiscElementalMaxRow" class="admin-cpu-level-inputs">
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Fiend CPU</span>
+            <input type="number" id="adminCpuElementalMaxFiend" min="1" max="5" step="1" value="5">
+          </div>
+          <div class="admin-cpu-level-input-group">
+            <span>Elemental Rule CPU</span>
+            <input type="number" id="adminCpuElementalMaxRule" min="1" max="5" step="1" value="5">
+          </div>
+        </div>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="How hard Campaign NPC hands push for a spread of different elements. Rolled once per card slot: on a hit, that slot won't take an element the hand already holds. 100% = every slot enforces it, so the hand comes out all-unique wherever the card pool allows. 0% = no push at all, elements repeat freely. This never allows the SAME CARD twice -- that stays governed by the NPC's Double Up chance. Overridable per NPC in Edit Campaign NPCs.">
+        <label for="adminCampaignElementVarietySlider">Element Variety (Campaign NPCs): <span id="adminCampaignElementVarietyValue">50%</span></label>
+        <input type="range" id="adminCampaignElementVarietySlider" min="0" max="100" step="1" value="50">
+      </div>
+      <div class="settings-row checkbox-row" title="Stops a Campaign NPC's hand from carrying two cards of the same element. Elementless cards are never restricted. Tick the elements below to choose which ones are covered -- all of them are covered by default, so you only need to untick an element if you want to allow repeats of that one. Applies when the hand is built, so it takes effect on the next match, not the one in progress.">
+        <label><input type="checkbox" id="adminCampaignNoDupeElementsToggle"> No Duplicate Elements (Campaign NPCs)</label>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Which elements the No Duplicate Elements rule covers. Ticked = an NPC hand may hold at most one card of that element. Unticked = repeats of that element are allowed as normal. Has no effect until the master toggle above is on.">
+        <label>No Duplicate Elements - Per Element</label>
+        <div id="adminMiscNoDupeElementsGrid"></div>
+      </div>
       <div class="settings-row checkbox-row" title="The Auto button in the card picker (any human player, any mode) already targets an even level per slot with weighted randomness rather than the NPC's pure greedy-highest approach, but a lucky/unlucky roll can still occasionally skew a slot toward the top of its budget cap. This tightens that cap toward an even per-slot share the same way Balanced NPC Hands does, for a more consistent Auto-fill hand. Only affects budgeted picks (point-limited rooms/matches) -- unlimited-budget picks are unaffected.">
         <label><input type="checkbox" id="adminPickerHandBalanceToggle"> Balanced Auto Hand (Player Picker)</label>
       </div>
@@ -5004,6 +5066,11 @@
         <label>Ranked Seen Cards</label>
         <button type="button" id="adminClearRankedSeenBtn" class="menu-btn-secondary">Clear Ranked Seen Cards (All Accounts)</button>
         <div id="adminClearRankedSeenStatus" class="admin-inline-status"></div>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Writes every Campaign NPC edit currently stored in Firebase (campaignAdmin) back into this page's own source, so the NPC data in index.html matches what players actually see. Downloads two files: a timestamped backup of the page as it is right now, then a patched index.html to drop into the repo. Nothing on the server or in the database is changed -- the overrides stay in Firebase and keep working exactly as before, they just stop being the only copy.">
+        <label>Campaign NPC Overrides</label>
+        <button type="button" id="adminBakeNpcOverridesBtn" class="menu-btn-secondary">Bake NPC Overrides into index.html</button>
+        <div id="adminBakeNpcOverridesStatus" class="admin-inline-status"></div>
       </div>
     </div>
   </div>
@@ -5710,7 +5777,148 @@ rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).on('value', snap => {
   const label = document.getElementById('adminCampaignHandBalanceValue');
   if (slider && document.activeElement !== slider) slider.value = campaignHandBalancePercent;
   if (label) label.textContent = `${campaignHandBalancePercent}%`;
+  renderAdminMiscHandBalanceGrid();
 });
+// Per-skill-level Hand Balance. The slider above stays the baseline for every
+// level; anything set here overrides it for NPCs of that cpuDifficulty only,
+// so a level 1 cadet can play near-even hands while a level 5 boss keeps the
+// lopsided ace-plus-junk spread (or the reverse). An unset level just uses
+// the slider, which is why nothing changes until a box is actually touched.
+let campaignHandBalanceByLevel = {};
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceByLevel`).on('value', snap => {
+  campaignHandBalanceByLevel = snap.val() || {};
+  renderAdminMiscHandBalanceGrid();
+});
+function campaignHandBalancePercentForLevel(skillLevel) {
+  const v = Number(campaignHandBalanceByLevel && campaignHandBalanceByLevel[skillLevel]);
+  return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : campaignHandBalancePercent;
+}
+// No Duplicate Elements. Master toggle plus one checkbox per element, so an
+// NPC hand can be stopped from carrying two Fire cards while still being
+// allowed two Thunder ones. Unset elements default to ON, so ticking the
+// master immediately does the obvious thing (no element twice, anywhere) and
+// you untick individual elements to permit repeats of just those.
+let campaignNoDupeElementsEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNoDupeElementsEnabled`).on('value', snap => {
+  campaignNoDupeElementsEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminCampaignNoDupeElementsToggle');
+  if (toggle) toggle.checked = campaignNoDupeElementsEnabled;
+  renderAdminMiscNoDupeElementsGrid();
+});
+let campaignNoDupeElementsByElement = {};
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNoDupeElements`).on('value', snap => {
+  campaignNoDupeElementsByElement = snap.val() || {};
+  renderAdminMiscNoDupeElementsGrid();
+});
+function campaignElementDupeBlocked(element) {
+  if (!campaignNoDupeElementsEnabled || !element) return false;
+  const v = campaignNoDupeElementsByElement ? campaignNoDupeElementsByElement[element] : undefined;
+  return v === undefined || v === null ? true : v === true;
+}
+// Elemental Minimum. How many elemental cards a CPU/NPC hand is topped up to
+// when the Elemental board rule is active. Two separate floors: Elemental
+// Fiend CPUs (cpuBehavior 'elemental') get their own, higher one, everyone
+// else uses the plain Elemental Rule floor. Both apply to Campaign AND VS CPU
+// -- before this these were three hardcoded numbers that disagreed with each
+// other (campaign used 3 for fiends and 1 for the rest, VS CPU used 2 for
+// fiends and skipped the rest entirely). Range 1-5.
+const ELEMENTAL_MIN_DEFAULTS = { fiend: 3, rule: 1 };
+let cpuElementalMinFiend = ELEMENTAL_MIN_DEFAULTS.fiend;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMinFiend`).on('value', snap => {
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  cpuElementalMinFiend = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MIN_DEFAULTS.fiend;
+  const input = document.getElementById('adminCpuElementalMinFiend');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMinFiend);
+});
+let cpuElementalMinRule = ELEMENTAL_MIN_DEFAULTS.rule;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMinRule`).on('value', snap => {
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  cpuElementalMinRule = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MIN_DEFAULTS.rule;
+  const input = document.getElementById('adminCpuElementalMinRule');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMinRule);
+});
+function cpuElementalMinimumFor(behavior) {
+  return behavior === 'elemental' ? cpuElementalMinFiend : cpuElementalMinRule;
+}
+// Elemental Maximum. Hard ceiling on how many elemental cards a CPU/NPC hand
+// may hold while the Elemental rule is active. The minimum only ever tops a
+// hand up; nothing stopped a card pool that is heavily elemental (a narrowed
+// Card Pool especially) from handing the NPC four or five on its own. Default
+// 5 = no effective cap, so nothing changes until it's set. If a cap is set
+// below the matching minimum the cap wins -- trimming runs after topping up.
+const ELEMENTAL_MAX_DEFAULTS = { fiend: 5, rule: 5 };
+let cpuElementalMaxFiend = ELEMENTAL_MAX_DEFAULTS.fiend;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMaxFiend`).on('value', snap => {
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  cpuElementalMaxFiend = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MAX_DEFAULTS.fiend;
+  const input = document.getElementById('adminCpuElementalMaxFiend');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMaxFiend);
+});
+let cpuElementalMaxRule = ELEMENTAL_MAX_DEFAULTS.rule;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuElementalMaxRule`).on('value', snap => {
+  const raw = snap.val();
+  const v = (raw === null || raw === undefined || raw === '') ? NaN : Number(raw);
+  cpuElementalMaxRule = Number.isFinite(v) ? Math.max(1, Math.min(PICKER_HAND_SIZE, Math.round(v))) : ELEMENTAL_MAX_DEFAULTS.rule;
+  const input = document.getElementById('adminCpuElementalMaxRule');
+  if (input && document.activeElement !== input) input.value = String(cpuElementalMaxRule);
+});
+function cpuElementalMaximumFor(behavior) {
+  return behavior === 'elemental' ? cpuElementalMaxFiend : cpuElementalMaxRule;
+}
+// Random Rule Card Level Floor, per NPC skill level. Was hardcoded as
+// "level 5 -> 5+, level 4 -> 3+, everyone else -> 1+". Drives both the hand
+// build and the "Random Cards: Level N+" label on the challenge screen.
+const CAMPAIGN_RANDOM_FLOOR_DEFAULTS = { 1: 1, 2: 1, 3: 1, 4: 3, 5: 5 };
+let campaignRandomLevelFloorByLevel = {};
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomLevelFloor`).on('value', snap => {
+  campaignRandomLevelFloorByLevel = snap.val() || {};
+  renderAdminMiscRandomFloorGrid();
+});
+function campaignRandomFloorDefault(skillLevel) {
+  return CAMPAIGN_RANDOM_FLOOR_DEFAULTS[skillLevel] != null ? CAMPAIGN_RANDOM_FLOOR_DEFAULTS[skillLevel] : 1;
+}
+// Random + one-of-a-kind cap. Campaign only. The NPC's forced reward card is
+// already limited to one, but a custom Card Pool can contain rares and the
+// player's Random hand is drawn from their whole collection, so either side
+// could open with several. On = at most one per hand.
+let campaignRandomOneRareOnly = true;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomOneRareOnly`).on('value', snap => {
+  campaignRandomOneRareOnly = snap.val() !== false;
+  const toggle = document.getElementById('adminCampaignRandomOneRareToggle');
+  if (toggle) toggle.checked = campaignRandomOneRareOnly;
+});
+// Element Variety. A soft dial rolled once per hand slot: on a hit, that slot
+// refuses an element the hand already holds. 100% = every slot enforces it, so
+// the hand comes out all-unique wherever the pool allows. 0% = never enforced,
+// elements repeat freely. It does NOT relax the card-ID dedup -- an exact card
+// repeat still only happens through the NPC's Double Up chance, at any variety
+// setting. No Duplicate Elements sits on top as a hard rule: an element ticked
+// there is always unique regardless of what this rolls.
+let campaignElementVarietyPercent = 50;
+rtdb.ref(`${GAME_CONFIG_ROOT}/campaignElementVarietyPercent`).on('value', snap => {
+  const v = Number(snap.val());
+  campaignElementVarietyPercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 50;
+  const slider = document.getElementById('adminCampaignElementVarietySlider');
+  const label = document.getElementById('adminCampaignElementVarietyValue');
+  if (slider && document.activeElement !== slider) slider.value = campaignElementVarietyPercent;
+  if (label) label.textContent = `${campaignElementVarietyPercent}%`;
+});
+function campaignEffectiveElementVarietyPercent(npc) {
+  return (npc && npc.elementVarietyPercent != null) ? npc.elementVarietyPercent : campaignElementVarietyPercent;
+}
+function campaignRollElementVariety(npc) {
+  return Math.random() * 100 < campaignEffectiveElementVarietyPercent(npc);
+}
+// Elementless cards are never restricted -- the rule is about elements, and
+// treating "no element" as an element would cap most hands at one plain card.
+function campaignElementAllowed(card, elementCounts, forceUnique) {
+  if (!card || !card.element) return true;
+  if (!forceUnique && !campaignElementDupeBlocked(card.element)) return true;
+  return !elementCounts.get(card.element);
+}
 let pickerHandBalanceEnabled = false;
 rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalanceEnabled`).on('value', snap => {
   pickerHandBalanceEnabled = snap.val() === true;
@@ -6668,6 +6876,13 @@ function campaignEmptyRules(overrides) {
     reverse: false, chaos: false, order: false, swap: false, roulette: false,
   }, overrides || {});
 }
+// ==== BAKE:CAMPAIGN_NPC_QUOTES:START ====
+// Everything between this marker and the matching :END marker is regenerated
+// wholesale by the "Bake NPC Overrides into index.html" button in Admin > Misc.
+// Hand-edits in here survive fine until the next bake, but a bake overwrites
+// them with whatever the live game has in memory (these file defaults with the
+// Firebase campaignAdmin overrides already merged on top). Edit freely -- just
+// re-bake afterwards, or make the change through the NPC editor instead.
 const CAMPAIGN_NPC_QUOTES = {
   'trepie': "How 'bout a quick game of cards?",
   'trepie-friend': "Cards? Yeah sure, I'll play.",
@@ -6746,9 +6961,16 @@ const CAMPAIGN_NPC_QUOTES = {
   'queen-of-cards': "You wish to challenge me?",
   'chocobo-forest-man': "You don't believe me either, huh? Fine - let's play. Winner gets to laugh at the other one.",
 };
+// ==== BAKE:CAMPAIGN_NPC_QUOTES:END ====
 function campaignNpcQuote(npc) {
   return CAMPAIGN_NPC_QUOTES[npc.id] || 'Want to play a card game?';
 }
+// ==== BAKE:CAMPAIGN_LOCATIONS:START ====
+// Regenerated wholesale by the "Bake NPC Overrides into index.html" button in
+// Admin > Misc -- same rules as the quotes block above. Note the bake emits
+// every NPC field it finds, so admin-only fields (cardPool, doubleUpPercent,
+// regionBiasPercent, oneOfAKindPlayChancePercent, sortOrder) will start
+// appearing here once you set them, and NPCs deleted via the editor drop out.
 const CAMPAIGN_LOCATIONS = [
   {
     id: 'balamb-garden', name: 'Balamb Garden', image: 'balamb-garden.png',
@@ -6996,6 +7218,7 @@ const CAMPAIGN_LOCATIONS = [
     ],
   },
 ];
+// ==== BAKE:CAMPAIGN_LOCATIONS:END ====
 function campaignAllNpcs() {
   return CAMPAIGN_LOCATIONS.flatMap(loc => loc.npcs.map(npc => ({ ...npc, locationId: loc.id })));
 }
@@ -7026,6 +7249,10 @@ function campaignAdminApplyNpcFields(npc, data) {
   if ('oneOfAKindPlayChancePercent' in data) {
     if (data.oneOfAKindPlayChancePercent != null) npc.oneOfAKindPlayChancePercent = Math.max(0, Math.min(100, Number(data.oneOfAKindPlayChancePercent) || 0));
     else delete npc.oneOfAKindPlayChancePercent;
+  }
+  if ('elementVarietyPercent' in data) {
+    if (data.elementVarietyPercent != null) npc.elementVarietyPercent = Math.max(0, Math.min(100, Number(data.elementVarietyPercent) || 0));
+    else delete npc.elementVarietyPercent;
   }
   if ('sortOrder' in data) {
     if (data.sortOrder != null) npc.sortOrder = Number(data.sortOrder) || 0;
@@ -7069,6 +7296,7 @@ function loadCampaignAdminOverrides() {
       if (Array.isArray(entry.cardPool) && entry.cardPool.length) npc.cardPool = entry.cardPool.slice();
       if (entry.doubleUpPercent != null) npc.doubleUpPercent = Math.max(0, Math.min(100, Number(entry.doubleUpPercent) || 0));
       if (entry.regionBiasPercent != null) npc.regionBiasPercent = Math.max(0, Math.min(100, Number(entry.regionBiasPercent) || 0));
+      if (entry.elementVarietyPercent != null) npc.elementVarietyPercent = Math.max(0, Math.min(100, Number(entry.elementVarietyPercent) || 0));
       loc.npcs.push(npc);
       if (entry.quote) CAMPAIGN_NPC_QUOTES[npcId] = entry.quote;
     });
@@ -7200,7 +7428,11 @@ function cardStock(cardId) {
   }
   return 9;
 }
-function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeakest) {
+// "Auto Rare" (card picker footer). Off means the Auto button won't spend your
+// one-of-a-kind cards. Remembered for the session so it doesn't reset between
+// matches. Manual clicks in the grid are unaffected -- this only gates Auto.
+let pickerAutoRareEnabled = false;
+function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeakest, excludeOneOfAKind, maxOneOfAKind) {
   const hasBudget = pointBudget != null;
   const hasFloor = minLevel != null && minLevel > 1;
   const added = [];
@@ -7235,6 +7467,21 @@ function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeak
     };
     let candidates = hasFloor ? CARD_DB.filter(c => baseFilter(c) && c.level >= minLevel) : CARD_DB.filter(baseFilter);
     if (hasFloor && candidates.length === 0) candidates = CARD_DB.filter(baseFilter);
+    // Absolute: with Auto Rare off, a one-of-a-kind card is never auto-picked,
+    // even if that leaves the slot empty for you to fill by hand.
+    if (excludeOneOfAKind) {
+      candidates = candidates.filter(c => !isOneOfAKindCardId(c.id));
+    }
+    // Cap on one-of-a-kind cards per hand. Falls back to allowing one if
+    // nothing else is playable, since a Random hand has to come out complete
+    // or the match can't start.
+    if (maxOneOfAKind != null) {
+      const heldRares = [...handOrder, ...added].filter(id => isOneOfAKindCardId(id)).length;
+      if (heldRares >= maxOneOfAKind) {
+        const nonRare = candidates.filter(c => !isOneOfAKindCardId(c.id));
+        if (nonRare.length) candidates = nonRare;
+      }
+    }
     if (candidates.length === 0) break;
     const isUnused = c => (counts.get(c.id) || 0) === 0;
     let card;
@@ -7286,8 +7533,8 @@ function buildRandomHandIds(pointBudget, counts, handOrder, minLevel, preferWeak
   }
   return added;
 }
-function buildRandomHand(pointBudget, minLevel) {
-  const ids = buildRandomHandIds(pointBudget != null ? pointBudget : null, new Map(), [], minLevel);
+function buildRandomHand(pointBudget, minLevel, maxOneOfAKind) {
+  const ids = buildRandomHandIds(pointBudget != null ? pointBudget : null, new Map(), [], minLevel, false, false, maxOneOfAKind);
   return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
 }
 function prefillHandFromPreviousPicks(previousPickIds, pointBudget) {
@@ -7435,7 +7682,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
       refreshUi();
     }
     function autoFillHand() {
-      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
+      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse, !pickerAutoRareEnabled);
       if (added.length) {
         added.forEach(id => handOrder.push(id));
         playSfx('cardPlace');
@@ -7634,7 +7881,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
     }
     function forceCompleteAndConfirm() {
       const preFillSlots = handOrder.length;
-      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
+      const added = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse, !pickerAutoRareEnabled);
       added.forEach(id => handOrder.push(id));
       while (handOrder.length < PICKER_HAND_SIZE) {
         if (handOrder.length === 0) break;
@@ -7648,7 +7895,7 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
         const removedId = handOrder[removeIdx];
         handOrder.splice(removeIdx, 1);
         counts.set(removedId, Math.max(0, (counts.get(removedId) || 0) - 1));
-        const retryAdded = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse);
+        const retryAdded = buildRandomHandIds(hasBudget ? pointBudget : null, counts, handOrder, null, state.rules.reverse, !pickerAutoRareEnabled);
         retryAdded.forEach(id => handOrder.push(id));
       }
       if (state.rules.closedSingle && closedSingleSlot === null && handOrder.length === PICKER_HAND_SIZE) {
@@ -7740,6 +7987,21 @@ async function runCardPicker(owner, promptText, pointBudget, prefillIds, prefill
       playSfx('cursorCancel');
       backOutOfPicker();
     });
+    const autoRareBtn = document.getElementById('pickerAutoRareBtn');
+    if (autoRareBtn) {
+      const freshAutoRareBtn = autoRareBtn.cloneNode(true);
+      autoRareBtn.replaceWith(freshAutoRareBtn);
+      const autoRareStateEl = freshAutoRareBtn.querySelector('#pickerAutoRareState');
+      const paintAutoRare = () => {
+        if (autoRareStateEl) autoRareStateEl.textContent = pickerAutoRareEnabled ? 'On' : 'Off';
+      };
+      paintAutoRare();
+      freshAutoRareBtn.addEventListener('click', () => {
+        playSfx('cursorMove');
+        pickerAutoRareEnabled = !pickerAutoRareEnabled;
+        paintAutoRare();
+      });
+    }
     const autoBtn = document.getElementById('pickerAuto');
     const freshAutoBtn = autoBtn.cloneNode(true);
     autoBtn.replaceWith(freshAutoBtn);
@@ -7913,7 +8175,14 @@ function elementalModifier(cellIndex, card) {
   return state.elementalMode === 'buff' ? 0 : -1;
 }
 function rank(cellIndex, card, side) {
-  return card[side] + elementalModifier(cellIndex, card);
+  // Clamp to 1-10, matching what the card face actually draws (see the
+  // `effective` helper in the card renderer, which uses the same bounds).
+  // Without this an A on its matching element became an internal 11 while
+  // still rendering as a bare "A" -- so a buffed A beat an unbuffed A and the
+  // board showed "A flipped A" with no visible reason. A 1 nerfed to 0 had the
+  // mirror problem under Reverse. Elemental buffs now do nothing to a side
+  // already at the cap, which is the tradeoff for the display never lying.
+  return Math.max(1, Math.min(10, card[side] + elementalModifier(cellIndex, card)));
 }
 function capturesBeats(attackerIndex, attackerCard, attackerSide, defenderIndex, defenderCard, defenderSide) {
   if (state.rules.fallenAce && attackerCard[attackerSide] === 1 && defenderCard[defenderSide] === 10) return true;
@@ -7936,7 +8205,7 @@ const state = {
   elementAlignment: 100,
   elementalMode: 'buffnerf',
   elementalBias: 80,
-  elementalStatsMode: 'plusOne',
+  elementalStatsMode: 'adjust',
   mode: 'practice',
   seat: null,
   roomId: null,
@@ -8061,6 +8330,13 @@ function initGame(hands) {
   state.hands = hands || dealHands();
   tagHandOwnership(state.hands);
   if (state.rules.swap) applySwapRule(state.hands);
+  // Snapshot of the five cards each side opened with. Sudden Death calls
+  // initGame() again with re-dealt hands, so it saves and restores this around
+  // that call -- see maybeTriggerPracticeSuddenDeath.
+  state.matchOriginalHandIds = {
+    p1: state.hands.p1.map(c => c.id),
+    p2: state.hands.p2.map(c => c.id),
+  };
   tagClosedSingleHandCards();
   state.forcedCardId = { p1: null, p2: null };
   state.forcedCardTurnKey = { p1: null, p2: null };
@@ -8114,9 +8390,16 @@ function maybeTriggerPracticeSuddenDeath() {
   // no gil, no NPC marked defeated, nothing.
   const campaignLocationId = state.campaignLocationId;
   const campaignNpcId = state.campaignNpcId;
+  // Sudden Death re-deals both sides from whatever they own at the tie, so
+  // each hand now contains cards captured from the opponent. The end-of-match
+  // trade must still offer the loser's ORIGINAL five, not that mixture --
+  // otherwise the winner gets offered their own cards back. Keep the snapshot
+  // from the first round instead of letting initGame() overwrite it.
+  const matchOriginalHandIds = state.matchOriginalHandIds;
   initGame({ p1: p1Hand, p2: p2Hand });
   state.campaignLocationId = campaignLocationId;
   state.campaignNpcId = campaignNpcId;
+  if (matchOriginalHandIds) state.matchOriginalHandIds = matchOriginalHandIds;
   return true;
 }
 let lastPracticeHands = null;
@@ -8236,8 +8519,20 @@ function buildMaxPointsHandIds(pointBudget) {
     if (candidates.length === 0) break;
     const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
     const best = candidates.filter(c => c.level === highestLevel);
-    const unused = best.filter(c => (counts.get(c.id) || 0) === 0);
-    const finalists = unused.length ? unused : best;
+    let finalists = best.filter(c => (counts.get(c.id) || 0) === 0);
+    if (!finalists.length) {
+      // Every card at the top affordable level is already in the hand. Step
+      // down to the highest level that still has an unheld card instead of
+      // stacking a second copy -- a slightly weaker distinct card beats a
+      // duplicate. Only repeat when the pool genuinely has nothing left.
+      const freshLower = candidates.filter(c => (counts.get(c.id) || 0) === 0);
+      if (freshLower.length) {
+        const nextLevel = freshLower.reduce((max, c) => Math.max(max, c.level), 0);
+        finalists = freshLower.filter(c => c.level === nextLevel);
+      } else {
+        finalists = best;
+      }
+    }
     const card = finalists[Math.floor(Math.random() * finalists.length)];
     counts.set(card.id, (counts.get(card.id) || 0) + 1);
     picked.push(card.id);
@@ -8250,7 +8545,11 @@ function buildMaxPointsHandIds(pointBudget) {
   return picked;
 }
 function ensureElementalCardsInHand(ids, pointBudget) {
-  const MIN_ELEMENTAL = 2;
+  // Gated on the Elemental board rule, matching ensureCampaignElementalOthers.
+  // Previously this ran even with the rule off, which forced elemental cards
+  // into VS CPU hands in matches where element could never matter.
+  if (!state.rules.elemental) return ids;
+  const MIN_ELEMENTAL = cpuElementalMinimumFor(state.cpuBehavior);
   let elementalCount = ids.reduce((sum, id) => {
     const c = CARD_DB.find(cc => cc.id === id);
     return sum + (c && c.element ? 1 : 0);
@@ -8288,29 +8587,59 @@ function ensureElementalCardsInHand(ids, pointBudget) {
       return c.level <= budgetForSwap;
     });
     if (candidates.length === 0) break;
-    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
-    const best = candidates.filter(c => c.level === highestLevel);
+    // Same defect ensureCampaignElementalOthers had: this loop can run more
+    // than once and every pass grabs the highest-level affordable elemental,
+    // which is usually the exact same card -- and PICKER_MAX_COPIES is 9, so
+    // nothing stopped it stacking. Prefer an element the hand isn't holding.
+    const heldIds = new Set(result.filter((id, i) => i !== outIdx));
+    const freshCandidates = candidates.filter(c => !heldIds.has(c.id));
+    const usable = freshCandidates.length ? freshCandidates : candidates;
+    const highestLevel = usable.reduce((max, c) => Math.max(max, c.level), 0);
+    const best = usable.filter(c => c.level === highestLevel);
     const inCard = best[Math.floor(Math.random() * best.length)];
     counts.set(outCard.id, (counts.get(outCard.id) || 0) - 1);
     counts.set(inCard.id, (counts.get(inCard.id) || 0) + 1);
     result[outIdx] = inCard.id;
     elementalCount++;
   }
+  // --- hard cap, mirroring ensureCampaignElementalOthers ---
+  const MAX_ELEMENTAL = cpuElementalMaximumFor(state.cpuBehavior);
+  while (elementalCount > MAX_ELEMENTAL) {
+    const elementalIdxs = result.map((id, i) => i).filter(i => isElemental(i));
+    if (elementalIdxs.length === 0) break;
+    const outIdx = elementalIdxs[Math.floor(Math.random() * elementalIdxs.length)];
+    const outCard = cardOf(outIdx);
+    const spentWithoutOut = totalSpent() - (outCard ? outCard.level : 0);
+    const budgetForSwap = hasBudget ? pointBudget - spentWithoutOut : Infinity;
+    const heldIds = new Set(result.filter((id, i) => i !== outIdx));
+    const candidates = CARD_DB.filter(c => {
+      if (c.element) return false;
+      if (heldIds.has(c.id)) return false;
+      const remainingStock = cardStock(c.id) - (counts.get(c.id) || 0);
+      if (remainingStock <= 0) return false;
+      if ((counts.get(c.id) || 0) >= PICKER_MAX_COPIES) return false;
+      return c.level <= budgetForSwap;
+    });
+    if (candidates.length === 0) break;
+    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
+    const best = candidates.filter(c => c.level === highestLevel);
+    const inCard = best[Math.floor(Math.random() * best.length)];
+    counts.set(outCard.id, (counts.get(outCard.id) || 0) - 1);
+    counts.set(inCard.id, (counts.get(inCard.id) || 0) + 1);
+    result[outIdx] = inCard.id;
+    elementalCount--;
+  }
   return result;
 }
 function buildMaxPointsHand(pointBudget) {
   let ids = buildMaxPointsHandIds(pointBudget);
-  if (state.cpuBehavior === 'elemental') {
-    ids = ensureElementalCardsInHand(ids, pointBudget);
-  }
+  ids = ensureElementalCardsInHand(ids, pointBudget);
   return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
 }
 function buildCpuP2Hand(pointBudget) {
   if (state.rules.random) {
     let ids = buildRandomHandIds(null, new Map(), []);
-    if (state.cpuBehavior === 'elemental') {
-      ids = ensureElementalCardsInHand(ids, null);
-    }
+    ids = ensureElementalCardsInHand(ids, null);
     return ids.map(id => ({ ...CARD_DB.find(c => c.id === id) }));
   }
   return buildMaxPointsHand(applyReversePointBudget(state.cpuDifficulty, pointBudget));
@@ -8469,7 +8798,13 @@ function campaignRollForcedRareCards(npc, baseBudget) {
   if (Math.random() * 100 >= campaignEffectiveOneOfAKindPlayChancePercent(npc)) {
     return { pointBudget: baseBudget, forcedRareCardIds: [] };
   }
-  const picked = candidates[Math.floor(Math.random() * candidates.length)];
+  // Cards won off the player take priority over the NPC's own reward card.
+  // A uniform pick meant a 50/50 every match, so a card you lost could sit
+  // unplayed for many rematches.
+  const wonIds = campaignNpcState(npc.id).wonCardIds || [];
+  const fromPlayer = candidates.filter(c => wonIds.includes(c.id));
+  const pickFrom = fromPlayer.length ? fromPlayer : candidates;
+  const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)];
   return { pointBudget: baseBudget, forcedRareCardIds: [picked.id] };
 }
 function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards) {
@@ -8477,28 +8812,71 @@ function ensureCampaignElementalOthers(npc, others, pool, otherBudget, rareCards
   // rule is actually active this match -- otherwise element never matters and
   // this was just picking a worse card for no reason.
   if (!state.rules.elemental) return others;
-  const minElemental = npc.cpuBehavior === 'elemental' ? 3 : 1;
+  // A FLOOR, not an exact count: top up when the hand is short, never remove
+  // elemental cards the main loop drew on its own.
+  const targetElemental = cpuElementalMinimumFor(npc.cpuBehavior);
   const rareElementalCount = (rareCards || []).reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
   let elementalCount = rareElementalCount + others.reduce((sum, c) => sum + (c.element ? 1 : 0), 0);
-  if (elementalCount >= minElemental) return others;
-  const elementalPool = pool.filter(c => c.element);
-  if (!elementalPool.length) return others;
   const result = others.slice();
   const totalSpent = () => result.reduce((sum, c) => sum + c.level, 0);
-  while (elementalCount < minElemental) {
+  const heldIdsExcept = outIdx => new Set(
+    result.filter((c, i) => i !== outIdx).map(c => c.id).concat((rareCards || []).map(c => c.id))
+  );
+  const heldElementsExcept = outIdx => {
+    const m = new Map();
+    result.forEach((c, i) => { if (i !== outIdx && c.element) m.set(c.element, (m.get(c.element) || 0) + 1); });
+    (rareCards || []).forEach(c => { if (c.element) m.set(c.element, (m.get(c.element) || 0) + 1); });
+    return m;
+  };
+  const swapIn = (outIdx, candidates) => {
+    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
+    const best = candidates.filter(c => c.level === highestLevel);
+    result[outIdx] = { ...best[Math.floor(Math.random() * best.length)] };
+  };
+  // --- top up toward the target ---
+  const elementalPool = pool.filter(c => c.element);
+  while (elementalCount < targetElemental && elementalPool.length) {
     const nonElementalIdxs = result.map((c, i) => i).filter(i => !result[i].element);
     if (nonElementalIdxs.length === 0) break;
     const outIdx = nonElementalIdxs.reduce((best, i) => (result[i].level < result[best].level ? i : best), nonElementalIdxs[0]);
     const outCard = result[outIdx];
-    const spentWithoutOut = totalSpent() - outCard.level;
-    const budgetForSwap = otherBudget - spentWithoutOut;
-    const candidates = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
-    if (candidates.length === 0) break;
-    const highestLevel = candidates.reduce((max, c) => Math.max(max, c.level), 0);
-    const best = candidates.filter(c => c.level === highestLevel);
-    const inCard = best[Math.floor(Math.random() * best.length)];
-    result[outIdx] = { ...inCard };
+    const budgetForSwap = otherBudget - (totalSpent() - outCard.level);
+    const affordable = elementalPool.filter(c => c.level <= budgetForSwap && c.id !== outCard.id);
+    if (affordable.length === 0) break;
+    // Prefer cards the hand isn't already holding; a repeat only through the
+    // NPC's own Double Up chance (see the duplicate-card fix).
+    const alreadyHeld = heldIdsExcept(outIdx);
+    const fresh = affordable.filter(c => !alreadyHeld.has(c.id));
+    let candidates = fresh;
+    if (!fresh.length) {
+      if (Math.random() * 100 >= (npc.doubleUpPercent || 0)) break;
+      candidates = affordable;
+    }
+    const heldElements = heldElementsExcept(outIdx);
+    const varietyRoll = campaignRollElementVariety(npc);
+    const elementOk = candidates.filter(c => campaignElementAllowed(c, heldElements, varietyRoll));
+    if (elementOk.length) candidates = elementOk;
+    swapIn(outIdx, candidates);
     elementalCount++;
+  }
+  // --- hard cap: trim the surplus back out ---
+  // Runs after the top-up, so a cap set below the minimum wins. Removes a
+  // RANDOM elemental card and swaps in the best affordable plain card, so the
+  // trim doesn't always strip the same (weakest) element every match. Forced
+  // rare cards are never trimmed.
+  const maxElemental = cpuElementalMaximumFor(npc.cpuBehavior);
+  const plainPool = pool.filter(c => !c.element);
+  while (elementalCount > maxElemental && plainPool.length) {
+    const elementalIdxs = result.map((c, i) => i).filter(i => !!result[i].element);
+    if (elementalIdxs.length === 0) break;
+    const outIdx = elementalIdxs[Math.floor(Math.random() * elementalIdxs.length)];
+    const outCard = result[outIdx];
+    const budgetForSwap = otherBudget - (totalSpent() - outCard.level);
+    const alreadyHeld = heldIdsExcept(outIdx);
+    const candidates = plainPool.filter(c => c.level <= budgetForSwap && !alreadyHeld.has(c.id));
+    if (candidates.length === 0) break;
+    swapIn(outIdx, candidates);
+    elementalCount--;
   }
   return result;
 }
@@ -8515,7 +8893,12 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
   const others = [];
   let spent = 0;
   const usageCounts = new Map();
-  rareCards.forEach(c => usageCounts.set(c.id, (usageCounts.get(c.id) || 0) + 1));
+  const elementCounts = new Map();
+  const noteCard = c => {
+    usageCounts.set(c.id, (usageCounts.get(c.id) || 0) + 1);
+    if (c.element) elementCounts.set(c.element, (elementCounts.get(c.element) || 0) + 1);
+  };
+  rareCards.forEach(noteCard);
   for (let i = 0; i < otherSlots; i++) {
     const slotsRemaining = otherSlots - i;
     const reserveForOtherSlots = (slotsRemaining - 1) * minLevelInPool;
@@ -8529,10 +8912,13 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
     // extreme high/low spread -- without flattening it into a single level,
     // since the card actually chosen is still whichever's highest AFFORDABLE
     // within this slot's cap (plus regional bias/tie-break randomness).
+    // Strength is looked up per NPC skill level (Misc > Hand Balance By Skill
+    // Level), falling back to the single slider for any level left unset.
     let perSlotCap = greedyCap;
-    if (campaignHandBalanceEnabled && campaignHandBalancePercent > 0 && slotsRemaining > 1) {
+    const handBalancePercent = campaignHandBalancePercentForLevel(npc && npc.cpuDifficulty);
+    if (campaignHandBalanceEnabled && handBalancePercent > 0 && slotsRemaining > 1) {
       const evenCap = Math.max(minLevelInPool, Math.floor((otherBudget - spent) / slotsRemaining));
-      const balanceAmount = Math.min(100, campaignHandBalancePercent) / 100;
+      const balanceAmount = Math.min(100, handBalancePercent) / 100;
       perSlotCap = Math.round(greedyCap + (evenCap - greedyCap) * balanceAmount);
     }
     const candidates = pool.filter(c => c.level <= perSlotCap);
@@ -8546,14 +8932,26 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
       const unusedCandidates = biasedCandidates.filter(c => !usageCounts.get(c.id));
       const usedCandidates = biasedCandidates.filter(c => usageCounts.get(c.id));
       const wantsDouble = usedCandidates.length > 0 && Math.random() * 100 < (npc.doubleUpPercent || 0);
-      const pickFrom = wantsDouble ? biasedCandidates : (unusedCandidates.length ? unusedCandidates : biasedCandidates);
+      // Region bias can narrow a slot to a handful of cards (Winhill and
+      // Fisherman's Horizon list two each), which used to force a duplicate
+      // the moment they were spent. Drop the bias for this slot and retry
+      // against the full affordable set before resorting to a repeat.
+      const unusedUnbiased = unusedCandidates.length
+        ? unusedCandidates
+        : candidates.filter(c => !usageCounts.get(c.id));
+      let pickFrom = wantsDouble ? biasedCandidates : (unusedUnbiased.length ? unusedUnbiased : biasedCandidates);
+      // No Duplicate Elements: drop anything whose element is already in the
+      // hand, unless filtering would leave this slot with nothing to play.
+      const varietyRoll = campaignRollElementVariety(npc);
+      const elementFiltered = pickFrom.filter(c => campaignElementAllowed(c, elementCounts, varietyRoll));
+      if (elementFiltered.length) pickFrom = elementFiltered;
       const highestLevel = pickFrom.reduce((max, c) => Math.max(max, c.level), 0);
       const best = pickFrom.filter(c => c.level === highestLevel);
       card = best[Math.floor(Math.random() * best.length)];
     } else {
       card = pool.reduce((a, c) => (c.level < a.level ? c : a), pool[0]);
     }
-    usageCounts.set(card.id, (usageCounts.get(card.id) || 0) + 1);
+    noteCard(card);
     others.push({ ...card });
     spent += card.level;
   }
@@ -8566,10 +8964,10 @@ function buildCampaignNpcHand(npc, pointBudget, forcedRareCardIds) {
   return hand;
 }
 function campaignRandomCardsLevelFloor(npc) {
-  const difficulty = npc && npc.cpuDifficulty;
-  if (difficulty === 5) return 5;
-  if (difficulty === 4) return 3;
-  return 1;
+  const difficulty = (npc && npc.cpuDifficulty) || 1;
+  const raw = Number(campaignRandomLevelFloorByLevel ? campaignRandomLevelFloorByLevel[difficulty] : undefined);
+  if (Number.isFinite(raw)) return Math.max(1, Math.min(10, Math.round(raw)));
+  return campaignRandomFloorDefault(difficulty);
 }
 function campaignRandomCardsLabel(npc) {
   const floor = campaignRandomCardsLevelFloor(npc);
@@ -8583,8 +8981,26 @@ function buildCampaignNpcRandomHand(npc, forcedRareCardIds) {
   const rareCards = (forcedRareCardIds || []).map(id => CARD_DB.find(c => c.id === id)).filter(Boolean);
   const otherSlots = Math.max(0, PICKER_HAND_SIZE - rareCards.length);
   const others = [];
+  // Uniform random *with replacement* duplicated a card in ~28% of hands even
+  // at 0% Double Up. Draw from what the hand isn't holding yet, and only fall
+  // back to the whole pool when Double Up says so (or the pool is genuinely
+  // too small to fill five distinct slots).
+  const usedIds = new Set(rareCards.map(c => c.id));
+  let rareCount = rareCards.filter(c => isOneOfAKindCardId(c.id)).length;
   for (let i = 0; i < otherSlots; i++) {
-    others.push({ ...pool[Math.floor(Math.random() * pool.length)] });
+    let fresh = pool.filter(c => !usedIds.has(c.id));
+    // One-of-a-kind cap: a custom Card Pool can contain rares, so the NPC's
+    // Random hand could otherwise open with several on top of its reward card.
+    if (campaignRandomOneRareOnly && rareCount >= 1) {
+      const nonRare = fresh.filter(c => !isOneOfAKindCardId(c.id));
+      if (nonRare.length) fresh = nonRare;
+    }
+    const wantsDouble = Math.random() * 100 < (npc.doubleUpPercent || 0);
+    const pickFrom = (fresh.length && !wantsDouble) ? fresh : pool;
+    const card = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+    usedIds.add(card.id);
+    if (isOneOfAKindCardId(card.id)) rareCount++;
+    others.push({ ...card });
   }
   const hand = others.slice();
   rareCards.forEach(rareCard => {
@@ -8622,13 +9038,55 @@ async function startCampaignBattle(locationId, npcId, rules, playerBudget, npcBu
   const prefillP1Ids = state.rules.random ? null : prefillHandFromPreviousPicks(prefillSourceIds, playerBudget);
   const prefillP1ClosedSingle = state.closedSingleCardId ? state.closedSingleCardId.p1 : null;
   const p1Hand = state.rules.random
-    ? buildRandomHand(randomIgnoresPoints ? null : playerBudget, randomCardsMinLevel)
+    ? buildRandomHand(randomIgnoresPoints ? null : playerBudget, randomCardsMinLevel, campaignRandomOneRareOnly ? 1 : null)
     : await runCardPicker('p1', `Challenge: ${npc.name}`, playerBudget, prefillP1Ids, prefillP1ClosedSingle);
   lastCampaignP1HandIds = p1Hand.map(c => c.id);
   lastCampaignP1HandNpcId = npcId;
   const p2Hand = randomIgnoresPoints
     ? buildCampaignNpcRandomHand(npc, forcedRareCardIds)
     : buildCampaignNpcHand(npc, npcBudget, forcedRareCardIds);
+  // Diagnostic: prints the settings that were actually in effect and the hand
+  // they produced. Open DevTools (F12) > Console and filter for "[npc hand]".
+  // Safe to delete this block once the elemental-count question is settled.
+  console.log('[npc hand]', {
+    npc: npc.name,
+    behavior: npc.cpuBehavior,
+    difficulty: npc.cpuDifficulty,
+    path: randomIgnoresPoints ? 'buildCampaignNpcRandomHand (Random ignores points)' : 'buildCampaignNpcHand',
+    budget: npcBudget,
+    elementalRuleActive: !!state.rules.elemental,
+    elementalMinUsed: cpuElementalMinimumFor(npc.cpuBehavior),
+    elementalMaxUsed: cpuElementalMaximumFor(npc.cpuBehavior),
+    settings: {
+      cpuElementalMinFiend,
+      cpuElementalMinRule,
+      cpuElementalMaxFiend,
+      cpuElementalMaxRule,
+      elementVarietyGlobal: campaignElementVarietyPercent,
+      elementVarietyForThisNpc: campaignEffectiveElementVarietyPercent(npc),
+      noDupeElementsEnabled: campaignNoDupeElementsEnabled,
+    },
+    npcOverrides: {
+      cardPoolSize: Array.isArray(npc.cardPool) ? npc.cardPool.length : 'default pool',
+      elementVarietyPercent: npc.elementVarietyPercent != null ? npc.elementVarietyPercent : '(inherits)',
+      doubleUpPercent: npc.doubleUpPercent || 0,
+    },
+    forcedRareCardIds: forcedRareCardIds || [],
+    rareRoll: {
+      // Everything campaignRollForcedRareCards weighed for this match.
+      playChancePercent: campaignEffectiveOneOfAKindPlayChancePercent(npc),
+      candidates: campaignNpcRareCardCandidates(npc).map(c => `${c.name} (${c.id})`),
+      wonFromYou: campaignNpcState(npc.id).wonCardIds
+        .map(id => { const c = CARD_DB.find(x => x.id === id); return c ? `${c.name} (${id})` : id; }),
+      ownRewardCard: npc.rewardCardId
+        ? `${(CARD_DB.find(c => c.id === npc.rewardCardId) || {}).name} (${npc.rewardCardId})`
+        : null,
+      ownRewardAlreadyTaken: !!campaignNpcState(npc.id).rareCardLost,
+    },
+    hand: p2Hand.map(c => `${c.name} L${c.level} ${c.element || '-'}`),
+    elementalCount: p2Hand.filter(c => c.element).length,
+    distinctElements: [...new Set(p2Hand.filter(c => c.element).map(c => c.element))],
+  });
   state.closedSingleCardId = {
     p1: p1Hand.closedSingleCardId != null ? p1Hand.closedSingleCardId : null,
     p2: state.rules.closedSingle ? assignRandomClosedSingleCardId(p2Hand) : null,
@@ -9648,7 +10106,8 @@ async function executeDisconnectForfeit(roomId, roomRef, losingSeat, winningSeat
   const board = fromRoomBoard(room.board);
   const roomHands = fromRoomHands(room.hands);
   const loserHand = roomHands[losingSeat] || [];
-  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand);
+  const loserOriginalIds = room.suddenDeathHandIds ? room.suddenDeathHandIds[losingSeat] : null;
+  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand, loserOriginalIds);
   if (tradeState.picked && tradeState.picked.length) {
     tradeState.picked = await annotateTradePicksWithDuplicates(winningUid, tradeState.picked, tradeState.winner);
   }
@@ -12497,19 +12956,32 @@ function totalScore(owner) {
 }
 const TRADE_RULES = ['one', 'diff', 'direct', 'all'];
 const TRADE_RULE_LABELS = { one: 'One', diff: 'Diff', direct: 'Direct', all: 'All' };
-function buildInitialTradeState(rule, board, p1Score, p2Score, loserHand) {
+function buildInitialTradeState(rule, board, p1Score, p2Score, loserHand, originalHandIds) {
   if (p1Score === p2Score) return { done: true, rule, pool: [], picked: [], revealIndex: 0, takeCount: 0 };
   const winner = p1Score > p2Score ? 'p1' : 'p2';
   const loser = winner === 'p1' ? 'p2' : 'p1';
   if (rule === 'direct') {
     return { rule, winner, loser, pool: [], takeCount: 0, picked: [], revealIndex: 0, done: true };
   }
-  const loserPlayedCards = board
-    .map((cell, idx) => ({ cell, idx }))
-    .filter(({ cell }) => cell && cell.card && cell._placedBy === loser);
-  const boardPool = loserPlayedCards.map(({ cell, idx }) => ({ cardId: cell.card.id, poolKey: `${loser}-${idx}`, originalOwner: cell.card._originalOwner || loser }));
-  const handPool = (Array.isArray(loserHand) ? loserHand : []).map((card, i) => ({ cardId: card.id, poolKey: `${loser}-hand-${i}`, originalOwner: card._originalOwner || loser }));
-  const pool = [...boardPool, ...handPool];
+  // Sudden Death re-deals both sides from whatever they own at the tie, so by
+  // the end the loser's board+hand is a mixture that includes cards captured
+  // from the winner -- scanning it would offer the winner their own cards back.
+  // Rooms record the opening picks in suddenDeathHandIds and never overwrite
+  // them, so prefer those. Only populated for rooms running the Sudden Death
+  // rule; every other room falls through to the original scan unchanged.
+  let pool;
+  if (Array.isArray(originalHandIds) && originalHandIds.length) {
+    pool = originalHandIds.map((cardId, i) => ({
+      cardId, poolKey: `${loser}-orig-${i}`, originalOwner: loser,
+    }));
+  } else {
+    const loserPlayedCards = board
+      .map((cell, idx) => ({ cell, idx }))
+      .filter(({ cell }) => cell && cell.card && cell._placedBy === loser);
+    const boardPool = loserPlayedCards.map(({ cell, idx }) => ({ cardId: cell.card.id, poolKey: `${loser}-${idx}`, originalOwner: cell.card._originalOwner || loser }));
+    const handPool = (Array.isArray(loserHand) ? loserHand : []).map((card, i) => ({ cardId: card.id, poolKey: `${loser}-hand-${i}`, originalOwner: card._originalOwner || loser }));
+    pool = [...boardPool, ...handPool];
+  }
   let takeCount;
   if (rule === 'one') takeCount = 1;
   else if (rule === 'diff') takeCount = Math.abs(p1Score - p2Score);
@@ -12665,7 +13137,8 @@ async function resolveRankedMatchIfNeededInner(room, roomId, roomRef) {
   const roomHands = fromRoomHands(room.hands);
   const loserSeat = p1Score === p2Score ? null : (p1Score > p2Score ? 'p2' : 'p1');
   const loserHand = loserSeat ? roomHands[loserSeat] : [];
-  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand);
+  const loserOriginalIds = (loserSeat && room.suddenDeathHandIds) ? room.suddenDeathHandIds[loserSeat] : null;
+  const tradeState = buildInitialTradeState(tradeRule, board, p1Score, p2Score, loserHand, loserOriginalIds);
   if (tradeState.picked && tradeState.picked.length) {
     const winnerUid = room.seatUids && tradeState.winner && room.seatUids[tradeState.winner];
     tradeState.picked = await annotateTradePicksWithDuplicates(winnerUid, tradeState.picked, tradeState.winner);
@@ -12871,6 +13344,15 @@ async function campaignMarkNpcDefeated(uid, locationId, npcId) {
   return next.id;
 }
 function campaignBuildBoardHandPool(seat, board, hand) {
+  // Prefer the match-start snapshot. Scanning the board for cards this seat
+  // placed plus whatever is left in hand gives the right answer in a normal
+  // match, but after Sudden Death it returns the post-tie mixture.
+  const snapshot = state.matchOriginalHandIds && state.matchOriginalHandIds[seat];
+  if (Array.isArray(snapshot) && snapshot.length) {
+    return snapshot.map((cardId, i) => ({
+      cardId, poolKey: `${seat}-orig-${i}`, originalOwner: seat,
+    }));
+  }
   const boardCards = (board || [])
     .map((cell, idx) => ({ cell, idx }))
     .filter(({ cell }) => cell && cell.card && cell._placedBy === seat);
@@ -16025,11 +16507,48 @@ document.getElementById('adminCampaignHandBalanceSlider').addEventListener('inpu
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   const label = document.getElementById('adminCampaignHandBalanceValue');
   if (label) label.textContent = `${v}%`;
+  // Keep the per-level boxes' greyed placeholders showing the value any
+  // un-overridden level would actually use while the slider is being dragged.
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscHandBalance_${level}`);
+    if (input) input.placeholder = String(v);
+  }
 });
 document.getElementById('adminCampaignHandBalanceSlider').addEventListener('change', e => {
   playSfx('cursorMove');
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).set(v).catch(() => {});
+});
+[['adminCpuElementalMinFiend', 'cpuElementalMinFiend'], ['adminCpuElementalMinRule', 'cpuElementalMinRule'],
+ ['adminCpuElementalMaxFiend', 'cpuElementalMaxFiend'], ['adminCpuElementalMaxRule', 'cpuElementalMaxRule']].forEach(([inputId, key]) => {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const commit = () => {
+    const v = Math.max(1, Math.min(5, Math.round(Number(input.value))));
+    if (!Number.isFinite(v)) return;
+    input.value = String(v);
+    rtdb.ref(`${GAME_CONFIG_ROOT}/${key}`).set(v).catch(() => {});
+  };
+  input.addEventListener('change', () => { playSfx('cursorMove'); commit(); });
+  input.addEventListener('blur', commit);
+});
+document.getElementById('adminCampaignElementVarietySlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminCampaignElementVarietyValue');
+  if (label) label.textContent = `${v}%`;
+});
+document.getElementById('adminCampaignElementVarietySlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignElementVarietyPercent`).set(v).catch(() => {});
+});
+document.getElementById('adminCampaignRandomOneRareToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomOneRareOnly`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCampaignNoDupeElementsToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNoDupeElementsEnabled`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminPickerHandBalanceToggle').addEventListener('change', e => {
   playSfx('cursorMove');
@@ -16600,6 +17119,9 @@ function clearAdminNpcEditorForm() {
   document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked = false;
   document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value = String(campaignOneOfAKindPlayChancePercent != null ? campaignOneOfAKindPlayChancePercent : 100);
   document.getElementById('adminNpcEditorOneOfAKindPlayPercent').disabled = true;
+  document.getElementById('adminNpcEditorElementVarietyOverride').checked = false;
+  document.getElementById('adminNpcEditorElementVarietyPercent').value = String(campaignElementVarietyPercent != null ? campaignElementVarietyPercent : 50);
+  document.getElementById('adminNpcEditorElementVarietyPercent').disabled = true;
   setAdminNpcEditorRulesFromNpc(null);
   setAdminNpcEditorPoolFromIds(campaignDefaultCardPoolIds({ cpuDifficulty: 3 }));
   adminNpcEditorCurrentNpc = null;
@@ -16633,6 +17155,10 @@ function loadAdminNpcEditorNpcIntoForm(npcId) {
   document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked = oneOfAKindPlayOverrideSet;
   document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value = String(oneOfAKindPlayOverrideSet ? npc.oneOfAKindPlayChancePercent : (campaignOneOfAKindPlayChancePercent != null ? campaignOneOfAKindPlayChancePercent : 100));
   document.getElementById('adminNpcEditorOneOfAKindPlayPercent').disabled = !oneOfAKindPlayOverrideSet;
+  const elementVarietyOverrideSet = npc.elementVarietyPercent != null;
+  document.getElementById('adminNpcEditorElementVarietyOverride').checked = elementVarietyOverrideSet;
+  document.getElementById('adminNpcEditorElementVarietyPercent').value = String(elementVarietyOverrideSet ? npc.elementVarietyPercent : (campaignElementVarietyPercent != null ? campaignElementVarietyPercent : 50));
+  document.getElementById('adminNpcEditorElementVarietyPercent').disabled = !elementVarietyOverrideSet;
   setAdminNpcEditorRulesFromNpc(npc.rules);
   setAdminNpcEditorPoolFromIds((Array.isArray(npc.cardPool) && npc.cardPool.length) ? npc.cardPool : campaignDefaultCardPoolIds(npc));
   form.classList.remove('hidden');
@@ -16691,10 +17217,12 @@ async function persistAdminNpcEditorEditedNpc(npc) {
   const regionBiasPercent = regionBiasOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorRegionBiasPercent').value) || 0)) : null;
   const oneOfAKindPlayOverrideOn = document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked;
   const oneOfAKindPlayChancePercent = oneOfAKindPlayOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value) || 0)) : null;
+  const elementVarietyOverrideOn = document.getElementById('adminNpcEditorElementVarietyOverride').checked;
+  const elementVarietyPercent = elementVarietyOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorElementVarietyPercent').value) || 0)) : null;
   const rules = collectAdminNpcEditorRules();
   const cardPool = collectAdminNpcEditorPool();
   if (!cardPool.length) throw new Error('Select at least one card for the Card Pool.');
-  const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
+  const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, elementVarietyPercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
   if (npc._adminCustom) {
     const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
     entry.locationId = loc ? loc.id : document.getElementById('adminNpcEditorLocationSelect').value;
@@ -16806,7 +17334,7 @@ function initAdminNpcEditorUi() {
       if (npcSelect.value) loadAdminNpcEditorNpcIntoForm(npcSelect.value);
     });
   }
-  ['adminNpcEditorName', 'adminNpcEditorDesc', 'adminNpcEditorQuote', 'adminNpcEditorDoubleUpPercent', 'adminNpcEditorRegionBiasPercent', 'adminNpcEditorOneOfAKindPlayPercent'].forEach(id => {
+  ['adminNpcEditorName', 'adminNpcEditorDesc', 'adminNpcEditorQuote', 'adminNpcEditorDoubleUpPercent', 'adminNpcEditorRegionBiasPercent', 'adminNpcEditorOneOfAKindPlayPercent', 'adminNpcEditorElementVarietyPercent'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', scheduleAdminNpcEditorAutoSave);
   });
@@ -16819,6 +17347,12 @@ function initAdminNpcEditorUi() {
     regionBiasOverrideCb.addEventListener('change', () => {
       document.getElementById('adminNpcEditorRegionBiasPercent').disabled = !regionBiasOverrideCb.checked;
       scheduleAdminNpcEditorAutoSave();
+    });
+  }
+  const elementVarietyOverrideCb = document.getElementById('adminNpcEditorElementVarietyOverride');
+  if (elementVarietyOverrideCb) {
+    elementVarietyOverrideCb.addEventListener('change', () => {
+      document.getElementById('adminNpcEditorElementVarietyPercent').disabled = !elementVarietyOverrideCb.checked;
     });
   }
   const oneOfAKindPlayOverrideCb = document.getElementById('adminNpcEditorOneOfAKindPlayOverride');
@@ -16905,6 +17439,8 @@ function initAdminNpcEditorUi() {
       const regionBiasPercent = regionBiasOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorRegionBiasPercent').value) || 0)) : null;
       const oneOfAKindPlayOverrideOn = document.getElementById('adminNpcEditorOneOfAKindPlayOverride').checked;
       const oneOfAKindPlayChancePercent = oneOfAKindPlayOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorOneOfAKindPlayPercent').value) || 0)) : null;
+      const elementVarietyOverrideOn = document.getElementById('adminNpcEditorElementVarietyOverride').checked;
+      const elementVarietyPercent = elementVarietyOverrideOn ? Math.max(0, Math.min(100, Number(document.getElementById('adminNpcEditorElementVarietyPercent').value) || 0)) : null;
       const rules = collectAdminNpcEditorRules();
       const cardPool = collectAdminNpcEditorPool();
       if (!cardPool.length) { statusEl.textContent = 'Select at least one card for the Card Pool.'; return; }
@@ -16916,7 +17452,7 @@ function initAdminNpcEditorUi() {
           const loc = campaignFindLocation(locationId);
           if (!loc) throw new Error('Pick a location first.');
           const npcId = campaignAdminGenerateNpcId(name);
-          const entry = { locationId, name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent };
+          const entry = { locationId, name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, elementVarietyPercent };
           if (rewardCardId) entry.rewardCardId = rewardCardId;
           await rtdb.ref(`${CAMPAIGN_ADMIN_ROOT}/customNpcs/${npcId}`).set(entry);
           const npc = { id: npcId, name, desc, rules: campaignEmptyRules(rules), cpuDifficulty, cpuBehavior, cardPool: cardPool.slice(), doubleUpPercent, _adminCustom: true };
@@ -16934,7 +17470,7 @@ function initAdminNpcEditorUi() {
         } else {
           const npc = adminNpcEditorCurrentNpc;
           if (!npc) throw new Error('Pick an NPC first.');
-          const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
+          const entry = { name, desc, quote, cpuDifficulty, cpuBehavior, rules, cardPool, rewardCardId: rewardCardId || null, doubleUpPercent, regionBiasPercent, oneOfAKindPlayChancePercent, elementVarietyPercent, sortOrder: npc.sortOrder != null ? npc.sortOrder : null };
           if (npc._adminCustom) {
             const loc = CAMPAIGN_LOCATIONS.find(l => l.npcs.includes(npc));
             entry.locationId = loc ? loc.id : document.getElementById('adminNpcEditorLocationSelect').value;
@@ -17317,6 +17853,221 @@ function writeReverseBudget(metric, level, value) {
     rtdb.ref(`${GAME_CONFIG_ROOT}/reverseBudget/${metric}/${level}`).set(value).catch(() => {});
   }, 350);
 }
+// One "no dupes" checkbox per element, laid out like the skill-level grid.
+// Elements default to covered when nothing is stored, so the checkbox shows
+// ticked until you explicitly turn one off.
+function writeCampaignRandomFloor(level, value) {
+  clearTimeout(adminMiscWriteTimers['randomFloor_' + level]);
+  adminMiscWriteTimers['randomFloor_' + level] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomLevelFloor/${level}`).set(value).catch(() => {});
+  }, 350);
+}
+function renderAdminMiscRandomFloorGrid() {
+  const grid = document.getElementById('adminMiscRandomFloorGrid');
+  if (!grid) return;
+  if (grid.dataset.built !== 'true') {
+    grid.innerHTML = '';
+    grid.dataset.built = 'true';
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-cpu-level-metric';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'admin-cpu-level-metric-hint';
+    hintEl.textContent = 'Skill level -> lowest card level its Random hand can contain. 1 = no floor.';
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'admin-cpu-level-inputs';
+    for (let level = 1; level <= 5; level++) {
+      const group = document.createElement('div');
+      group.className = 'admin-cpu-level-input-group';
+      const span = document.createElement('span');
+      span.textContent = `Lv${level}`;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '1';
+      input.max = '10';
+      input.step = '1';
+      input.id = `adminMiscRandomFloor_${level}`;
+      input.addEventListener('input', () => {
+        const raw = Math.round(Number(input.value));
+        if (!Number.isFinite(raw)) return;
+        input.classList.add('overridden');
+        writeCampaignRandomFloor(level, Math.max(1, Math.min(10, raw)));
+      });
+      group.appendChild(span);
+      group.appendChild(input);
+      inputsRow.appendChild(group);
+    }
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'menu-btn-secondary';
+    resetBtn.textContent = 'Reset To Defaults';
+    resetBtn.addEventListener('click', () => {
+      playSfx('cursorMove');
+      for (let level = 1; level <= 5; level++) clearTimeout(adminMiscWriteTimers['randomFloor_' + level]);
+      rtdb.ref(`${GAME_CONFIG_ROOT}/campaignRandomLevelFloor`).set(null).catch(() => {});
+    });
+    wrap.appendChild(hintEl);
+    wrap.appendChild(inputsRow);
+    wrap.appendChild(resetBtn);
+    grid.appendChild(wrap);
+  }
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscRandomFloor_${level}`);
+    if (!input || document.activeElement === input) continue;
+    const raw = Number(campaignRandomLevelFloorByLevel ? campaignRandomLevelFloorByLevel[level] : undefined);
+    const has = Number.isFinite(raw);
+    const def = campaignRandomFloorDefault(level);
+    input.value = String(has ? Math.max(1, Math.min(10, Math.round(raw))) : def);
+    input.classList.toggle('overridden', has);
+    input.title = `Default: ${def}`;
+  }
+}
+function renderAdminMiscNoDupeElementsGrid() {
+  const grid = document.getElementById('adminMiscNoDupeElementsGrid');
+  if (!grid) return;
+  if (grid.dataset.built !== 'true') {
+    grid.innerHTML = '';
+    grid.dataset.built = 'true';
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-cpu-level-metric';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'admin-cpu-level-metric-hint';
+    hintEl.textContent = 'Ticked = no dupes of that element in an NPC hand. Untick to allow repeats of just that element.';
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'admin-cpu-level-inputs';
+    ELEMENTS.forEach(element => {
+      const group = document.createElement('div');
+      group.className = 'admin-cpu-level-input-group';
+      const label = document.createElement('label');
+      label.style.display = 'flex';
+      label.style.alignItems = 'center';
+      label.style.gap = '4px';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = `adminMiscNoDupeElement_${element}`;
+      input.addEventListener('change', () => {
+        playSfx('cursorMove');
+        rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNoDupeElements/${element}`).set(input.checked).catch(() => {});
+      });
+      const span = document.createElement('span');
+      span.textContent = element;
+      label.appendChild(input);
+      label.appendChild(span);
+      group.appendChild(label);
+      inputsRow.appendChild(group);
+    });
+    const btnRow = document.createElement('div');
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '8px';
+    [['All', true], ['None', false]].forEach(([text, value]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'menu-btn-secondary';
+      btn.textContent = text;
+      btn.addEventListener('click', () => {
+        playSfx('cursorMove');
+        const payload = {};
+        ELEMENTS.forEach(el => { payload[el] = value; });
+        rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNoDupeElements`).set(payload).catch(() => {});
+      });
+      btnRow.appendChild(btn);
+    });
+    wrap.appendChild(hintEl);
+    wrap.appendChild(inputsRow);
+    wrap.appendChild(btnRow);
+    grid.appendChild(wrap);
+  }
+  ELEMENTS.forEach(element => {
+    const input = document.getElementById(`adminMiscNoDupeElement_${element}`);
+    if (!input) return;
+    const stored = campaignNoDupeElementsByElement ? campaignNoDupeElementsByElement[element] : undefined;
+    input.checked = (stored === undefined || stored === null) ? true : stored === true;
+    input.disabled = !campaignNoDupeElementsEnabled;
+    input.title = campaignNoDupeElementsEnabled
+      ? (input.checked ? `NPC hands may hold at most one ${element} card` : `Repeat ${element} cards allowed`)
+      : 'Turn on "No Duplicate Elements (Campaign NPCs)" above to use this';
+  });
+}
+function writeCampaignHandBalanceForLevel(level, value) {
+  clearTimeout(adminMiscWriteTimers['handBalance_' + level]);
+  adminMiscWriteTimers['handBalance_' + level] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceByLevel/${level}`).set(value).catch(() => {});
+  }, 350);
+}
+// Per-skill-level override row for Hand Balance Strength. Same
+// column-per-level layout and CSS classes as the grid below it. An empty box
+// means "no override" -- that level falls back to the single slider, and the
+// box shows the slider's current value greyed rather than a hard 0, so it
+// always reads as the value actually in effect.
+function renderAdminMiscHandBalanceGrid() {
+  const grid = document.getElementById('adminMiscHandBalanceGrid');
+  if (!grid) return;
+  if (grid.dataset.built !== 'true') {
+    grid.innerHTML = '';
+    grid.dataset.built = 'true';
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-cpu-level-metric';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'admin-cpu-level-metric-hint';
+    hintEl.textContent = '0% = fully lopsided (a couple of maxed cards then level 1 filler), 100% = an even share of the budget per slot. Empty = use the slider above.';
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'admin-cpu-level-inputs';
+    for (let level = 1; level <= 5; level++) {
+      const group = document.createElement('div');
+      group.className = 'admin-cpu-level-input-group';
+      const span = document.createElement('span');
+      span.textContent = `Lv${level}`;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.max = '100';
+      input.step = '1';
+      input.id = `adminMiscHandBalance_${level}`;
+      input.addEventListener('input', () => {
+        if (input.value.trim() === '') {
+          input.classList.remove('overridden');
+          writeCampaignHandBalanceForLevel(level, null);
+          return;
+        }
+        const raw = Math.round(Number(input.value));
+        if (!Number.isFinite(raw)) return;
+        input.classList.add('overridden');
+        writeCampaignHandBalanceForLevel(level, Math.max(0, Math.min(100, raw)));
+      });
+      group.appendChild(span);
+      group.appendChild(input);
+      inputsRow.appendChild(group);
+    }
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'menu-btn-secondary';
+    resetBtn.textContent = 'Reset All To Slider';
+    resetBtn.addEventListener('click', () => {
+      playSfx('cursorMove');
+      for (let level = 1; level <= 5; level++) {
+        clearTimeout(adminMiscWriteTimers['handBalance_' + level]);
+        const input = document.getElementById(`adminMiscHandBalance_${level}`);
+        if (input) { input.value = ''; input.classList.remove('overridden'); }
+      }
+      rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalanceByLevel`).set(null).catch(() => {});
+    });
+    wrap.appendChild(hintEl);
+    wrap.appendChild(inputsRow);
+    wrap.appendChild(resetBtn);
+    grid.appendChild(wrap);
+  }
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscHandBalance_${level}`);
+    if (!input || document.activeElement === input) continue;
+    const raw = Number(campaignHandBalanceByLevel && campaignHandBalanceByLevel[level]);
+    const hasOverride = Number.isFinite(raw);
+    input.value = hasOverride ? String(Math.max(0, Math.min(100, raw))) : '';
+    input.placeholder = String(campaignHandBalancePercent);
+    input.classList.toggle('overridden', hasOverride);
+    input.title = hasOverride
+      ? `Level ${level} NPCs use ${Math.max(0, Math.min(100, raw))}% (slider default: ${campaignHandBalancePercent}%)`
+      : `Level ${level} NPCs use the slider default: ${campaignHandBalancePercent}%`;
+  }
+}
 // Same row-per-metric, column-per-skill-level layout as CPU AI Weights' "By
 // Skill Level" grid (reuses its CSS classes), just built once directly into
 // the Misc modal instead of a separate tab.
@@ -17383,6 +18134,9 @@ function openAdminMiscModal() {
   playSfx('cursorMove');
   document.getElementById('adminMiscModal').classList.add('show');
   renderAdminMiscReverseBudgetGrid();
+  renderAdminMiscHandBalanceGrid();
+  renderAdminMiscNoDupeElementsGrid();
+  renderAdminMiscRandomFloorGrid();
 }
 function closeAdminMiscModal() {
   document.getElementById('adminMiscModal').classList.remove('show');
@@ -17416,6 +18170,182 @@ async function adminClearAllRankedSeenCards() {
     btn.disabled = false;
   }
 }
+// ---- Bake Campaign NPC Overrides into index.html -------------------------
+// The NPC editor writes to Firebase (campaignAdmin/npcOverrides + customNpcs)
+// and loadCampaignAdminOverrides() merges those on top of the hardcoded
+// CAMPAIGN_LOCATIONS at boot. That works, but it means the source file drifts
+// further from the real game with every edit, and anyone reading index.html is
+// reading stale data. This regenerates the two NPC data blocks from what the
+// game currently has in memory and hands back a patched copy of this page.
+//
+// A page can't write to its own file on disk, so this downloads instead: first
+// a timestamped backup of the source exactly as it is right now, then the
+// patched index.html to drop into the repo. Firebase is deliberately left
+// untouched -- once the patched file is deployed the overrides just re-apply on
+// top of matching defaults, which is a no-op, so there's no window where the
+// game breaks if the deploy is delayed or rolled back. Clear the campaignAdmin
+// node by hand later if you want the file to be the only copy.
+//
+// Note the first bake reformats the whole block (regenerated quoting/spacing
+// won't match the hand-written original). Every bake after that is stable --
+// same input, byte-identical output.
+function bakeMarker(block, edge) {
+  // Assembled at runtime rather than written as a literal: if the full marker
+  // text appeared in this function's own source, the indexOf() searches below
+  // could match here instead of at the real data block.
+  return '// ==== ' + 'BAKE:' + block + ':' + edge + ' ====';
+}
+function bakeStr(v) {
+  // JSON.stringify emits a correctly-escaped double-quoted string that is also
+  // a valid JS string literal. U+2028/9 are legal in JSON but are line
+  // terminators in JS source, so they need escaping on top.
+  return JSON.stringify(String(v)).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+function bakeKeyName(k) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(k) ? k : bakeStr(k);
+}
+function bakeValueLiteral(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'string') return bakeStr(v);
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  if (Array.isArray(v)) return '[' + v.map(bakeValueLiteral).join(', ') + ']';
+  return '{ ' + Object.keys(v).map(k => bakeKeyName(k) + ': ' + bakeValueLiteral(v[k])).join(', ') + ' }';
+}
+function bakeRulesLiteral(rules) {
+  // Emit only the flags that are on, wrapped in campaignEmptyRules() exactly
+  // like the hand-written data, so the defaults stay in one place.
+  const on = Object.keys(rules || {}).filter(k => rules[k]);
+  if (!on.length) return 'campaignEmptyRules()';
+  return 'campaignEmptyRules({ ' + on.map(k => bakeKeyName(k) + ': true').join(', ') + ' })';
+}
+// Fields written in this order when present; anything else found on an NPC is
+// appended afterwards so a field added to the editor later still round-trips
+// instead of being silently dropped.
+const BAKE_NPC_FIELD_ORDER = ['rewardCardId', 'cardPool', 'doubleUpPercent', 'regionBiasPercent',
+  'oneOfAKindPlayChancePercent', 'elementVarietyPercent', 'sortOrder', 'minUnlockedLocations', 'requiresDefeatedNpcIds', 'finalBoss'];
+// _adminCustom is dropped on purpose. It routes editor saves to
+// campaignAdmin/customNpcs, and loadCampaignAdminOverrides() skips a customNpcs
+// entry whose id already exists in the file -- so keeping the flag on a
+// baked-in NPC would make every future edit to it silently vanish on reload.
+// Without it the NPC is an ordinary file NPC and edits go to npcOverrides.
+const BAKE_NPC_CORE_KEYS = ['id', 'name', 'desc', 'rules', 'cpuDifficulty', 'cpuBehavior', '_adminCustom'];
+function bakeExtraKeys(obj, coreKeys, ordered) {
+  const extras = (ordered || []).filter(k => obj[k] !== undefined && obj[k] !== null);
+  Object.keys(obj).forEach(k => {
+    if (coreKeys.indexOf(k) !== -1) return;
+    if ((ordered || []).indexOf(k) !== -1) return;
+    if (obj[k] === undefined || obj[k] === null) return;
+    extras.push(k);
+  });
+  return extras;
+}
+function bakeNpcLiteral(npc) {
+  const parts = ['rules: ' + bakeRulesLiteral(npc.rules),
+    'cpuDifficulty: ' + (Number(npc.cpuDifficulty) || 1),
+    'cpuBehavior: ' + bakeStr(npc.cpuBehavior || 'normal')];
+  bakeExtraKeys(npc, BAKE_NPC_CORE_KEYS, BAKE_NPC_FIELD_ORDER)
+    .forEach(k => parts.push(bakeKeyName(k) + ': ' + bakeValueLiteral(npc[k])));
+  return '      { id: ' + bakeStr(npc.id) + ', name: ' + bakeStr(npc.name) + ', desc: ' + bakeStr(npc.desc || '') + ',\n' +
+    '        ' + parts.join(', ') + ' },';
+}
+const BAKE_LOC_CORE_KEYS = ['id', 'name', 'image', 'desc', 'npcs'];
+function bakeLocationLiteral(loc) {
+  const head = ['id: ' + bakeStr(loc.id), 'name: ' + bakeStr(loc.name),
+    'image: ' + (loc.image ? bakeStr(loc.image) : 'null')];
+  bakeExtraKeys(loc, BAKE_LOC_CORE_KEYS, [])
+    .forEach(k => head.push(bakeKeyName(k) + ': ' + bakeValueLiteral(loc[k])));
+  const lines = ['  {', '    ' + head.join(', ') + ',', '    desc: ' + bakeStr(loc.desc || '') + ',', '    npcs: ['];
+  (loc.npcs || []).forEach(n => lines.push(bakeNpcLiteral(n)));
+  lines.push('    ],', '  },');
+  return lines.join('\n');
+}
+function bakeQuotesBlock() {
+  const body = Object.keys(CAMPAIGN_NPC_QUOTES)
+    .map(id => '  ' + bakeStr(id) + ': ' + bakeStr(CAMPAIGN_NPC_QUOTES[id]) + ',').join('\n');
+  return 'const ' + 'CAMPAIGN_NPC_QUOTES' + ' = {\n' + body + '\n};';
+}
+function bakeLocationsBlock() {
+  return 'const ' + 'CAMPAIGN_LOCATIONS' + ' = [\n' + CAMPAIGN_LOCATIONS.map(bakeLocationLiteral).join('\n') + '\n];';
+}
+function bakeReplaceBlock(src, block, declPrefix, body) {
+  const startMark = bakeMarker(block, 'START');
+  const endMark = bakeMarker(block, 'END');
+  const s = src.indexOf(startMark);
+  if (s === -1) throw new Error('Missing the ' + block + ' START marker in the page source.');
+  const e = src.indexOf(endMark, s);
+  if (e === -1) throw new Error('Missing the ' + block + ' END marker in the page source.');
+  // Replace from the declaration itself, not from the marker, so the
+  // explanatory comment banner under the START marker is preserved.
+  const d = src.indexOf(declPrefix, s);
+  if (d === -1 || d > e) throw new Error('Could not find "' + declPrefix + '" inside the ' + block + ' block.');
+  return src.slice(0, d) + body + '\n' + src.slice(e);
+}
+function bakeTriggerDownload(filename, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/html' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+function bakeTimestamp() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + '-' + p(d.getMinutes());
+}
+async function adminBakeNpcOverridesIntoIndex() {
+  const btn = document.getElementById('adminBakeNpcOverridesBtn');
+  const statusEl = document.getElementById('adminBakeNpcOverridesStatus');
+  if (!btn || !statusEl) return;
+  btn.disabled = true;
+  statusEl.textContent = 'Reading this page’s source...';
+  try {
+    const srcUrl = window.location.href.split('#')[0].split('?')[0];
+    let res;
+    try {
+      res = await fetch(srcUrl, { cache: 'no-store' });
+    } catch (netErr) {
+      throw new Error('Could not read this page’s own source. If you opened index.html straight from disk (file://), serve the folder over http instead -- browsers block a file:// page from fetching itself.');
+    }
+    if (!res.ok) throw new Error('Reading this page returned HTTP ' + res.status + '.');
+    const original = await res.text();
+    if (original.indexOf(bakeMarker('CAMPAIGN_LOCATIONS', 'START')) === -1) {
+      throw new Error('The deployed index.html has no bake markers -- it is older than the build running here. Deploy the marked-up file first, then bake.');
+    }
+    // Re-read the database rather than trusting this tab's merge: another
+    // admin may have edited an NPC since this tab loaded. Re-running the
+    // loader is idempotent (same fields reapplied, already-added customs
+    // skipped, already-removed deletions no-op).
+    statusEl.textContent = 'Re-reading NPC overrides from the database...';
+    await loadCampaignAdminOverrides();
+    const admin = (await rtdb.ref(CAMPAIGN_ADMIN_ROOT).once('value')).val() || {};
+    const overrides = admin.npcOverrides || {};
+    const customNpcs = admin.customNpcs || {};
+    const overrideIds = Object.keys(overrides);
+    const deletedCount = overrideIds.filter(id => overrides[id] && overrides[id].deleted).length;
+    const editedCount = overrideIds.length - deletedCount;
+    const customCount = Object.keys(customNpcs).length;
+    statusEl.textContent = 'Building patched file...';
+    let patched = bakeReplaceBlock(original, 'CAMPAIGN_NPC_QUOTES', 'const ' + 'CAMPAIGN_NPC_QUOTES' + ' = {', bakeQuotesBlock());
+    patched = bakeReplaceBlock(patched, 'CAMPAIGN_LOCATIONS', 'const ' + 'CAMPAIGN_LOCATIONS' + ' = [', bakeLocationsBlock());
+    const stamp = bakeTimestamp();
+    bakeTriggerDownload('index.backup-' + stamp + '.html', original);
+    // Small gap so the backup lands first; some browsers prompt once to allow
+    // multiple downloads from a page, which is expected here.
+    await new Promise(r => setTimeout(r, 900));
+    bakeTriggerDownload('index.html', patched);
+    const npcTotal = CAMPAIGN_LOCATIONS.reduce((n, l) => n + (l.npcs ? l.npcs.length : 0), 0);
+    const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+    statusEl.textContent = 'Baked ' + plural(editedCount, 'edit') + ', ' + plural(customCount, 'custom NPC') + ', ' +
+      plural(deletedCount, 'deletion') + ' -- ' + plural(npcTotal, 'NPC') + ' written. Downloaded the backup and the patched index.html; swap the patched one into the repo. Firebase was not touched.';
+  } catch (err) {
+    statusEl.textContent = (err && err.message) ? err.message : 'Failed to bake.';
+  } finally {
+    btn.disabled = false;
+  }
+}
 function initAdminMiscUi() {
   const adminBtn = document.getElementById('menuAdminMisc');
   if (adminBtn) adminBtn.addEventListener('click', openAdminMiscModal);
@@ -17429,6 +18359,8 @@ function initAdminMiscUi() {
   }
   const clearSeenBtn = document.getElementById('adminClearRankedSeenBtn');
   if (clearSeenBtn) clearSeenBtn.addEventListener('click', () => { playSfx('cursorMove'); adminClearAllRankedSeenCards(); });
+  const bakeBtn = document.getElementById('adminBakeNpcOverridesBtn');
+  if (bakeBtn) bakeBtn.addEventListener('click', () => { playSfx('cursorMove'); adminBakeNpcOverridesIntoIndex(); });
 }
 // ---- Controller Support --------------------------------------------------
 // Generic gamepad navigation layered on top of the existing click-driven UI.
