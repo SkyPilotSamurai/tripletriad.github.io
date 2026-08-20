@@ -4346,8 +4346,8 @@
       <div class="settings-row">
         <label>Elemental Stats
           <select id="elementalStatsSelect">
-            <option value="adjust" selected>Adjust Numbers</option>
-            <option value="plusOne">Just +1 Number</option>
+            <option value="plusOne" selected>+- Number Only</option>
+            <option value="adjust">Adjusted Stats</option>
           </select>
         </label>
       </div>
@@ -8205,7 +8205,7 @@ const state = {
   elementAlignment: 100,
   elementalMode: 'buffnerf',
   elementalBias: 80,
-  elementalStatsMode: 'adjust',
+  elementalStatsMode: 'plusOne',
   mode: 'practice',
   seat: null,
   roomId: null,
@@ -9442,8 +9442,26 @@ let roomPollInterval = null;
 const ROOM_POLL_INTERVAL_MS = 3000;
 function startRoomPoll(roomRef, onSnapshot) {
   stopRoomPoll();
+  // This poll runs unconditionally every 3s for the entire match, completely
+  // independent of the realtime .on('value') listener and regardless of
+  // whether anything actually changed -- it's the one piece of online-match
+  // machinery that keeps running in the background with no relation to user
+  // interaction, unlike anything in Practice/Campaign. handleOnlineRoomSnapshot
+  // has its own "nothingChanged" short-circuit to make redundant snapshots a
+  // no-op, but that comparison only covers specific fields (board/hands
+  // length/turn/gameOver/etc) -- skipping the callback entirely here whenever
+  // the raw poll result is byte-for-byte identical to last time is a
+  // stronger, blanket guarantee that a plain unchanged poll can never trigger
+  // any rendering work at all, closing off this as a possible source of the
+  // periodic card flicker reported in online matches.
+  let lastPolledJson = null;
   roomPollInterval = setInterval(() => {
-    roomRef.once('value').then(onSnapshot).catch(() => {});
+    roomRef.once('value').then(snap => {
+      const json = JSON.stringify(snap.val());
+      if (json === lastPolledJson) return;
+      lastPolledJson = json;
+      onSnapshot(snap);
+    }).catch(() => {});
   }, ROOM_POLL_INTERVAL_MS);
 }
 function stopRoomPoll() {
@@ -9846,6 +9864,16 @@ function playFirstPlayerSpin(firstPlayer, roomSeats) {
   const arrow = document.getElementById('firstPlayerArrow');
   const label = document.getElementById('firstPlayerLabel');
   if (!overlay || !arrow || !label) return Promise.resolve();
+  // showWaitingForOpponent (used while this player was waiting on the other
+  // to finish picking cards) sets arrow.style.display = 'none' since there's
+  // just a text message at that point, no arrow to show yet. Whichever
+  // player happened to finish picking first -- and therefore saw that
+  // waiting message -- would otherwise keep that inline display:none forever
+  // after, since nothing here ever cleared it: the overlay box and label
+  // would still show, but the actual spinning arrow would silently never
+  // render, making the spin look broken/invisible for that one player while
+  // their opponent (who never saw the waiting message) saw it fine.
+  arrow.style.display = '';
   label.textContent = 'Deciding who goes first...';
   label.classList.remove('first-player-p1', 'first-player-p2');
   overlay.classList.remove('hidden');
@@ -10146,6 +10174,73 @@ function watchTradeReveal(room, roomId, mySeat, roomRef) {
     advanceTradeReveal(room, roomId, roomRef);
   }, TRADE_REVEAL_STEP_MS);
 }
+// Resolves a pending online rematch once both seats have responded. Pulled
+// out into its own function so it can be called both from the normal
+// snapshot listener below (the usual path) AND directly from requestRematch
+// right after a player clicks Rematch/Rematch Same (see there for why) --
+// same exact logic either way, just reachable from two places. Returns true
+// if it actually performed a resolution (wrote an update), false if there
+// was nothing to do yet.
+//
+// A mismatch (one player picked "Same Rules/Points", the other picked plain
+// "Rematch") is deliberately treated the same as if both had picked plain
+// Rematch -- bothWantSame only requires it since both sides explicitly chose
+// it, so any mismatch falls through to the "different rules" branch below,
+// which sends both players back to a fresh rule vote rather than leaving
+// them stuck disagreeing about which rematch mode to use.
+function resolveOnlineRematchIfBothIn(room, roomId, roomRef) {
+  if (!room || !room._dealt) return false;
+  const bothWantRematch = !!(room.rematch && room.rematch.p1 && room.rematch.p2);
+  const bothWantSame = !!(room.rematch && room.rematch.p1 === 'same' && room.rematch.p2 === 'same');
+  if (!bothWantRematch) return false;
+  if (bothWantSame) {
+    // "Same Rules/Points" still means a fresh roll for Roulette specifically --
+    // it rolls new rules every match, so reusing the exact previous roll on
+    // rematch would be stale rather than actually "same as always" (matches
+    // rematchPracticeMatchSame/rematchCpuMatchSame/rematchCampaignBattleSame).
+    const rematchRules = room.rules && room.rules.roulette ? rollRouletteRules(room.rules) : room.rules;
+    roomRef.update({
+      board: toRoomBoard(Array(9).fill(null)),
+      boardElements: toRoomBoard(Array(9).fill(null)),
+      hands: toRoomHands({ p1: [], p2: [] }),
+      gameOver: false,
+      rematch: { p1: false, p2: false },
+      picks: null,
+      rules: rematchRules,
+      closedSingleCardId: { p1: null, p2: null },
+      sameRematchActive: true,
+      suddenDeathHandIds: null,
+      _dealt: false,
+      matchResolved: false,
+      tradeState: null,
+      freePlayResolved: false,
+    });
+    return true;
+  }
+  roomRef.update({
+    board: toRoomBoard(Array(9).fill(null)),
+    boardElements: toRoomBoard(Array(9).fill(null)),
+    hands: toRoomHands({ p1: [], p2: [] }),
+    gameOver: false,
+    rematch: { p1: false, p2: false },
+    picks: null,
+    closedSingleCardId: { p1: null, p2: null },
+    ruleVotes: { p1: null, p2: null },
+    liveRuleVotes: { p1: null, p2: null },
+    tradeRuleVotes: { p1: null, p2: null },
+    liveTradeRuleVotes: { p1: null, p2: null },
+    rulesFinalized: false,
+    pointBudget: rollPointBudget(),
+    pointBudgetCapped: false,
+    sameRematchActive: false,
+    suddenDeathHandIds: null,
+    _dealt: false,
+    matchResolved: false,
+    tradeState: null,
+    freePlayResolved: false,
+  });
+  return true;
+}
 function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
   const room = snap.val();
   if (!room) return;
@@ -10163,12 +10258,27 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
     state.gameOver = false;
     updateOverlay();
   }
-  if (!room._dealt && !bothSeatsFilled) {
-    showWaitingForOpponent(null, true);
-  } else if (!room._dealt && bothSeatsFilled && myPickIn && !bothPicksIn) {
-    showWaitingForOpponent('Waiting for the other player to choose their cards...');
-  } else {
-    hideWaitingForOpponent();
+  // Skip this entirely while the "who goes first" spin is actively playing
+  // (firstPlayerSpinPending). This block runs unconditionally on EVERY
+  // snapshot, including redundant ones that arrive mid-animation (the poll
+  // fallback in startRoomPoll fires independently of the realtime listener,
+  // and either can refire for reasons unrelated to the deal itself, e.g. a
+  // presence heartbeat). hideWaitingForOpponent() unconditionally re-hides
+  // the overlay -- and since playFirstPlayerSpin had already put it in
+  // "no-box" mode, hideWaitingForOpponent's board-dimmed cleanup is skipped
+  // too -- so a stray snapshot during the ~1.4s spin animation would hide the
+  // spinner graphic while leaving the board dimmed for the rest of the spin,
+  // making it look like the spinner silently never appeared. Which specific
+  // player this hits is just down to which client happens to receive a
+  // redundant snapshot during that narrow window, not a fixed p1/p2 thing.
+  if (!firstPlayerSpinPending) {
+    if (!room._dealt && !bothSeatsFilled) {
+      showWaitingForOpponent(null, true);
+    } else if (!room._dealt && bothSeatsFilled && myPickIn && !bothPicksIn) {
+      showWaitingForOpponent('Waiting for the other player to choose their cards...');
+    } else {
+      hideWaitingForOpponent();
+    }
   }
   const budgetLockKey = `budget:${roomId}`;
   const bothSeatUidsKnown = !!(room.seatUids && room.seatUids.p1 && room.seatUids.p2);
@@ -10272,57 +10382,7 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
       return;
     }
   }
-  const bothWantRematch = !!(room.rematch && room.rematch.p1 && room.rematch.p2);
-  const bothWantSame = !!(room.rematch && room.rematch.p1 === 'same' && room.rematch.p2 === 'same');
-  if (seat === 'p1' && bothWantSame && room._dealt) {
-    // "Same Rules/Points" still means a fresh roll for Roulette specifically --
-    // it rolls new rules every match, so reusing the exact previous roll on
-    // rematch would be stale rather than actually "same as always" (matches
-    // rematchPracticeMatchSame/rematchCpuMatchSame/rematchCampaignBattleSame).
-    const rematchRules = room.rules && room.rules.roulette ? rollRouletteRules(room.rules) : room.rules;
-    roomRef.update({
-      board: toRoomBoard(Array(9).fill(null)),
-      boardElements: toRoomBoard(Array(9).fill(null)),
-      hands: toRoomHands({ p1: [], p2: [] }),
-      gameOver: false,
-      rematch: { p1: false, p2: false },
-      picks: null,
-      rules: rematchRules,
-      closedSingleCardId: { p1: null, p2: null },
-      sameRematchActive: true,
-      suddenDeathHandIds: null,
-      _dealt: false,
-      matchResolved: false,
-      tradeState: null,
-      freePlayResolved: false,
-    });
-    return;
-  }
-  if (seat === 'p1' && bothWantRematch && !bothWantSame && room._dealt) {
-    roomRef.update({
-      board: toRoomBoard(Array(9).fill(null)),
-      boardElements: toRoomBoard(Array(9).fill(null)),
-      hands: toRoomHands({ p1: [], p2: [] }),
-      gameOver: false,
-      rematch: { p1: false, p2: false },
-      picks: null,
-      closedSingleCardId: { p1: null, p2: null },
-      ruleVotes: { p1: null, p2: null },
-      liveRuleVotes: { p1: null, p2: null },
-      tradeRuleVotes: { p1: null, p2: null },
-      liveTradeRuleVotes: { p1: null, p2: null },
-      rulesFinalized: false,
-      pointBudget: rollPointBudget(),
-      pointBudgetCapped: false,
-      sameRematchActive: false,
-      suddenDeathHandIds: null,
-      _dealt: false,
-      matchResolved: false,
-      tradeState: null,
-      freePlayResolved: false,
-    });
-    return;
-  }
+  if (seat === 'p1' && resolveOnlineRematchIfBothIn(room, roomId, roomRef)) return;
   if (seat === 'p1' && boardIsEmpty && handsAreEmpty && bothSeatsFilled && bothPicksIn && !room._dealt) {
     const fallbackDeal = (!buildHandFromPicks(room.picks.p1) || !buildHandFromPicks(room.picks.p2)) ? dealHands() : null;
     const dealt = {
@@ -10351,6 +10411,18 @@ function handleOnlineRoomSnapshot(snap, roomId, seat, roomRef) {
       dealUpdate.suddenDeathHandIds = { p1: room.picks.p1, p2: room.picks.p2 };
     }
     roomRef.update(dealUpdate);
+    // The player whose client performs this deal write (always seat p1, by
+    // the seat==='p1' gate above) would otherwise only see the "who goes
+    // first" spinner once its own listener echoes this write back -- which
+    // normally happens almost instantly, but any delay leaves p1 staring at
+    // a blank/hidden overlay while p2 (whose snapshot naturally arrives via
+    // the normal round trip) already sees it. Applying the just-computed
+    // update locally, immediately, closes that gap for p1 without waiting on
+    // the echo. turnStartedAt is swapped for a real local timestamp since
+    // the ServerValue.TIMESTAMP sentinel written above isn't a usable value
+    // client-side -- the real echo will overwrite it with the resolved
+    // server time moments later either way.
+    applyRoomSnapshot({ ...room, ...dealUpdate, turnStartedAt: Date.now() });
     return;
   }
   applyRoomSnapshot(room);
@@ -11732,7 +11804,23 @@ function leaveOnlineRoomOrSpectate() {
 }
 function requestRematch(sameRulesAndPoints) {
   if (state.mode !== 'online' || !state.roomId || !state.seat) return;
-  rtdb.ref(`${state.roomRoot}/${state.roomId}/rematch/${state.seat}`).set(sameRulesAndPoints ? 'same' : true);
+  const roomRoot = state.roomRoot, roomId = state.roomId;
+  const write = rtdb.ref(`${roomRoot}/${roomId}/rematch/${state.seat}`).set(sameRulesAndPoints ? 'same' : true);
+  // Resolving a completed rematch normally happens in the room listener
+  // (handleOnlineRoomSnapshot), which relies on this write echoing back
+  // through that listener. Also resolving it right here, directly off a
+  // fresh read after the write lands, closes any gap where that echo is
+  // delayed or missed -- otherwise two players picking different rematch
+  // options (one "Same", one plain "Rematch") in close succession could both
+  // end up stuck on the result screen with nothing left to trigger the
+  // transition. resolveOnlineRematchIfBothIn is a no-op if the other player
+  // hasn't responded yet, or if this already got resolved by the listener.
+  if (state.seat === 'p1') {
+    const roomRef = rtdb.ref(`${roomRoot}/${roomId}`);
+    write.then(() => roomRef.once('value')).then(snap => {
+      resolveOnlineRematchIfBothIn(snap.val(), roomId, roomRef);
+    }).catch(() => {});
+  }
 }
 function selectCard(owner, idx) {
   if (state.gameOver || owner !== state.turn) return;
@@ -14356,7 +14444,11 @@ function renderTradeOverlay(ts) {
     label.textContent = iAmWinner
       ? (remaining === 1 ? 'Pick a card' : 'Pick cards')
       : `${winnerName} is picking...`;
-    const poolSignature = `${ts.pool.map(p => p.poolKey).join(',')}|${iAmWinner}`;
+    // Same reasoning as the reveal signature below -- poolKeys are just
+    // seat+index (e.g. "p1-hand-2"), not unique across matches, so a rematch
+    // with the same loser/pool shape as the previous match's pool would
+    // otherwise look unchanged and never render.
+    const poolSignature = `${state.roomDealId}|${ts.pool.map(p => p.poolKey).join(',')}|${iAmWinner}`;
     if (poolSignature === lastRenderedPoolSignature) return;
     lastRenderedPoolSignature = poolSignature;
     const roomRef = rtdb.ref(`${state.roomRoot}/${state.roomId}`);
@@ -14383,7 +14475,16 @@ function renderTradeOverlay(ts) {
   poolEl.innerHTML = '';
   revealWrap.classList.remove('hidden');
   label.textContent = '';
-  const signature = `${ts.winner}|${ts.rule}|${ts.picked.length}`;
+  // Include the deal's unique id in the signature -- without it, a rematch
+  // whose trade happens to land on the same winner/rule/picked-count as a
+  // moment during the PREVIOUS match's trade (very likely for "Rematch Same"
+  // specifically, since the rule is identical and the winner is often the
+  // same player again) would look identical to the stale signature left over
+  // from before, so lastRenderedRevealIndex never resets to -1 and the new
+  // match's first card reveal gets silently skipped -- the trade panel shows
+  // no card at all. Matches the equivalent ts.token already used for this
+  // same reason in renderCampaignTradeOverlay below.
+  const signature = `${state.roomDealId}|${ts.winner}|${ts.rule}|${ts.picked.length}`;
   if (signature !== lastRenderedTradeSignature) {
     lastRenderedTradeSignature = signature;
     lastRenderedRevealIndex = -1;
