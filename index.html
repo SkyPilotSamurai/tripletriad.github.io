@@ -8212,6 +8212,7 @@ const state = {
   roomRoot: ROOMS_ROOT,
   roomRef: null,
   roomRematch: null,
+  roomPresence: null,
   roomTurnStartedAt: null,
   roomSeats: null,
   closedSingleCardId: null,
@@ -9789,6 +9790,7 @@ function markMoveAnimated(moveId) {
 }
 function applyRoomSnapshotNow(room) {
   state.roomRematch = room.rematch || null;
+  state.roomPresence = room.presence || null;
   state.roomTurnStartedAt = room.turnStartedAt || null;
   state.roomTradeState = room.tradeState || null;
   state.roomRankedResult = room.rankedResult || null;
@@ -10017,6 +10019,7 @@ function startOnlineRoom(roomId, seat, root = ROOMS_ROOT) {
   state.pickerStockSource = root === RANKED_ROOMS_ROOT ? 'ranked' : (root === ROOMS_ROOT ? 'freeplay' : 'unlimited');
   state.selected = null;
   state.roomRematch = null;
+  state.roomPresence = null;
   state.roomTurnStartedAt = null;
   state.roomSeats = null;
   state.board = Array(9).fill(null);
@@ -11795,6 +11798,7 @@ function leaveOnlineRoomOrSpectate() {
   state.pickerStockSource = 'unlimited';
   state.seat = null;
   state.roomRematch = null;
+  state.roomPresence = null;
   state.roomTurnStartedAt = null;
   state.roomSeats = null;
   state.closedSingleCardId = null;
@@ -13984,10 +13988,18 @@ function boardCellSignature(cell, i) {
     const elem = state.rules.elemental && state.boardElements[i] ? state.boardElements[i] : '';
     return `empty|${elem}`;
   }
-  const justLanding = !!cell._justPlaced;
+  // Note: deliberately excludes the transient "just landed" flag. That flag
+  // flips to false a moment after a card is placed (see renderBoard below),
+  // and including it here used to give the cell a different signature on
+  // its very next unrelated re-render -- which happens almost immediately
+  // in online matches (opponent snapshot, poll tick, etc.) -- causing the
+  // card's DOM element to be needlessly recreated. If your cursor was still
+  // resting on that cell (as it is right after placing), the browser had to
+  // reapply :hover to the new node from scratch, restarting the name
+  // label's opacity fade -- visible as a flicker on the card you just placed.
   const owner = cell._displayOwner || cell.owner;
   const elem = state.rules.elemental && state.boardElements[i] ? state.boardElements[i] : '';
-  return `${cell.card.id}|${owner}|${justLanding ? 'landing' : 'settled'}|${elem}|${state.elementalStatsMode}|${state.elementalMode}`;
+  return `${cell.card.id}|${owner}|${elem}|${state.elementalStatsMode}|${state.elementalMode}`;
 }
 function isRankedSeenTrackingActive() {
   return state.mode === 'online' && state.roomRoot === RANKED_ROOMS_ROOT && !!state.seat;
@@ -14356,9 +14368,20 @@ function updateOverlay() {
     const myRematch = state.roomRematch && state.seat && state.roomRematch[state.seat];
     const theirSeat = state.seat === 'p1' ? 'p2' : 'p1';
     const theirRematch = state.roomRematch && state.roomRematch[theirSeat];
-    resetBtn.disabled = !!myRematch;
-    rematchSameBtn.disabled = !!myRematch;
-    if (myRematch && !theirRematch) {
+    // Once the match is over, presence is the only signal that the other
+    // player has actually left the room (as opposed to just being slow to
+    // click Rematch) -- teardownRoomPresence() writes their seat to false
+    // immediately when they click Leave Room, and the same onDisconnect
+    // hook covers them closing the tab/losing connection outright. Without
+    // this check, whoever's left behind just sees a blank or "waiting"
+    // status forever with no indication the other side is gone for good.
+    const theirSeatFilled = !!(state.roomSeats && state.roomSeats[theirSeat]);
+    const theyLeft = theirSeatFilled && state.roomPresence && state.roomPresence[theirSeat] === false;
+    resetBtn.disabled = !!myRematch || theyLeft;
+    rematchSameBtn.disabled = !!myRematch || theyLeft;
+    if (theyLeft) {
+      statusEl.textContent = 'The other player has left the room.';
+    } else if (myRematch && !theirRematch) {
       statusEl.textContent = 'Waiting for the other player to rematch...';
     } else if (!myRematch && theirRematch) {
       statusEl.textContent = theirRematch === 'same'
