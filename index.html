@@ -8349,7 +8349,6 @@ function syncRuleCheckboxesFromState() {
     if (el) el.checked = !!state.rules[key];
   });
   if (typeof updateDependentRuleCheckboxes === 'function') updateDependentRuleCheckboxes();
-  if (typeof syncCpuRulesFromState === 'function') syncCpuRulesFromState();
 }
 const DIRS = [
   { dir: 'up',    mySide: 'top',    theirSide: 'bottom' },
@@ -9386,6 +9385,36 @@ function loadSavedCpuTimerEnabled() {
 function saveCpuTimerEnabled(value) {
   try { localStorage.setItem(CPU_TIMER_ENABLED_STORAGE_KEY, value ? '1' : '0'); } catch (e) {}
 }
+// state.rules only holds the rules of the match being played. Each mode loads
+// its own set into it on starting: VS CPU from cpuRules, Practice from
+// practiceRules, Campaign from the NPC, online from the room (whose votes come
+// from the lobby's own saved prefs), the Tutorial from its lesson. VS CPU's set
+// is saved when a match starts or the setup screen is backed out of, and
+// restored when it's opened.
+let cpuRules = { ...state.rules };
+const practiceRules = { ...state.rules };
+const CPU_SETUP_STORAGE_KEY = 'tripleTriadCpuSetup_v1';
+function saveCpuSetup() {
+  try {
+    const slider = document.getElementById('cpuDifficultySlider');
+    localStorage.setItem(CPU_SETUP_STORAGE_KEY, JSON.stringify({
+      rules: { ...cpuRules },
+      difficulty: slider ? parseInt(slider.value, 10) : null,
+      behavior: cpuSelectedBehavior,
+    }));
+  } catch (e) {}
+}
+function restoreCpuSetup() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(CPU_SETUP_STORAGE_KEY)); } catch (e) {}
+  if (!saved || typeof saved !== 'object') return;
+  if (saved.rules && typeof saved.rules === 'object') {
+    cpuRules = { ...cpuRules, ...saved.rules };
+  }
+  const slider = document.getElementById('cpuDifficultySlider');
+  if (slider && Number.isFinite(saved.difficulty)) slider.value = String(Math.max(1, Math.min(5, saved.difficulty)));
+  if (typeof saved.behavior === 'string' && CPU_BEHAVIOR_NAMES[saved.behavior]) cpuSelectedBehavior = saved.behavior;
+}
 function openCpuSetup() {
   document.getElementById('mainMenu').classList.add('hidden');
   document.getElementById('cpuSetupScreen').classList.remove('hidden');
@@ -9411,6 +9440,7 @@ function openCpuSetup() {
   document.getElementById('cpuPointTotal').value = keepPoints ? loadSavedCpuPointTotal() : CPU_POINT_TOTAL_DEFAULT;
   const timerToggle = document.getElementById('cpuTimerToggle');
   if (timerToggle) timerToggle.checked = loadSavedCpuTimerEnabled();
+  restoreCpuSetup();
   refreshCpuDifficultyLabel();
   refreshCpuBehaviorButtons();
   syncCpuRulesFromState();
@@ -9483,11 +9513,12 @@ async function startCpuMatch() {
   state.cpuBehavior = cpuSelectedBehavior;
   state.cpuPointBudget = pointBudget;
   state.cpuTimerEnabled = timerEnabled;
+  saveCpuSetup();
+  state.rules = { ...cpuRules };
   if (CPU_BEHAVIORS_REQUIRING_ELEMENTAL.includes(cpuSelectedBehavior)) {
     state.rules.elemental = true;
-    const elementalCheckbox = document.getElementById('ruleElemental');
-    if (elementalCheckbox) elementalCheckbox.checked = true;
   }
+  syncRuleCheckboxesFromState();
   if (state.rules.roulette) {
     state.rules = rollRouletteRules(state.rules);
     syncRuleCheckboxesFromState();
@@ -9551,10 +9582,12 @@ async function rematchCpuMatchSame() {
   initGame({ p1: p1Hand, p2: p2Hand });
 }
 document.getElementById('cpuSetupBack').addEventListener('click', () => {
+  saveCpuSetup();
   playSfx('cursorCancel');
   closeCpuSetup();
 });
 document.getElementById('cpuSetupClose').addEventListener('click', () => {
+  saveCpuSetup();
   playSfx('cursorCancel');
   closeCpuSetup();
 });
@@ -15904,136 +15937,36 @@ for (let v = 0; v <= 100; v += 10) {
 elementalBiasSelect.addEventListener('change', () => {
   state.elementalBias = Number(elementalBiasSelect.value);
 });
-const CPU_RULE_CHECKBOX_MAP = {
-  cpuRuleSame: 'ruleSame',
-  cpuRuleSameWall: 'ruleSameWall',
-  cpuRulePlus: 'rulePlus',
-  cpuRuleUp: 'ruleUp',
-  cpuRuleCombo: 'ruleCombo',
-  cpuRuleElemental: 'ruleElemental',
-  cpuRuleRandom: 'ruleRandom',
-  cpuRuleSuddenDeath: 'ruleSuddenDeath',
-  cpuRuleFallenAce: 'ruleFallenAce',
-  cpuRuleReverse: 'ruleReverse',
-  cpuRuleChaos: 'ruleChaos',
-  cpuRuleOrder: 'ruleOrder',
-  cpuRuleSwap: 'ruleSwap',
-  cpuRuleRoulette: 'ruleRoulette',
-  cpuRuleClosed: 'ruleClosed',
-  cpuRuleClosedSingle: 'ruleClosedSingle',
-};
+function cpuRuleCheckbox(key) {
+  return document.getElementById('cpuRule' + key[0].toUpperCase() + key.slice(1));
+}
 function updateCpuDependentRuleCheckboxes() {
   const sameWallEl = document.getElementById('cpuRuleSameWall');
   if (sameWallEl) sameWallEl.disabled = !document.getElementById('cpuRuleSame').checked;
 }
 function syncCpuRulesFromState() {
-  Object.entries(CPU_RULE_CHECKBOX_MAP).forEach(([cpuId, mainId]) => {
-    const cpuEl = document.getElementById(cpuId);
-    const mainEl = document.getElementById(mainId);
-    if (cpuEl && mainEl) cpuEl.checked = mainEl.checked;
+  RULE_CHECKBOX_KEYS.forEach(key => {
+    const el = cpuRuleCheckbox(key);
+    if (el) el.checked = !!cpuRules[key];
   });
   updateCpuDependentRuleCheckboxes();
 }
-document.getElementById('cpuRuleSame').addEventListener('change', e => {
-  state.rules.same = e.target.checked;
-  document.getElementById('ruleSame').checked = e.target.checked;
-  if (!e.target.checked) {
-    document.getElementById('cpuRuleSameWall').checked = false;
-    document.getElementById('ruleSameWall').checked = false;
-    state.rules.sameWall = false;
-  }
-  updateCpuDependentRuleCheckboxes();
-  updateDependentRuleCheckboxes();
-});
-document.getElementById('cpuRuleSameWall').addEventListener('change', e => {
-  state.rules.sameWall = e.target.checked && state.rules.same;
-  document.getElementById('ruleSameWall').checked = state.rules.sameWall;
-});
-document.getElementById('cpuRulePlus').addEventListener('change', e => {
-  state.rules.plus = e.target.checked;
-  document.getElementById('rulePlus').checked = e.target.checked;
-});
-document.getElementById('cpuRuleUp').addEventListener('change', e => {
-  state.rules.up = e.target.checked;
-  document.getElementById('ruleUp').checked = e.target.checked;
-});
-document.getElementById('cpuRuleCombo').addEventListener('change', e => {
-  state.rules.combo = e.target.checked;
-  document.getElementById('ruleCombo').checked = e.target.checked;
-});
-document.getElementById('cpuRuleElemental').addEventListener('change', e => {
-  if (state.cpuOpponent && CPU_BEHAVIORS_REQUIRING_ELEMENTAL.includes(state.cpuBehavior)) {
-    e.target.checked = true;
-    return;
-  }
-  state.rules.elemental = e.target.checked;
-  document.getElementById('ruleElemental').checked = e.target.checked;
-  if (e.target.checked && state.boardElements.every(el => el === null)) {
-    const emptyIndices = state.board
-      .map((cell, i) => (cell === null ? i : -1))
-      .filter(i => i !== -1);
-    state.boardElements = generateBoardElements(emptyIndices);
-  }
-});
-document.getElementById('cpuRuleRandom').addEventListener('change', e => {
-  state.rules.random = e.target.checked;
-  document.getElementById('ruleRandom').checked = e.target.checked;
-});
-document.getElementById('cpuRuleSuddenDeath').addEventListener('change', e => {
-  state.rules.suddenDeath = e.target.checked;
-  document.getElementById('ruleSuddenDeath').checked = e.target.checked;
-});
-document.getElementById('cpuRuleClosed').addEventListener('change', e => {
-  state.rules.closed = e.target.checked;
-  document.getElementById('ruleClosed').checked = e.target.checked;
-  if (e.target.checked) {
-    state.rules.closedSingle = false;
-    document.getElementById('cpuRuleClosedSingle').checked = false;
-    document.getElementById('ruleClosedSingle').checked = false;
-  }
-});
-document.getElementById('cpuRuleClosedSingle').addEventListener('change', e => {
-  state.rules.closedSingle = e.target.checked;
-  document.getElementById('ruleClosedSingle').checked = e.target.checked;
-  if (e.target.checked) {
-    state.rules.closed = false;
-    document.getElementById('cpuRuleClosed').checked = false;
-    document.getElementById('ruleClosed').checked = false;
-  }
-});
-document.getElementById('cpuRuleFallenAce').addEventListener('change', e => {
-  state.rules.fallenAce = e.target.checked;
-  document.getElementById('ruleFallenAce').checked = e.target.checked;
-});
-document.getElementById('cpuRuleReverse').addEventListener('change', e => {
-  state.rules.reverse = e.target.checked;
-  document.getElementById('ruleReverse').checked = e.target.checked;
-});
-document.getElementById('cpuRuleChaos').addEventListener('change', e => {
-  state.rules.chaos = e.target.checked;
-  document.getElementById('ruleChaos').checked = e.target.checked;
-  if (e.target.checked) {
-    state.rules.order = false;
-    document.getElementById('cpuRuleOrder').checked = false;
-    document.getElementById('ruleOrder').checked = false;
-  }
-});
-document.getElementById('cpuRuleOrder').addEventListener('change', e => {
-  state.rules.order = e.target.checked;
-  document.getElementById('ruleOrder').checked = e.target.checked;
-  if (e.target.checked) {
-    state.rules.chaos = false;
-    document.getElementById('cpuRuleChaos').checked = false;
-    document.getElementById('ruleChaos').checked = false;
-  }
-});
-document.getElementById('cpuRuleSwap').addEventListener('change', e => {
-  state.rules.swap = e.target.checked;
-  document.getElementById('ruleSwap').checked = e.target.checked;
-});
-document.getElementById('cpuRuleRoulette').addEventListener('change', e => {
-  state.rules.roulette = e.target.checked;
-  document.getElementById('ruleRoulette').checked = e.target.checked;
+// Ticking one of these clears the other in the pair.
+const CPU_RULE_EXCLUSIVE = { closed: 'closedSingle', closedSingle: 'closed', chaos: 'order', order: 'chaos' };
+RULE_CHECKBOX_KEYS.forEach(key => {
+  const el = cpuRuleCheckbox(key);
+  if (!el) return;
+  el.addEventListener('change', e => {
+    if (key === 'elemental' && CPU_BEHAVIORS_REQUIRING_ELEMENTAL.includes(cpuSelectedBehavior)) {
+      e.target.checked = true;
+      return;
+    }
+    cpuRules[key] = e.target.checked;
+    if (e.target.checked && CPU_RULE_EXCLUSIVE[key]) cpuRules[CPU_RULE_EXCLUSIVE[key]] = false;
+    if (key === 'same' && !e.target.checked) cpuRules.sameWall = false;
+    if (key === 'sameWall') cpuRules.sameWall = e.target.checked && cpuRules.same;
+    syncCpuRulesFromState();
+  });
 });
 initMusicPlayer();
 initSfxControls();
@@ -16360,6 +16293,8 @@ function initMainMenu() {
   }, { once: true });
   document.getElementById('menuPractice').addEventListener('click', () => {
     leaveOnlineRoomOrSpectate();
+    state.rules = practiceRules;
+    syncRuleCheckboxesFromState();
     showGameScreen();
     runPracticePickFlow();
   });
