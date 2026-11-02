@@ -5018,6 +5018,17 @@
         <label>Hand Balance Strength (By Skill Level)</label>
         <div id="adminMiscHandBalanceGrid"></div>
       </div>
+      <div class="settings-row checkbox-row" title="VS CPU opponents (the VS CPU menu) normally build their hand by spending as much budget as possible on the first few cards, which often leaves just enough for a level 1 on the last slot or two -- a couple of maxed-out cards plus a pile of level 1s. This softens that skew toward a more even spread of levels across the hand, without removing high/low variety entirely -- see the slider below to control how strongly it applies. Separate from the Campaign setting above. Only affects VS CPU hands built from a point budget (not the Random rule, which already ignores points).">
+        <label><input type="checkbox" id="adminCpuHandBalanceToggle"> Balanced CPU Hands (VS CPU)</label>
+      </div>
+      <div class="settings-row admin-region-bias-row" title="How strongly to soften the high/low skew when Balanced CPU Hands is on. 0% = no change from the default lopsided behavior. 100% = each card slot gets an even share of the remaining budget (still varies by highest-affordable-card-in-range and regional bias, just centered rather than skewed).">
+        <label for="adminCpuHandBalanceSlider">Hand Balance Strength: <span id="adminCpuHandBalanceValue">50%</span></label>
+        <input type="range" id="adminCpuHandBalanceSlider" min="0" max="100" step="1" value="50">
+      </div>
+      <div class="settings-row admin-region-bias-row" title="Overrides Hand Balance Strength for NPCs of a single skill level. Each box starts at whatever the slider above is set to -- change one and only VS CPU opponents of that difficulty use it, so you can give low-level NPCs even hands and let level 5 bosses keep the lopsided ace-plus-junk spread, or the other way round. Blank a box (or click Reset) to hand that level back to the slider. Requires Balanced CPU Hands to be ticked.">
+        <label>Hand Balance Strength (By Skill Level)</label>
+        <div id="adminMiscCpuHandBalanceGrid"></div>
+      </div>
       <div class="settings-row admin-region-bias-row" title="The fewest elemental cards a CPU hand is topped up to while the Elemental board rule is active. Applies to both Campaign NPCs and VS CPU opponents. Elemental Fiend covers any opponent whose AI behavior is Elemental Fiend; Elemental Rule covers every other behavior. This is a floor only -- a hand that naturally drew more keeps them. Takes effect on the next match.">
         <label>Elemental Minimum (Campaign + VS CPU)</label>
         <div id="adminMiscElementalMinRow" class="admin-cpu-level-inputs">
@@ -5054,6 +5065,9 @@
       <div class="settings-row admin-region-bias-row" title="Which elements the No Duplicate Elements rule covers. Ticked = an NPC hand may hold at most one card of that element. Unticked = repeats of that element are allowed as normal. Has no effect until the master toggle above is on.">
         <label>No Duplicate Elements - Per Element</label>
         <div id="adminMiscNoDupeElementsGrid"></div>
+      </div>
+      <div class="settings-row checkbox-row" title="VS CPU (any card source: Free Play, Ranked or Campaign cards). The CPU first fills its hand evenly with level 1-6 cards, then, while there's room left in the point total, upgrades a random card to a random level 7, 8, 9 or 10 (no bias between them) and checks again, until nothing more fits. Overrides Balanced NPC Hands for VS CPU. Campaign NPC battles and the Random rule are unaffected.">
+        <label><input type="checkbox" id="adminCpuHighCardWhenSpaceToggle"> CPU High Level Card When Space (VS CPU)</label>
       </div>
       <div class="settings-row checkbox-row" title="The Auto button in the card picker (any human player, any mode) already targets an even level per slot with weighted randomness rather than the NPC's pure greedy-highest approach, but a lucky/unlucky roll can still occasionally skew a slot toward the top of its budget cap. This tightens that cap toward an even per-slot share the same way Balanced NPC Hands does, for a more consistent Auto-fill hand. Only affects budgeted picks (point-limited rooms/matches) -- unlimited-budget picks are unaffected.">
         <label><input type="checkbox" id="adminPickerHandBalanceToggle"> Balanced Auto Hand (Player Picker)</label>
@@ -5793,6 +5807,38 @@ function campaignHandBalancePercentForLevel(skillLevel) {
   const v = Number(campaignHandBalanceByLevel && campaignHandBalanceByLevel[skillLevel]);
   return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : campaignHandBalancePercent;
 }
+// VS CPU's own copy of Balanced NPC Hands (Misc > Balanced CPU Hands), kept
+// separate from Campaign so the two can be tuned independently.
+let cpuHandBalanceEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalanceEnabled`).on('value', snap => {
+  cpuHandBalanceEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminCpuHandBalanceToggle');
+  if (toggle) toggle.checked = cpuHandBalanceEnabled;
+});
+let cpuHandBalancePercent = 50;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalancePercent`).on('value', snap => {
+  const v = Number(snap.val());
+  cpuHandBalancePercent = Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 50;
+  const slider = document.getElementById('adminCpuHandBalanceSlider');
+  const label = document.getElementById('adminCpuHandBalanceValue');
+  if (slider && document.activeElement !== slider) slider.value = cpuHandBalancePercent;
+  if (label) label.textContent = `${cpuHandBalancePercent}%`;
+  renderAdminMiscCpuHandBalanceGrid();
+});
+// Per-skill-level Hand Balance. The slider above stays the baseline for every
+// level; anything set here overrides it for NPCs of that cpuDifficulty only,
+// so a level 1 cadet can play near-even hands while a level 5 boss keeps the
+// lopsided ace-plus-junk spread (or the reverse). An unset level just uses
+// the slider, which is why nothing changes until a box is actually touched.
+let cpuHandBalanceByLevel = {};
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalanceByLevel`).on('value', snap => {
+  cpuHandBalanceByLevel = snap.val() || {};
+  renderAdminMiscCpuHandBalanceGrid();
+});
+function cpuHandBalancePercentForLevel(skillLevel) {
+  const v = Number(cpuHandBalanceByLevel && cpuHandBalanceByLevel[skillLevel]);
+  return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : cpuHandBalancePercent;
+}
 // No Duplicate Elements. Master toggle plus one checkbox per element, so an
 // NPC hand can be stopped from carrying two Fire cards while still being
 // allowed two Thunder ones. Unset elements default to ON, so ticking the
@@ -5919,6 +5965,12 @@ function campaignElementAllowed(card, elementCounts, forceUnique) {
   if (!forceUnique && !campaignElementDupeBlocked(card.element)) return true;
   return !elementCounts.get(card.element);
 }
+let cpuHighCardWhenSpaceEnabled = false;
+rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHighCardWhenSpaceEnabled`).on('value', snap => {
+  cpuHighCardWhenSpaceEnabled = snap.val() === true;
+  const toggle = document.getElementById('adminCpuHighCardWhenSpaceToggle');
+  if (toggle) toggle.checked = cpuHighCardWhenSpaceEnabled;
+});
 let pickerHandBalanceEnabled = false;
 rtdb.ref(`${GAME_CONFIG_ROOT}/pickerHandBalanceEnabled`).on('value', snap => {
   pickerHandBalanceEnabled = snap.val() === true;
@@ -8500,7 +8552,72 @@ function tagClosedSingleHandCards() {
     if (card) card._closedSingle = true;
   });
 }
+// "CPU High Level Card When Space" (Misc admin toggle, VS CPU only). Step 1:
+// fill all 5 slots evenly with level 1-6 cards. Step 2: while the point total
+// still has room, pick a random hand card that's level 6 or below and upgrade
+// it to a random affordable level 7/8/9/10 (each level equally likely), then
+// check again -- until no upgrade fits. Returns null if the card source can't
+// supply a full low-level hand, so the caller falls back to the normal builder.
+function buildHighCardWhenSpaceIds(pointBudget) {
+  const counts = new Map();
+  const picked = [];
+  const levelOf = id => { const c = CARD_DB.find(cc => cc.id === id); return c ? c.level : 0; };
+  const total = () => picked.reduce((sum, id) => sum + levelOf(id), 0);
+  const available = c => (cardStock(c.id) - (counts.get(c.id) || 0)) > 0 && (counts.get(c.id) || 0) < PICKER_MAX_COPIES;
+  const pickRandomPreferUnused = pool => {
+    const fresh = pool.filter(c => !(counts.get(c.id) || 0));
+    const src = fresh.length ? fresh : pool;
+    return src[Math.floor(Math.random() * src.length)];
+  };
+  // Step 1: fill with level 1-6 the same way the normal VS CPU builder does --
+  // highest affordable card under the slot's cap -- with the cap pulled toward
+  // an even share by Balanced NPC Hands (Hand Balance Strength for this CPU's
+  // difficulty level, or the slider if that level has no override).
+  const handBalancePercent = cpuHandBalancePercentForLevel(state.cpuDifficulty);
+  for (let slot = 0; slot < PICKER_HAND_SIZE; slot++) {
+    const slotsRemaining = PICKER_HAND_SIZE - slot;
+    const remaining = pointBudget - total();
+    const greedyCap = remaining - (slotsRemaining - 1);
+    let perSlotCap = greedyCap;
+    if (cpuHandBalanceEnabled && handBalancePercent > 0 && slotsRemaining > 1) {
+      const evenCap = Math.max(1, Math.floor(remaining / slotsRemaining));
+      perSlotCap = Math.round(greedyCap + (evenCap - greedyCap) * Math.min(100, handBalancePercent) / 100);
+    }
+    const maxForSlot = Math.min(6, perSlotCap);
+    const lows = CARD_DB.filter(c => c.level <= maxForSlot && available(c));
+    if (!lows.length) return null;
+    const topLevel = lows.reduce((m, c) => Math.max(m, c.level), 0);
+    const card = pickRandomPreferUnused(lows.filter(c => c.level === topLevel));
+    counts.set(card.id, (counts.get(card.id) || 0) + 1);
+    picked.push(card.id);
+  }
+  // Step 2: upgrade random cards while there's space.
+  while (true) {
+    const space = pointBudget - total();
+    const options = [];
+    picked.forEach((id, idx) => {
+      const curLevel = levelOf(id);
+      if (curLevel > 6) return;
+      const levels = [7, 8, 9, 10].filter(lv => lv - curLevel <= space &&
+        CARD_DB.some(c => c.level === lv && available(c)));
+      if (levels.length) options.push({ idx, levels });
+    });
+    if (!options.length) break;
+    const choice = options[Math.floor(Math.random() * options.length)];
+    const newLevel = choice.levels[Math.floor(Math.random() * choice.levels.length)];
+    const inCard = pickRandomPreferUnused(CARD_DB.filter(c => c.level === newLevel && available(c)));
+    const outId = picked[choice.idx];
+    counts.set(outId, (counts.get(outId) || 0) - 1);
+    counts.set(inCard.id, (counts.get(inCard.id) || 0) + 1);
+    picked[choice.idx] = inCard.id;
+  }
+  return picked;
+}
 function buildMaxPointsHandIds(pointBudget) {
+  if (cpuHighCardWhenSpaceEnabled) {
+    const highCardIds = buildHighCardWhenSpaceIds(pointBudget);
+    if (highCardIds) return highCardIds;
+  }
   const counts = new Map();
   const picked = [];
   for (let slot = 0; slot < PICKER_HAND_SIZE; slot++) {
@@ -8510,7 +8627,19 @@ function buildMaxPointsHandIds(pointBudget) {
     }, 0);
     const slotsRemaining = PICKER_HAND_SIZE - slot;
     const reserveForOtherSlots = slotsRemaining - 1;
-    const perSlotCap = Math.max(0, pointBudget - spent - reserveForOtherSlots);
+    const greedyCap = Math.max(0, pointBudget - spent - reserveForOtherSlots);
+    // Balanced NPC Hands (Misc admin toggle + slider + per-skill-level grid),
+    // shared with Campaign. Without this, VS CPU was purely greedy: any budget
+    // >= 14 opened with a level 10 (often two in Free Play) and padded with
+    // level 1s. Same blend as the Campaign NPC builder, keyed by the VS CPU
+    // difficulty (1-5) so the per-level overrides apply here too.
+    let perSlotCap = greedyCap;
+    const handBalancePercent = cpuHandBalancePercentForLevel(state.cpuDifficulty);
+    if (cpuHandBalanceEnabled && handBalancePercent > 0 && slotsRemaining > 1) {
+      const evenCap = Math.max(1, Math.floor((pointBudget - spent) / slotsRemaining));
+      const balanceAmount = Math.min(100, handBalancePercent) / 100;
+      perSlotCap = Math.round(greedyCap + (evenCap - greedyCap) * balanceAmount);
+    }
     const candidates = CARD_DB.filter(c => {
       const remainingStock = cardStock(c.id) - (counts.get(c.id) || 0);
       if (remainingStock <= 0) return false;
@@ -16643,6 +16772,26 @@ document.getElementById('adminCampaignHandBalanceSlider').addEventListener('chan
   const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignHandBalancePercent`).set(v).catch(() => {});
 });
+document.getElementById('adminCpuHandBalanceToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalanceEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCpuHandBalanceSlider').addEventListener('input', e => {
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  const label = document.getElementById('adminCpuHandBalanceValue');
+  if (label) label.textContent = `${v}%`;
+  // Keep the per-level boxes' greyed placeholders showing the value any
+  // un-overridden level would actually use while the slider is being dragged.
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscCpuHandBalance_${level}`);
+    if (input) input.placeholder = String(v);
+  }
+});
+document.getElementById('adminCpuHandBalanceSlider').addEventListener('change', e => {
+  playSfx('cursorMove');
+  const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+  rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalancePercent`).set(v).catch(() => {});
+});
 [['adminCpuElementalMinFiend', 'cpuElementalMinFiend'], ['adminCpuElementalMinRule', 'cpuElementalMinRule'],
  ['adminCpuElementalMaxFiend', 'cpuElementalMaxFiend'], ['adminCpuElementalMaxRule', 'cpuElementalMaxRule']].forEach(([inputId, key]) => {
   const input = document.getElementById(inputId);
@@ -16673,6 +16822,10 @@ document.getElementById('adminCampaignRandomOneRareToggle').addEventListener('ch
 document.getElementById('adminCampaignNoDupeElementsToggle').addEventListener('change', e => {
   playSfx('cursorMove');
   rtdb.ref(`${GAME_CONFIG_ROOT}/campaignNoDupeElementsEnabled`).set(e.target.checked).catch(() => {});
+});
+document.getElementById('adminCpuHighCardWhenSpaceToggle').addEventListener('change', e => {
+  playSfx('cursorMove');
+  rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHighCardWhenSpaceEnabled`).set(e.target.checked).catch(() => {});
 });
 document.getElementById('adminPickerHandBalanceToggle').addEventListener('change', e => {
   playSfx('cursorMove');
@@ -18192,6 +18345,87 @@ function renderAdminMiscHandBalanceGrid() {
       : `Level ${level} NPCs use the slider default: ${campaignHandBalancePercent}%`;
   }
 }
+function writeCpuHandBalanceForLevel(level, value) {
+  clearTimeout(adminMiscWriteTimers['cpuHandBalance_' + level]);
+  adminMiscWriteTimers['cpuHandBalance_' + level] = setTimeout(() => {
+    rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalanceByLevel/${level}`).set(value).catch(() => {});
+  }, 350);
+}
+// Per-skill-level override row for Hand Balance Strength. Same
+// column-per-level layout and CSS classes as the grid below it. An empty box
+// means "no override" -- that level falls back to the single slider, and the
+// box shows the slider's current value greyed rather than a hard 0, so it
+// always reads as the value actually in effect.
+function renderAdminMiscCpuHandBalanceGrid() {
+  const grid = document.getElementById('adminMiscCpuHandBalanceGrid');
+  if (!grid) return;
+  if (grid.dataset.built !== 'true') {
+    grid.innerHTML = '';
+    grid.dataset.built = 'true';
+    const wrap = document.createElement('div');
+    wrap.className = 'admin-cpu-level-metric';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'admin-cpu-level-metric-hint';
+    hintEl.textContent = '0% = fully lopsided (a couple of maxed cards then level 1 filler), 100% = an even share of the budget per slot. Empty = use the slider above.';
+    const inputsRow = document.createElement('div');
+    inputsRow.className = 'admin-cpu-level-inputs';
+    for (let level = 1; level <= 5; level++) {
+      const group = document.createElement('div');
+      group.className = 'admin-cpu-level-input-group';
+      const span = document.createElement('span');
+      span.textContent = `Lv${level}`;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '0';
+      input.max = '100';
+      input.step = '1';
+      input.id = `adminMiscCpuHandBalance_${level}`;
+      input.addEventListener('input', () => {
+        if (input.value.trim() === '') {
+          input.classList.remove('overridden');
+          writeCpuHandBalanceForLevel(level, null);
+          return;
+        }
+        const raw = Math.round(Number(input.value));
+        if (!Number.isFinite(raw)) return;
+        input.classList.add('overridden');
+        writeCpuHandBalanceForLevel(level, Math.max(0, Math.min(100, raw)));
+      });
+      group.appendChild(span);
+      group.appendChild(input);
+      inputsRow.appendChild(group);
+    }
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'menu-btn-secondary';
+    resetBtn.textContent = 'Reset All To Slider';
+    resetBtn.addEventListener('click', () => {
+      playSfx('cursorMove');
+      for (let level = 1; level <= 5; level++) {
+        clearTimeout(adminMiscWriteTimers['cpuHandBalance_' + level]);
+        const input = document.getElementById(`adminMiscCpuHandBalance_${level}`);
+        if (input) { input.value = ''; input.classList.remove('overridden'); }
+      }
+      rtdb.ref(`${GAME_CONFIG_ROOT}/cpuHandBalanceByLevel`).set(null).catch(() => {});
+    });
+    wrap.appendChild(hintEl);
+    wrap.appendChild(inputsRow);
+    wrap.appendChild(resetBtn);
+    grid.appendChild(wrap);
+  }
+  for (let level = 1; level <= 5; level++) {
+    const input = document.getElementById(`adminMiscCpuHandBalance_${level}`);
+    if (!input || document.activeElement === input) continue;
+    const raw = Number(cpuHandBalanceByLevel && cpuHandBalanceByLevel[level]);
+    const hasOverride = Number.isFinite(raw);
+    input.value = hasOverride ? String(Math.max(0, Math.min(100, raw))) : '';
+    input.placeholder = String(cpuHandBalancePercent);
+    input.classList.toggle('overridden', hasOverride);
+    input.title = hasOverride
+      ? `Level ${level} CPUs use ${Math.max(0, Math.min(100, raw))}% (slider default: ${cpuHandBalancePercent}%)`
+      : `Level ${level} CPUs use the slider default: ${cpuHandBalancePercent}%`;
+  }
+}
 // Same row-per-metric, column-per-skill-level layout as CPU AI Weights' "By
 // Skill Level" grid (reuses its CSS classes), just built once directly into
 // the Misc modal instead of a separate tab.
@@ -18259,6 +18493,7 @@ function openAdminMiscModal() {
   document.getElementById('adminMiscModal').classList.add('show');
   renderAdminMiscReverseBudgetGrid();
   renderAdminMiscHandBalanceGrid();
+  renderAdminMiscCpuHandBalanceGrid();
   renderAdminMiscNoDupeElementsGrid();
   renderAdminMiscRandomFloorGrid();
 }
